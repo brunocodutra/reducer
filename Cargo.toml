@@ -6,4 +6,7 @@ repository = "https://github.com/brunocodutra/reducer.git"
 license = "MIT"
 readme = "README.md"
 
+[badges]
+travis-ci = { repository = "brunocodutra/reducer" }
+
 [dependencies]
