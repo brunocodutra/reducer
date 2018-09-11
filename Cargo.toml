@@ -2,5 +2,8 @@
 name = "reducer"
 version = "0.1.0"
 authors = ["Bruno Dutra <brunocodutra@gmail.com>"]
+repository = "https://github.com/brunocodutra/reducer.git"
+license = "MIT"
+readme = "README.md"
 
 [dependencies]
