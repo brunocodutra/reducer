@@ -2,6 +2,7 @@ mod array;
 mod mock;
 mod option;
 mod reference;
+mod sender;
 mod slice;
 mod tuple;
 
