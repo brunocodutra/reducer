@@ -34,6 +34,15 @@ jobs:
     script:
     - cargo +nightly fmt --all -- --check
 
+  - name: clippy
+    stage: check
+    rust: nightly
+    os: linux
+    install:
+    - rustup component add clippy-preview --toolchain nightly
+    script:
+    - cargo +nightly clippy --all-targets --all-features -- -D warnings
+
   - name: coverage
     stage: check
     rust: nightly
