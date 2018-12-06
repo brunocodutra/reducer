@@ -11,6 +11,11 @@ impl<R: Reducer, S: Subscriber<R>> Store<R, S> {
     pub fn new(state: R, subscriber: S) -> Self {
         Self { state, subscriber }
     }
+
+    pub fn dispatch(&mut self, action: impl Into<R::Action>) -> Result<(), S::Error> {
+        self.state.reduce(action.into());
+        self.subscriber.notify(&self.state)
+    }
 }
 
 #[cfg(test)]
@@ -41,5 +46,29 @@ mod tests {
     fn clone() {
         let store = Store::new(MockReducer::<()>::default(), MockSubscriber::default());
         assert_eq!(store, store.clone());
+    }
+
+    #[test]
+    fn dispatch() {
+        let mut store = Store::<MockReducer<_>, MockSubscriber<_>>::default();
+
+        assert!(store.dispatch(5).is_ok());
+        assert!(store.dispatch(1).is_ok());
+        assert!(store.dispatch(3).is_ok());
+
+        store.subscriber.set_result(Err);
+        assert!(store.dispatch(false).is_err());
+        store.subscriber.set_result(Ok);
+
+        assert_eq!(store.state, MockReducer::new(vec![5, 1, 3, false.into()]));
+
+        assert_eq!(
+            store.subscriber,
+            MockSubscriber::new(vec![
+                MockReducer::new(vec![5]),
+                MockReducer::new(vec![5, 1]),
+                MockReducer::new(vec![5, 1, 3]),
+            ]),
+        );
     }
 }
