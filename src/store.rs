@@ -1,4 +1,5 @@
 use reducer::Reducer;
+use std::mem;
 use subscriber::Subscriber;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
@@ -15,6 +16,10 @@ impl<R: Reducer, S: Subscriber<R>> Store<R, S> {
     pub fn dispatch(&mut self, action: impl Into<R::Action>) -> Result<(), S::Error> {
         self.state.reduce(action.into());
         self.subscriber.notify(&self.state)
+    }
+
+    pub fn subscribe(&mut self, subscriber: impl Into<S>) -> S {
+        mem::replace(&mut self.subscriber, subscriber.into())
     }
 }
 
@@ -69,6 +74,30 @@ mod tests {
                 MockReducer::new(vec![5, 1]),
                 MockReducer::new(vec![5, 1, 3]),
             ]),
+        );
+    }
+
+    #[test]
+    fn subscribe() {
+        let mut store = Store::new(MockReducer::default(), None);
+
+        assert!(store.dispatch(0).is_ok());
+
+        store.subscribe(Some(MockSubscriber::default()));
+
+        assert!(store.dispatch(5).is_ok());
+        assert!(store.dispatch(1).is_ok());
+        assert!(store.dispatch(3).is_ok());
+
+        assert_eq!(store.state, MockReducer::new(vec![0, 5, 1, 3]));
+
+        assert_eq!(
+            store.subscriber,
+            Some(MockSubscriber::new(vec![
+                MockReducer::new(vec![0, 5]),
+                MockReducer::new(vec![0, 5, 1]),
+                MockReducer::new(vec![0, 5, 1, 3]),
+            ])),
         );
     }
 }
