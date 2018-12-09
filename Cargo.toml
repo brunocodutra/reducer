@@ -10,3 +10,10 @@ readme = "README.md"
 travis-ci = { repository = "brunocodutra/reducer" }
 
 [dependencies]
+
+[dev-dependencies]
+ttf-noto-sans = "0.1.1"
+
+[dev-dependencies.conrod]
+version = "0.61.1"
+features = ["winit", "glium"]
