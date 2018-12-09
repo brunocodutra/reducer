@@ -2,6 +2,7 @@ mod array;
 mod mock;
 mod reference;
 mod slice;
+mod tuple;
 
 use std::fmt::Debug;
 
