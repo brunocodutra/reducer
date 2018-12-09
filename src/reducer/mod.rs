@@ -1,4 +1,5 @@
 mod mock;
+mod tuple;
 
 pub trait Reducer: 'static {
     type Action;
