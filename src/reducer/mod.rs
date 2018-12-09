@@ -1,3 +1,4 @@
+mod arc;
 mod mock;
 mod rc;
 mod tuple;
