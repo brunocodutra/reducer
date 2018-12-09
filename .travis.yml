@@ -21,6 +21,7 @@ env:
 addons:
   apt:
     packages:
+      - libgtk-3-dev
       - libssl-dev
 
 jobs:

@@ -12,6 +12,7 @@ travis-ci = { repository = "brunocodutra/reducer" }
 [dependencies]
 
 [dev-dependencies]
+iui = "0.3.0"
 ttf-noto-sans = "0.1.1"
 
 [dev-dependencies.conrod]
