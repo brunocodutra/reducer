@@ -1,5 +1,6 @@
 mod array;
 mod mock;
+mod option;
 mod reference;
 mod slice;
 mod tuple;
