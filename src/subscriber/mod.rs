@@ -1,3 +1,4 @@
+mod array;
 mod mock;
 mod reference;
 mod slice;
