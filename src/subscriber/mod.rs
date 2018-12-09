@@ -1,5 +1,6 @@
 mod mock;
 mod reference;
+mod slice;
 
 use std::fmt::Debug;
 
