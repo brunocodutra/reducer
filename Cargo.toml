@@ -10,6 +10,7 @@ readme = "README.md"
 travis-ci = { repository = "brunocodutra/reducer" }
 
 [dependencies]
+smallbox = "0.7.2"
 
 [dev-dependencies]
 iui = "0.3.0"

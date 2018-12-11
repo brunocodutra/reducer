@@ -1,3 +1,4 @@
+mod any;
 mod array;
 mod mock;
 mod option;
@@ -59,6 +60,8 @@ pub trait Subscriber<S> {
     /// Reacts to a state transition or returns `Err(Self::Error)` in case of failure.
     fn notify(&self, state: &S) -> Result<(), Self::Error>;
 }
+
+pub use self::any::AnySubscriber;
 
 #[cfg(test)]
 pub use self::mock::*;

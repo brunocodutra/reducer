@@ -76,6 +76,9 @@
 //! }
 //! ```
 
+#[macro_use]
+extern crate smallbox;
+
 mod reducer;
 mod store;
 mod subscriber;
