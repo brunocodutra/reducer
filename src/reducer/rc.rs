@@ -1,6 +1,7 @@
 use reducer::*;
 use std::rc::Rc;
 
+/// Lazy copy-on-write for single-threaded applications.
 impl<R> Reducer for Rc<R>
 where
     R: Reducer + Clone + ?Sized,

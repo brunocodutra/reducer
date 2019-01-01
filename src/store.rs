@@ -2,6 +2,13 @@ use reducer::Reducer;
 use std::mem;
 use subscriber::Subscriber;
 
+/// A reactive state container that manages the state of your application.
+///
+/// Store promotes reactive programming by encapsulating the state of your application and
+/// notifying a [subscriber](struct.Store.html#method.subscribe) upon every change.
+///
+/// The only way to mutate the internal state managed by Store is by
+/// [dispatching](struct.Store.html#method.dispatch) actions on it.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Store<R: Reducer, S: Subscriber<R>> {
     state: R,
@@ -9,15 +16,21 @@ pub struct Store<R: Reducer, S: Subscriber<R>> {
 }
 
 impl<R: Reducer, S: Subscriber<R>> Store<R, S> {
+    /// Constructs the store given the initial state and a subscriber.
     pub fn new(state: R, subscriber: S) -> Self {
         Self { state, subscriber }
     }
 
+    /// Updates the state via [`<R as Reducer>::reduce`](trait.Reducer.html#tymethod.reduce) and
+    /// notifies the subscriber, returning the result of calling
+    /// [`<S as Subscriber<R>>::notify`](trait.Subscriber.html#tymethod.notify) with a reference to the
+    /// new state.
     pub fn dispatch(&mut self, action: impl Into<R::Action>) -> Result<(), S::Error> {
         self.state.reduce(action.into());
         self.subscriber.notify(&self.state)
     }
 
+    /// Replaces the subscriber and returns the previous one.
     pub fn subscribe(&mut self, subscriber: impl Into<S>) -> S {
         mem::replace(&mut self.subscriber, subscriber.into())
     }
