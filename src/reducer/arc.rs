@@ -1,6 +1,10 @@
 use reducer::*;
 use std::sync::Arc;
 
+/// Lazy copy-on-write for multi-threaded applications.
+///
+/// Helps avoiding cloning the entire state when it needs to be sent to a different thread
+/// (e.g to the rendering thread of a GUI).
 impl<R> Reducer for Arc<R>
 where
     R: Reducer + Clone + ?Sized,

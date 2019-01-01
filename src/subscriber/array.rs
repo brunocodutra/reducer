@@ -1,53 +1,70 @@
 use subscriber::*;
 
-macro_rules! impl_subscriber_for_array {
-    ($size:expr) => {
-        impl<R, T> Subscriber<R> for [T; $size]
-        where
-            T: Subscriber<R>,
-        {
-            type Error = T::Error;
+macro_rules! document_subscriber_for_array {
+    ( show, $( $body:tt )+ ) => {
+        /// Notifies all subscribers in the array in order.
+        ///
+        /// Currently implemented for arrays of up to 32 elements.
+        $( $body )+
+    };
 
-            fn notify(&self, state: &R) -> Result<(), Self::Error> {
-                AsRef::<[T]>::as_ref(self).notify(state)
-            }
-        }
+    ( hide, $( $body:tt )+ ) => {
+        #[doc(hidden)]
+        $( $body )+
     };
 }
 
-impl_subscriber_for_array!(0);
-impl_subscriber_for_array!(1);
-impl_subscriber_for_array!(2);
-impl_subscriber_for_array!(3);
-impl_subscriber_for_array!(4);
-impl_subscriber_for_array!(5);
-impl_subscriber_for_array!(6);
-impl_subscriber_for_array!(7);
-impl_subscriber_for_array!(8);
-impl_subscriber_for_array!(9);
-impl_subscriber_for_array!(10);
-impl_subscriber_for_array!(11);
-impl_subscriber_for_array!(12);
-impl_subscriber_for_array!(13);
-impl_subscriber_for_array!(14);
-impl_subscriber_for_array!(15);
-impl_subscriber_for_array!(16);
-impl_subscriber_for_array!(17);
-impl_subscriber_for_array!(18);
-impl_subscriber_for_array!(19);
-impl_subscriber_for_array!(20);
-impl_subscriber_for_array!(21);
-impl_subscriber_for_array!(22);
-impl_subscriber_for_array!(23);
-impl_subscriber_for_array!(24);
-impl_subscriber_for_array!(25);
-impl_subscriber_for_array!(26);
-impl_subscriber_for_array!(27);
-impl_subscriber_for_array!(28);
-impl_subscriber_for_array!(29);
-impl_subscriber_for_array!(30);
-impl_subscriber_for_array!(31);
-impl_subscriber_for_array!(32);
+macro_rules! impl_subscriber_for_array {
+    ($size:expr, $doc:tt) => {
+        document_subscriber_for_array!(
+            $doc,
+            impl<R, T> Subscriber<R> for [T; $size]
+            where
+                T: Subscriber<R>,
+            {
+                type Error = T::Error;
+
+                fn notify(&self, state: &R) -> Result<(), Self::Error> {
+                    AsRef::<[T]>::as_ref(self).notify(state)
+                }
+            }
+        );
+    };
+}
+
+impl_subscriber_for_array!(0, hide);
+impl_subscriber_for_array!(1, hide);
+impl_subscriber_for_array!(2, hide);
+impl_subscriber_for_array!(3, hide);
+impl_subscriber_for_array!(4, hide);
+impl_subscriber_for_array!(5, hide);
+impl_subscriber_for_array!(6, hide);
+impl_subscriber_for_array!(7, hide);
+impl_subscriber_for_array!(8, hide);
+impl_subscriber_for_array!(9, hide);
+impl_subscriber_for_array!(10, hide);
+impl_subscriber_for_array!(11, hide);
+impl_subscriber_for_array!(12, hide);
+impl_subscriber_for_array!(13, hide);
+impl_subscriber_for_array!(14, hide);
+impl_subscriber_for_array!(15, hide);
+impl_subscriber_for_array!(16, hide);
+impl_subscriber_for_array!(17, hide);
+impl_subscriber_for_array!(18, hide);
+impl_subscriber_for_array!(19, hide);
+impl_subscriber_for_array!(20, hide);
+impl_subscriber_for_array!(21, hide);
+impl_subscriber_for_array!(22, hide);
+impl_subscriber_for_array!(23, hide);
+impl_subscriber_for_array!(24, hide);
+impl_subscriber_for_array!(25, hide);
+impl_subscriber_for_array!(26, hide);
+impl_subscriber_for_array!(27, hide);
+impl_subscriber_for_array!(28, hide);
+impl_subscriber_for_array!(29, hide);
+impl_subscriber_for_array!(30, hide);
+impl_subscriber_for_array!(31, hide);
+impl_subscriber_for_array!(32, show);
 
 #[cfg(test)]
 mod tests {

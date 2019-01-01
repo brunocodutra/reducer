@@ -1,5 +1,6 @@
 use subscriber::*;
 
+/// Forwards the event if `Some`, ignores if `None`.
 impl<R, T> Subscriber<R> for Option<T>
 where
     T: Subscriber<R>,

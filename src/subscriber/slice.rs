@@ -1,5 +1,6 @@
 use subscriber::*;
 
+/// Notifies all subscribers in the slice in order.
 impl<R, T> Subscriber<R> for [T]
 where
     T: Subscriber<R>,

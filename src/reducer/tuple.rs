@@ -1,23 +1,39 @@
 use reducer::*;
 
+macro_rules! document_reducer_for_tuples {
+    ( ($head:ident), $( $body:tt )+ ) => {
+        /// Updates all reducers in the tuple in order.
+        ///
+        /// Currently implemented for tuples of up to 12 elements.
+        $( $body )+
+    };
+
+    ( ($head:ident $(, $tail:ident )+), $( $body:tt )+ ) => {
+        #[doc(hidden)]
+        $( $body )+
+    };
+}
+
 macro_rules! impl_reducer_for_tuples {
     () => {};
 
     ( $head:ident $(, $tail:ident )* $(,)* ) => {
-        impl<A, $head, $( $tail, )*> Reducer for ($head, $( $tail, )*)
-        where
-            A: Clone,
-            $head: Reducer<Action = A>,
-            $( $tail: Reducer<Action = A>, )*
-        {
-            type Action = A;
+        document_reducer_for_tuples!(($head $(, $tail )*),
+            impl<A, $head, $( $tail, )*> Reducer for ($head, $( $tail, )*)
+            where
+                A: Clone,
+                $head: Reducer<Action = A>,
+                $( $tail: Reducer<Action = A>, )*
+            {
+                type Action = A;
 
-            fn reduce(&mut self, action: Self::Action) {
-                let ($head, $( $tail, )*) = self;
-                $head.reduce(action.clone());
-                $( $tail.reduce(action.clone()); )*
+                fn reduce(&mut self, action: Self::Action) {
+                    let ($head, $( $tail, )*) = self;
+                    $head.reduce(action.clone());
+                    $( $tail.reduce(action.clone()); )*
+                }
             }
-        }
+        );
 
         impl_reducer_for_tuples!($( $tail, )*);
     };

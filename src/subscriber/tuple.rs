@@ -1,24 +1,40 @@
 use subscriber::*;
 
+macro_rules! document_subscriber_for_tuples {
+    ( ($head:ident), $( $body:tt )+ ) => {
+        /// Notifies all subscribers in the tuple in order.
+        ///
+        /// Currently implemented for tuples of up to 12 elements.
+        $( $body )+
+    };
+
+    ( ($head:ident $(, $tail:ident )+), $( $body:tt )+ ) => {
+        #[doc(hidden)]
+        $( $body )+
+    };
+}
+
 macro_rules! impl_subscriber_for_tuples {
     () => {};
 
     ( $head:ident $(, $tail:ident )* $(,)* ) => {
-        impl<R, E, $head, $( $tail, )*> Subscriber<R> for ($head, $( $tail, )*)
-        where
-            E: Debug,
-            $head: Subscriber<R, Error = E>,
-            $( $tail: Subscriber<R, Error = E>, )*
-        {
-            type Error = E;
+        document_subscriber_for_tuples!(($head $(, $tail )*),
+            impl<R, E, $head, $( $tail, )*> Subscriber<R> for ($head, $( $tail, )*)
+            where
+                E: Debug,
+                $head: Subscriber<R, Error = E>,
+                $( $tail: Subscriber<R, Error = E>, )*
+            {
+                type Error = E;
 
-            fn notify(&self, state: &R) -> Result<(), Self::Error> {
-                let ($head, $( $tail, )*) = self;
-                $head.notify(state)?;
-                $( $tail.notify(state)?; )*
-                Ok(())
+                fn notify(&self, state: &R) -> Result<(), Self::Error> {
+                    let ($head, $( $tail, )*) = self;
+                    $head.notify(state)?;
+                    $( $tail.notify(state)?; )*
+                    Ok(())
+                }
             }
-        }
+        );
 
         impl_subscriber_for_tuples!($( $tail, )*);
     };
