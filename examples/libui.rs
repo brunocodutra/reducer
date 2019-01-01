@@ -93,11 +93,11 @@ fn main() {
     let dispatch = move |action| dispatcher.send(action).unwrap();
 
     // Create a channel to synchronize states.
-    let (subscriber, states) = channel();
+    let (reactor, states) = channel();
 
     thread::spawn(move || {
         // Create a Store to manage the state.
-        let mut store = Store::new(Arc::new(State::default()), subscriber);
+        let mut store = Store::new(Arc::new(State::default()), reactor);
 
         // Listen for actions.
         while let Ok(action) = actions.recv() {

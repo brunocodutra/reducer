@@ -21,7 +21,7 @@ pub(crate) mod tests {
     use super::*;
 
     #[test]
-    fn arc() {
+    fn reduce() {
         let mut state = Arc::new(MockReducer::default());
 
         state.reduce(5);

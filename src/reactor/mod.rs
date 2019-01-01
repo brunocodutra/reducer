@@ -10,18 +10,18 @@ use std::fmt::Debug;
 
 /// Trait for types that react to state transitions.
 ///
-/// Subscribers connect the _state_ to the _view_ components. They can implement arbitrary logic in
-/// response to state transitions, but it's often better to think of Subscribers as _channels_ that
+/// Reactors connect the _state_ to the _view_ components. They can implement arbitrary logic in
+/// response to state transitions, but it's often better to think of Reactors as _channels_ that
 /// transmit the current state to other parts of your application.
 ///
-/// # Subscriber as a Data Channel
+/// # Reactor as a Data Channel
 /// For GUI applications, it is a good practice to have a separate thread dedicated to rendering.
-/// To help wiring up the Flux pattern in such multi-threaded scenarios, Subscriber is implemented
-/// for [`mpsc::Sender`](trait.Subscriber.html#impl-Subscriber<S>) out of the box.
+/// To help wiring up the Flux pattern in such multi-threaded scenarios, Reactor is implemented
+/// for [`mpsc::Sender`](trait.Reactor.html#impl-Reactor<S>) out of the box.
 ///
 /// ## Example
 /// ```rust
-/// use reducer::Subscriber;
+/// use reducer::Reactor;
 ///
 /// fn main() {
 ///     // Create a channel for the current state.
@@ -45,19 +45,19 @@ use std::fmt::Debug;
 ///     // Set-up the initial state.
 ///     let mut countdown = 10;
 ///
-///     // Remember that tx implements Subscriber.
-///     while let Ok(()) = tx.notify(&countdown) {
+///     // Remember that tx implements Reactor.
+///     while let Ok(()) = tx.react(&countdown) {
 ///         // Update the state.
 ///         countdown -= 1;
 ///     }
 /// }
 /// ```
-pub trait Subscriber<S> {
-    /// The type returned if the Subscriber fails to react to a state transition.
+pub trait Reactor<S> {
+    /// The type returned if the Reactor fails to react to a state transition.
     type Error: Debug;
 
     /// Reacts to a state transition or returns `Err(Self::Error)` in case of failure.
-    fn notify(&self, state: &S) -> Result<(), Self::Error>;
+    fn react(&self, state: &S) -> Result<(), Self::Error>;
 }
 
 #[cfg(test)]
@@ -68,17 +68,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn notify() {
-        let mock = MockSubscriber::default();
+    fn react() {
+        let mock = MockReactor::default();
 
         {
-            let sbc: &Subscriber<_, Error = _> = &mock;
+            let sbc: &Reactor<_, Error = _> = &mock;
 
-            assert!(sbc.notify(&5).is_ok());
-            assert!(sbc.notify(&1).is_ok());
-            assert!(sbc.notify(&3).is_ok());
+            assert!(sbc.react(&5).is_ok());
+            assert!(sbc.react(&1).is_ok());
+            assert!(sbc.react(&3).is_ok());
         }
 
-        assert_eq!(mock, MockSubscriber::new(vec![5, 1, 3]));
+        assert_eq!(mock, MockReactor::new(vec![5, 1, 3]));
     }
 }

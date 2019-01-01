@@ -25,7 +25,7 @@
 //! The _view_, often a \[G\]UI, [dispatches](struct.Store.html#method.dispatch)
 //! _actions_ on the [_store_](struct.Store.html), which in turn
 //! [updates](trait.Reducer.html#tymethod.reduce) its internal state and
-//! [notifies](trait.Subscriber.html#tymethod.notify) back the _view_.
+//! [notifies](trait.Reactor.html#tymethod.react) back the _view_.
 //!
 //! # Usage
 //! ```rust
@@ -57,17 +57,17 @@
 //!     }
 //! }
 //!
-//! struct Reactor;
+//! struct Printer;
 //!
-//! impl Subscriber<Calculator> for Reactor {
+//! impl Reactor<Calculator> for Printer {
 //!     type Error = io::Error;
-//!     fn notify(&self, state: &Calculator) -> io::Result<()> {
+//!     fn react(&self, state: &Calculator) -> io::Result<()> {
 //!         io::stdout().write_fmt(format_args!("{}\n", state.0))
 //!     }
 //! }
 //!
 //! fn main() {
-//!     let mut store = Store::new(Calculator(0), Reactor);
+//!     let mut store = Store::new(Calculator(0), Printer);
 //!
 //!     store.dispatch(Add(5)).unwrap(); // prints "5"
 //!     store.dispatch(Mul(3)).unwrap(); // prints "15"
@@ -76,10 +76,10 @@
 //! }
 //! ```
 
+mod reactor;
 mod reducer;
 mod store;
-mod subscriber;
 
+pub use reactor::*;
 pub use reducer::*;
 pub use store::*;
-pub use subscriber::*;

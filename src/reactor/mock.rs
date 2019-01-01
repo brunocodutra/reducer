@@ -1,15 +1,15 @@
 #![cfg(test)]
 
+use reactor::Reactor;
 use std::cell::RefCell;
-use subscriber::Subscriber;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct MockSubscriber<R> {
+pub struct MockReactor<R> {
     states: RefCell<Vec<R>>,
     result: Result<(), ()>,
 }
 
-impl<R> MockSubscriber<R> {
+impl<R> MockReactor<R> {
     pub fn new(states: Vec<R>) -> Self {
         Self {
             states: RefCell::new(states),
@@ -22,16 +22,16 @@ impl<R> MockSubscriber<R> {
     }
 }
 
-impl<R> Default for MockSubscriber<R> {
+impl<R> Default for MockReactor<R> {
     fn default() -> Self {
-        MockSubscriber::new(vec![])
+        MockReactor::new(vec![])
     }
 }
 
-impl<R: Clone> Subscriber<R> for MockSubscriber<R> {
+impl<R: Clone> Reactor<R> for MockReactor<R> {
     type Error = ();
 
-    fn notify(&self, state: &R) -> Result<(), Self::Error> {
+    fn react(&self, state: &R) -> Result<(), Self::Error> {
         self.result?;
         self.states.borrow_mut().push(state.clone());
         Ok(())
@@ -43,16 +43,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn notify() {
-        let mut sbc = MockSubscriber::default();
-        assert!(sbc.notify(&5).is_ok());
+    fn react() {
+        let mut sbc = MockReactor::default();
+        assert!(sbc.react(&5).is_ok());
 
         sbc.set_result(Err);
-        assert!(sbc.notify(&1).is_err());
+        assert!(sbc.react(&1).is_err());
 
         sbc.set_result(Ok);
-        assert!(sbc.notify(&3).is_ok());
+        assert!(sbc.react(&3).is_ok());
 
-        assert_eq!(sbc, MockSubscriber::new(vec![5, 3]));
+        assert_eq!(sbc, MockReactor::new(vec![5, 3]));
     }
 }

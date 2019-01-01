@@ -1,13 +1,13 @@
+use reactor::*;
 use std::sync::mpsc::{SendError, Sender};
-use subscriber::*;
 
-impl<S> Subscriber<S> for Sender<S>
+impl<S> Reactor<S> for Sender<S>
 where
     S: Clone,
 {
     type Error = SendError<S>;
 
-    fn notify(&self, state: &S) -> Result<(), Self::Error> {
+    fn react(&self, state: &S) -> Result<(), Self::Error> {
         self.send(state.clone())
     }
 }
@@ -18,12 +18,12 @@ pub(crate) mod tests {
     use std::sync::mpsc::channel;
 
     #[test]
-    fn sender() {
+    fn react() {
         let (tx, rx) = channel();
 
-        assert!(tx.notify(&5).is_ok());
-        assert!(tx.notify(&1).is_ok());
-        assert!(tx.notify(&3).is_ok());
+        assert!(tx.react(&5).is_ok());
+        assert!(tx.react(&1).is_ok());
+        assert!(tx.react(&3).is_ok());
 
         // hang up tx
         drop(tx);

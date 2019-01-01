@@ -249,7 +249,7 @@ where
     Ok(())
 }
 
-fn start_conrod<D>(dispatch: D) -> impl Subscriber<Arc<State>>
+fn start_conrod<D>(dispatch: D) -> impl Reactor<Arc<State>>
 where
     D: Fn(Action) -> SendResult + Send + 'static,
 {
@@ -346,10 +346,10 @@ fn main() {
     let dispatcher = move |action| tx.send(action);
 
     // Start the rendering thread.
-    let subscriber = start_conrod(dispatcher);
+    let reactor = start_conrod(dispatcher);
 
     // Create a Store to manage the state.
-    let mut store = Store::new(Arc::new(State::default()), subscriber);
+    let mut store = Store::new(Arc::new(State::default()), reactor);
 
     // Listen for actions.
     while let Ok(action) = rx.recv() {
