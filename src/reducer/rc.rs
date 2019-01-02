@@ -2,13 +2,11 @@ use reducer::*;
 use std::rc::Rc;
 
 /// Lazy copy-on-write for single-threaded applications.
-impl<R> Reducer for Rc<R>
+impl<A, R> Reducer<A> for Rc<R>
 where
-    R: Reducer + Clone + ?Sized,
+    R: Reducer<A> + Clone + ?Sized,
 {
-    type Action = R::Action;
-
-    fn reduce(&mut self, action: Self::Action) {
+    fn reduce(&mut self, action: A) {
         Rc::make_mut(self).reduce(action);
     }
 }

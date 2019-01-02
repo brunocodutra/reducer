@@ -29,7 +29,6 @@ use std::fmt::Debug;
 ///
 ///     // Start the rendering thread.
 ///     std::thread::spawn(move || {
-///         println!("Preparing to launch");
 ///         loop {
 ///             // Render the current state to the screen.
 ///             match rx.recv() {
@@ -45,7 +44,7 @@ use std::fmt::Debug;
 ///     // Set-up the initial state.
 ///     let mut countdown = 10;
 ///
-///     // Remember that tx implements Reactor.
+///     // Remember that tx is a Reactor.
 ///     while let Ok(()) = tx.react(&countdown) {
 ///         // Update the state.
 ///         countdown -= 1;

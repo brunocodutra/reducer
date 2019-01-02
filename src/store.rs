@@ -10,23 +10,26 @@ use std::mem;
 /// The only way to mutate the internal state managed by Store is by
 /// [dispatching](struct.Store.html#method.dispatch) actions on it.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct Store<R: Reducer, S: Reactor<R>> {
+pub struct Store<R, S: Reactor<R>> {
     state: R,
     reactor: S,
 }
 
-impl<R: Reducer, S: Reactor<R>> Store<R, S> {
+impl<R, S: Reactor<R>> Store<R, S> {
     /// Constructs the store given the initial state and a reactor.
     pub fn new(state: R, reactor: S) -> Self {
         Self { state, reactor }
     }
 
-    /// Updates the state via [`<R as Reducer>::reduce`](trait.Reducer.html#tymethod.reduce) and
+    /// Updates the state via [`<R as Reducer<A>>::reduce`](trait.Reducer.html#tymethod.reduce) and
     /// notifies the reactor, returning the result of calling
     /// [`<S as Reactor<R>>::react`](trait.Reactor.html#tymethod.react) with a reference to the
     /// new state.
-    pub fn dispatch(&mut self, action: impl Into<R::Action>) -> Result<(), S::Error> {
-        self.state.reduce(action.into());
+    pub fn dispatch<A>(&mut self, action: A) -> Result<(), S::Error>
+    where
+        R: Reducer<A>,
+    {
+        self.state.reduce(action);
         self.reactor.react(&self.state)
     }
 
@@ -75,10 +78,10 @@ mod tests {
         assert!(store.dispatch(3).is_ok());
 
         store.reactor.set_result(Err);
-        assert!(store.dispatch(false).is_err());
+        assert!(store.dispatch(0).is_err());
         store.reactor.set_result(Ok);
 
-        assert_eq!(store.state, MockReducer::new(vec![5, 1, 3, false.into()]));
+        assert_eq!(store.state, MockReducer::new(vec![5, 1, 3, 0]));
 
         assert_eq!(
             store.reactor,

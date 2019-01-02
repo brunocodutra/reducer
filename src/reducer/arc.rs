@@ -5,13 +5,11 @@ use std::sync::Arc;
 ///
 /// Helps avoiding cloning the entire state when it needs to be sent to a different thread
 /// (e.g to the rendering thread of a GUI).
-impl<R> Reducer for Arc<R>
+impl<A, R> Reducer<A> for Arc<R>
 where
-    R: Reducer + Clone + ?Sized,
+    R: Reducer<A> + Clone + ?Sized,
 {
-    type Action = R::Action;
-
-    fn reduce(&mut self, action: Self::Action) {
+    fn reduce(&mut self, action: A) {
         Arc::make_mut(self).reduce(action);
     }
 }

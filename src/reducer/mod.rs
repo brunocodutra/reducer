@@ -26,35 +26,29 @@ mod tuple;
 /// struct ShoppingCart { /* ... */ }
 ///
 /// #[derive(Clone)]
-/// enum Action {
-///     AddToCart(/* ... */),
-///     // ...
-/// }
+/// struct AddToCart( /* ... */ );
 ///
-/// impl Reducer for ProductListing {
-///     type Action = Action;
-///     fn reduce(&mut self, action: Self::Action) {
+/// impl Reducer<AddToCart> for ProductListing {
+///     fn reduce(&mut self, action: AddToCart) {
 ///         // ...
 ///     }
 /// }
 ///
-/// impl Reducer for ShoppingCart {
-///     type Action = Action;
-///     fn reduce(&mut self, action: Self::Action) {
+/// impl Reducer<AddToCart> for ShoppingCart {
+///     fn reduce(&mut self, action: AddToCart) {
 ///         // ...
 ///     }
 /// }
 ///
-/// let mut shop = (ProductListing { }, ShoppingCart { });
+/// let products = ProductListing { /* ... */ };
+/// let cart = ShoppingCart { /* ... */ };
+/// let mut shop = (products, cart);
 ///
-/// // `shop` itself implements Reducer
-/// shop.reduce(Action::AddToCart( ));
+/// // `shop` itself implements Reducer<AddToCart>
+/// shop.reduce(AddToCart( /* ... */ ));
 /// ```
 
-pub trait Reducer: 'static {
-    /// The type that encodes all possible state transitions.
-    type Action;
-
+pub trait Reducer<A>: 'static {
     /// Implements the transition given the current state and an action.
     ///
     /// This method is expected to have no side effects and must never fail.
@@ -65,27 +59,25 @@ pub trait Reducer: 'static {
     /// ```rust
     /// use reducer::Reducer;
     ///
+    /// #[derive(Debug)]
     /// struct Todos(Vec<String>);
     ///
-    /// enum Action {
-    ///     Create(String),
-    ///     Remove(usize),
+    /// // Actions
+    /// struct Create(String);
+    /// struct Remove(usize);
+    ///
+    /// impl Reducer<Create> for Todos {
+    ///     fn reduce(&mut self, Create(todo): Create) {
+    ///         self.0.push(todo);
+    ///     }
     /// }
     ///
-    /// use Action::*;
-    ///
-    /// impl Reducer for Todos {
-    ///     type Action = Action;
-    ///     fn reduce(&mut self, action: Self::Action) {
-    ///         match action {
-    ///             Create(todo) => self.0.push(todo),
-    ///             Remove(i) if i < self.0.len() => {
-    ///                 self.0.remove(i);
-    ///             },
-    ///             _ => {
-    ///                 // Illegal transition,
-    ///                 // leave the state unchanged.
-    ///             }
+    /// impl Reducer<Remove> for Todos {
+    ///     fn reduce(&mut self, Remove(i): Remove) {
+    ///         if i < self.0.len() {
+    ///             self.0.remove(i);
+    ///         } else {
+    ///             // Illegal transition, leave the state unchanged.
     ///         }
     ///     }
     /// }
@@ -94,19 +86,19 @@ pub trait Reducer: 'static {
     ///     let mut todos = Todos(vec![]);
     ///
     ///     todos.reduce(Create("Buy milk".to_string()));
-    ///     // => ["Buy milk"]
+    ///     println!("{:?}", todos); // ["Buy milk"]
     ///
     ///     todos.reduce(Create("Learn Reducer".to_string()));
-    ///     // => ["Buy milk", "Learn Reducer"]
+    ///     println!("{:?}", todos); // ["Buy milk", "Learn Reducer"]
     ///
-    ///     todos.reduce(Remove(42));
-    ///     // => ["Buy milk", "Learn Reducer"]
+    ///     todos.reduce(Remove(42)); // out of bounds
+    ///     println!("{:?}", todos); // ["Buy milk", "Learn Reducer"]
     ///
     ///     todos.reduce(Remove(0));
-    ///     // => ["Learn Reducer"]
+    ///     println!("{:?}", todos); // ["Learn Reducer"]
     /// }
     /// ```
-    fn reduce(&mut self, action: Self::Action);
+    fn reduce(&mut self, action: A);
 }
 
 #[cfg(test)]
@@ -121,7 +113,7 @@ mod tests {
         let mut mock = MockReducer::default();
 
         {
-            let state: &mut Reducer<Action = _> = &mut mock;
+            let state: &mut Reducer<_> = &mut mock;
 
             state.reduce(5);
             state.reduce(1);

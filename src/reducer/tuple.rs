@@ -19,15 +19,13 @@ macro_rules! impl_reducer_for_tuples {
 
     ( $head:ident $(, $tail:ident )* $(,)* ) => {
         document_reducer_for_tuples!(($head $(, $tail )*),
-            impl<A, $head, $( $tail, )*> Reducer for ($head, $( $tail, )*)
+            impl<A, $head, $( $tail, )*> Reducer<A> for ($head, $( $tail, )*)
             where
                 A: Clone,
-                $head: Reducer<Action = A>,
-                $( $tail: Reducer<Action = A>, )*
+                $head: Reducer<A>,
+                $( $tail: Reducer<A>, )*
             {
-                type Action = A;
-
-                fn reduce(&mut self, action: Self::Action) {
+                fn reduce(&mut self, action: A) {
                     let ($head, $( $tail, )*) = self;
                     $head.reduce(action.clone());
                     $( $tail.reduce(action.clone()); )*
@@ -54,9 +52,7 @@ mod tests {
                 inner: MockReducer<A>,
             }
 
-            impl<A: 'static + Clone> Reducer for $head<A> {
-                type Action = A;
-
+            impl<A: 'static + Clone> Reducer<A> for $head<A> {
                 fn reduce(&mut self, action: A) {
                     self.inner.reduce(action);
                 }

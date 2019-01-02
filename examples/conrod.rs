@@ -54,11 +54,9 @@ struct State {
     filter: View,
 }
 
-impl Reducer for State {
-    type Action = Action;
-
+impl Reducer<Action> for State {
     // The entire business logic of our app goes here.
-    fn reduce(&mut self, action: Self::Action) {
+    fn reduce(&mut self, action: Action) {
         match action {
             Action::AddTodo => {
                 if !self.input.is_empty() {

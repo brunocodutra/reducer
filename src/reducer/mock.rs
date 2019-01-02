@@ -13,10 +13,8 @@ impl<A> MockReducer<A> {
     }
 }
 
-impl<A> Reducer for MockReducer<A> {
-    type Action = A;
-
-    fn reduce(&mut self, action: Self::Action) {
+impl<A> Reducer<A> for MockReducer<A> {
+    fn reduce(&mut self, action: A) {
         self.actions.push(action);
     }
 }

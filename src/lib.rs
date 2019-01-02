@@ -34,32 +34,43 @@
 //! use reducer::*;
 //! use std::io::{self, Write};
 //!
+//! // The state of your app.
 //! struct Calculator(i32);
 //!
-//! enum Operation {
-//!     Add(i32),
-//!     Sub(i32),
-//!     Mul(i32),
-//!     Div(i32),
-//! }
+//! // Actions the user can trigger.
+//! struct Add(i32);
+//! struct Sub(i32);
+//! struct Mul(i32);
+//! struct Div(i32);
 //!
-//! use Operation::*;
-//!
-//! impl Reducer for Calculator {
-//!     type Action = Operation;
-//!     fn reduce(&mut self, op: Self::Action) {
-//!         match op {
-//!             Add(x) => self.0 += x,
-//!             Sub(x) => self.0 -= x,
-//!             Mul(x) => self.0 *= x,
-//!             Div(x) => self.0 /= x,
-//!         }
+//! impl Reducer<Add> for Calculator {
+//!     fn reduce(&mut self, Add(x): Add) {
+//!         self.0 += x;
 //!     }
 //! }
 //!
-//! struct Printer;
+//! impl Reducer<Sub> for Calculator {
+//!     fn reduce(&mut self, Sub(x): Sub) {
+//!         self.0 -= x;
+//!     }
+//! }
 //!
-//! impl Reactor<Calculator> for Printer {
+//! impl Reducer<Mul> for Calculator {
+//!     fn reduce(&mut self, Mul(x): Mul) {
+//!         self.0 *= x;
+//!     }
+//! }
+//!
+//! impl Reducer<Div> for Calculator {
+//!     fn reduce(&mut self, Div(x): Div) {
+//!         self.0 /= x;
+//!     }
+//! }
+//!
+//! // The user interface.
+//! struct Ui;
+//!
+//! impl Reactor<Calculator> for Ui {
 //!     type Error = io::Error;
 //!     fn react(&self, state: &Calculator) -> io::Result<()> {
 //!         io::stdout().write_fmt(format_args!("{}\n", state.0))
@@ -67,12 +78,12 @@
 //! }
 //!
 //! fn main() {
-//!     let mut store = Store::new(Calculator(0), Printer);
+//!     let mut store = Store::new(Calculator(0), Ui);
 //!
-//!     store.dispatch(Add(5)).unwrap(); // prints "5"
-//!     store.dispatch(Mul(3)).unwrap(); // prints "15"
-//!     store.dispatch(Sub(1)).unwrap(); // prints "14"
-//!     store.dispatch(Div(7)).unwrap(); // prints "2"
+//!     store.dispatch(Add(5)).unwrap(); // displays "5"
+//!     store.dispatch(Mul(3)).unwrap(); // displays "15"
+//!     store.dispatch(Sub(1)).unwrap(); // displays "14"
+//!     store.dispatch(Div(7)).unwrap(); // displays "2"
 //! }
 //! ```
 
