@@ -25,7 +25,7 @@ impl<R, S: Reactor<R>> Store<R, S> {
     /// notifies the reactor, returning the result of calling
     /// [`<S as Reactor<R>>::react`](trait.Reactor.html#tymethod.react) with a reference to the
     /// new state.
-    pub fn dispatch<A>(&mut self, action: A) -> Result<(), S::Error>
+    pub fn dispatch<A>(&mut self, action: A) -> S::Output
     where
         R: Reducer<A>,
     {
@@ -34,7 +34,10 @@ impl<R, S: Reactor<R>> Store<R, S> {
     }
 
     /// Replaces the reactor and returns the previous one.
-    pub fn subscribe(&mut self, reactor: impl Into<S>) -> S {
+    pub fn subscribe<T>(&mut self, reactor: T) -> S
+    where
+        T: Into<S>,
+    {
         mem::replace(&mut self.reactor, reactor.into())
     }
 }
@@ -47,7 +50,7 @@ mod tests {
 
     #[test]
     fn default() {
-        let store = Store::<MockReducer<()>, MockReactor<_>>::default();
+        let store = Store::<MockReducer<()>, MockReactor>::default();
 
         assert_eq!(store.state, MockReducer::default());
         assert_eq!(store.reactor, MockReactor::default());
@@ -56,7 +59,7 @@ mod tests {
     #[test]
     fn new() {
         let state = MockReducer::new(vec![42]);
-        let reactor = MockReactor::new(vec![state.clone()]);
+        let reactor = MockReactor;
         let store = Store::new(state.clone(), &reactor);
 
         assert_eq!(store.state, state);
@@ -65,55 +68,29 @@ mod tests {
 
     #[test]
     fn clone() {
-        let store = Store::new(MockReducer::<()>::default(), MockReactor::default());
+        let store = Store::new(MockReducer::<()>::default(), MockReactor);
         assert_eq!(store, store.clone());
     }
 
     #[test]
     fn dispatch() {
-        let mut store = Store::<MockReducer<_>, MockReactor<_>>::default();
+        let mut store = Store::<MockReducer<_>, MockReactor>::default();
 
-        assert!(store.dispatch(5).is_ok());
-        assert!(store.dispatch(1).is_ok());
-        assert!(store.dispatch(3).is_ok());
-
-        store.reactor.set_result(Err);
-        assert!(store.dispatch(0).is_err());
-        store.reactor.set_result(Ok);
-
-        assert_eq!(store.state, MockReducer::new(vec![5, 1, 3, 0]));
-
-        assert_eq!(
-            store.reactor,
-            MockReactor::new(vec![
-                MockReducer::new(vec![5]),
-                MockReducer::new(vec![5, 1]),
-                MockReducer::new(vec![5, 1, 3]),
-            ]),
-        );
+        assert_eq!(store.dispatch(5), MockReducer::new(vec![5]));
+        assert_eq!(store.dispatch(1), MockReducer::new(vec![5, 1]));
+        assert_eq!(store.dispatch(3), MockReducer::new(vec![5, 1, 3]));
     }
 
     #[test]
     fn subscribe() {
-        let mut store = Store::new(MockReducer::default(), None);
+        let mut store: Store<_, Option<MockReactor>> = Store::new(MockReducer::default(), None);
 
-        assert!(store.dispatch(0).is_ok());
+        assert_eq!(store.dispatch(0), None);
 
-        store.subscribe(Some(MockReactor::default()));
+        store.subscribe(Some(MockReactor));
 
-        assert!(store.dispatch(5).is_ok());
-        assert!(store.dispatch(1).is_ok());
-        assert!(store.dispatch(3).is_ok());
-
-        assert_eq!(store.state, MockReducer::new(vec![0, 5, 1, 3]));
-
-        assert_eq!(
-            store.reactor,
-            Some(MockReactor::new(vec![
-                MockReducer::new(vec![0, 5]),
-                MockReducer::new(vec![0, 5, 1]),
-                MockReducer::new(vec![0, 5, 1, 3]),
-            ])),
-        );
+        assert_eq!(store.dispatch(5), Some(MockReducer::new(vec![0, 5])));
+        assert_eq!(store.dispatch(1), Some(MockReducer::new(vec![0, 5, 1])));
+        assert_eq!(store.dispatch(3), Some(MockReducer::new(vec![0, 5, 1, 3])));
     }
 }

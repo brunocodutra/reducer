@@ -19,19 +19,16 @@ macro_rules! impl_reactor_for_tuples {
 
     ( $head:ident $(, $tail:ident )* $(,)* ) => {
         document_reactor_for_tuples!(($head $(, $tail )*),
-            impl<R, E, $head, $( $tail, )*> Reactor<R> for ($head, $( $tail, )*)
+            impl<S, $head, $( $tail, )*> Reactor<S> for ($head, $( $tail, )*)
             where
-                E: Debug,
-                $head: Reactor<R, Error = E>,
-                $( $tail: Reactor<R, Error = E>, )*
+                $head: Reactor<S>,
+                $( $tail: Reactor<S>, )*
             {
-                type Error = E;
+                type Output = ($head::Output, $( $tail::Output, )*);
 
-                fn react(&self, state: &R) -> Result<(), Self::Error> {
+                fn react(&self, state: &S) -> Self::Output {
                     let ($head, $( $tail, )*) = self;
-                    $head.react(state)?;
-                    $( $tail.react(state)?; )*
-                    Ok(())
+                    ($head.react(state), $( $tail.react(state), )*)
                 }
             }
         );
@@ -51,30 +48,31 @@ mod tests {
 
         ( $head:ident $(, $tail:ident )* $(,)* ) => {
             #[derive(Debug, Default, Clone, Eq, PartialEq)]
-            struct $head<R: Clone> {
-                inner: MockReactor<R>,
+            struct $head<S: Clone> {
+                value: S,
             }
 
-            impl<R: Clone> Reactor<R> for $head<R> {
-                type Error = <MockReactor<R> as Reactor<R>>::Error;
+            impl<S: Clone> $head<S> {
+                fn new(value: S) -> Self {
+                    $head { value }
+                }
+            }
 
-                fn react(&self, state: &R) -> Result<(), Self::Error> {
-                    self.inner.react(state)
+            impl<S: Clone> Reactor<S> for $head<S> {
+                type Output = Self;
+
+                fn react(&self, state: &S) -> Self::Output {
+                    $head::new(state.clone())
                 }
             }
 
             #[test]
             fn $head() {
-                let sbc = ($head::default(), $( $tail::default(), )*);
+                let reactor = ($head::default(), $( $tail::default(), )*);
 
-                assert!(sbc.react(&5).is_ok());
-                assert!(sbc.react(&1).is_ok());
-                assert!(sbc.react(&3).is_ok());
-
-                let ($head, $( $tail, )*) = sbc;
-
-                assert_eq!($head.inner, MockReactor::new(vec![5, 1, 3]));
-                $( assert_eq!($tail.inner, MockReactor::new(vec![5, 1, 3])); )*
+                assert_eq!(reactor.react(&5), ($head::new(5), $( $tail::new(5), )*));
+                assert_eq!(reactor.react(&1), ($head::new(1), $( $tail::new(1), )*));
+                assert_eq!(reactor.react(&3), ($head::new(3), $( $tail::new(3), )*));
             }
 
             test_reactor_for_tuples!($( $tail, )*);

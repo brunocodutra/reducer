@@ -5,9 +5,9 @@ impl<S> Reactor<S> for Sender<S>
 where
     S: Clone,
 {
-    type Error = SendError<S>;
+    type Output = Result<(), SendError<S>>;
 
-    fn react(&self, state: &S) -> Result<(), Self::Error> {
+    fn react(&self, state: &S) -> Self::Output {
         self.send(state.clone())
     }
 }

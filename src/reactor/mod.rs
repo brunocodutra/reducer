@@ -6,8 +6,6 @@ mod sender;
 mod slice;
 mod tuple;
 
-use std::fmt::Debug;
-
 /// Trait for types that react to state transitions.
 ///
 /// Reactors connect the _state_ to the _view_ components. They can implement arbitrary logic in
@@ -52,11 +50,27 @@ use std::fmt::Debug;
 /// }
 /// ```
 pub trait Reactor<S> {
-    /// The type returned if the Reactor fails to react to a state transition.
-    type Error: Debug;
+    /// The result of reacting to `S`.
+    type Output;
 
-    /// Reacts to a state transition or returns `Err(Self::Error)` in case of failure.
-    fn react(&self, state: &S) -> Result<(), Self::Error>;
+    /// Reacts to `S` and produces `Self::Output`.
+    ///
+    /// # Example
+    /// ```rust
+    /// use reducer::*;
+    /// use std::fmt::Debug;
+    /// use std::io::{self, Write};
+    ///
+    /// struct Console;
+    ///
+    /// impl<T: Debug> Reactor<T> for Console {
+    ///     type Output = io::Result<()>;
+    ///     fn react(&self, state: &T) -> Self::Output {
+    ///         io::stdout().write_fmt(format_args!("{:?}\n", state))
+    ///     }
+    /// }
+    /// ```
+    fn react(&self, state: &S) -> Self::Output;
 }
 
 #[cfg(test)]
@@ -68,16 +82,10 @@ mod tests {
 
     #[test]
     fn react() {
-        let mock = MockReactor::default();
+        let reactor: &Reactor<_, Output = _> = &MockReactor;
 
-        {
-            let sbc: &Reactor<_, Error = _> = &mock;
-
-            assert!(sbc.react(&5).is_ok());
-            assert!(sbc.react(&1).is_ok());
-            assert!(sbc.react(&3).is_ok());
-        }
-
-        assert_eq!(mock, MockReactor::new(vec![5, 1, 3]));
+        assert_eq!(reactor.react(&5), 5);
+        assert_eq!(reactor.react(&1), 1);
+        assert_eq!(reactor.react(&3), 3);
     }
 }

@@ -247,7 +247,9 @@ where
     Ok(())
 }
 
-fn start_conrod<D>(dispatch: D) -> impl Reactor<Arc<State>>
+fn start_conrod<D>(
+    dispatch: D,
+) -> impl Reactor<Arc<State>, Output = Result<(), SendError<Arc<State>>>>
 where
     D: Fn(Action) -> SendResult + Send + 'static,
 {
@@ -351,6 +353,8 @@ fn main() {
 
     // Listen for actions.
     while let Ok(action) = rx.recv() {
-        store.dispatch(action).unwrap();
+        if store.dispatch(action).is_err() {
+            break;
+        }
     }
 }

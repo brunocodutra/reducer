@@ -1,12 +1,12 @@
 use reactor::*;
 
-impl<'a, R, T> Reactor<R> for &'a T
+impl<'a, S, T> Reactor<S> for &'a T
 where
-    T: Reactor<R> + ?Sized,
+    T: Reactor<S> + ?Sized,
 {
-    type Error = T::Error;
+    type Output = T::Output;
 
-    fn react(&self, state: &R) -> Result<(), Self::Error> {
+    fn react(&self, state: &S) -> Self::Output {
         (*self).react(state)
     }
 }
@@ -17,16 +17,11 @@ mod tests {
 
     #[test]
     fn react() {
-        let mock = &MockReactor::default();
+        let reactor = &MockReactor;
+        let reactor = &reactor;
 
-        {
-            let sbc: &Reactor<_, Error = _> = &mock;
-
-            assert!(sbc.react(&5).is_ok());
-            assert!(sbc.react(&1).is_ok());
-            assert!(sbc.react(&3).is_ok());
-        }
-
-        assert_eq!(mock, &MockReactor::new(vec![5, 1, 3]));
+        assert_eq!(reactor.react(&5), 5);
+        assert_eq!(reactor.react(&1), 1);
+        assert_eq!(reactor.react(&3), 3);
     }
 }

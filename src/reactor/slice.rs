@@ -1,18 +1,17 @@
 use reactor::*;
 
 /// Notifies all reactors in the slice in order.
-impl<R, T> Reactor<R> for [T]
+impl<S, T> Reactor<S> for [T]
 where
-    T: Reactor<R>,
+    T: Reactor<S>,
 {
-    type Error = T::Error;
+    type Output = Box<[T::Output]>;
 
-    fn react(&self, state: &R) -> Result<(), Self::Error> {
-        for sbc in self {
-            sbc.react(state)?;
-        }
-
-        Ok(())
+    fn react(&self, state: &S) -> Self::Output {
+        self.iter()
+            .map(|r| r.react(state))
+            .collect::<Vec<T::Output>>()
+            .into_boxed_slice()
     }
 }
 
@@ -22,18 +21,10 @@ mod tests {
 
     #[test]
     fn react() {
-        let sbc: &[MockReactor<_>] = &[Default::default(), Default::default()];
+        let reactor: &[MockReactor] = &[MockReactor, MockReactor, MockReactor];
 
-        assert!(sbc.react(&5).is_ok());
-        assert!(sbc.react(&1).is_ok());
-        assert!(sbc.react(&3).is_ok());
-
-        assert_eq!(
-            sbc,
-            [
-                MockReactor::new(vec![5, 1, 3]),
-                MockReactor::new(vec![5, 1, 3])
-            ]
-        );
+        assert_eq!(reactor.react(&5), vec![5, 5, 5].into_boxed_slice());
+        assert_eq!(reactor.react(&1), vec![1, 1, 1].into_boxed_slice());
+        assert_eq!(reactor.react(&3), vec![3, 3, 3].into_boxed_slice());
     }
 }

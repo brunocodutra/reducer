@@ -68,17 +68,17 @@
 //! }
 //!
 //! // The user interface.
-//! struct Ui;
+//! struct Display;
 //!
-//! impl Reactor<Calculator> for Ui {
-//!     type Error = io::Error;
-//!     fn react(&self, state: &Calculator) -> io::Result<()> {
+//! impl Reactor<Calculator> for Display {
+//!     type Output = io::Result<()>;
+//!     fn react(&self, state: &Calculator) -> Self::Output {
 //!         io::stdout().write_fmt(format_args!("{}\n", state.0))
 //!     }
 //! }
 //!
 //! fn main() {
-//!     let mut store = Store::new(Calculator(0), Ui);
+//!     let mut store = Store::new(Calculator(0), Display);
 //!
 //!     store.dispatch(Add(5)).unwrap(); // displays "5"
 //!     store.dispatch(Mul(3)).unwrap(); // displays "15"
