@@ -19,7 +19,7 @@ mod tuple;
 ///
 /// ## Example
 /// ```rust
-/// use reducer::Reactor;
+/// use reducer::*;
 ///
 /// fn main() {
 ///     // Create a channel for the current state.
@@ -27,26 +27,32 @@ mod tuple;
 ///
 ///     // Start the rendering thread.
 ///     std::thread::spawn(move || {
-///         loop {
+///         while let Ok(Countdown(t)) = rx.recv() {
 ///             // Render the current state to the screen.
-///             match rx.recv() {
-///                 Ok(10) => println!("T-10 seconds - Activate main engine hydrogen burnoff system."),
-///                 Ok(6) => println!("T-6 seconds - Main engine start."),
-///                 Ok(0) => println!("T-0 seconds - Solid rocket booster ignition and liftoff!"),
-///                 Ok(countdown) if countdown > 0 => println!("T-{} seconds", countdown),
+///             match t {
+///                 6 => println!("T-6 seconds - Main engine start."),
+///                 0 => println!("T-0 seconds - Solid rocket booster ignition and liftoff!"),
+///                 t if t > 0 => println!("T-{} seconds", t),
 ///                 _ => break,
 ///             }
 ///         }
 ///     });
 ///
-///     // Set-up the initial state.
-///     let mut countdown = 10;
+///     #[derive(Clone)]
+///     struct Countdown(i32);
 ///
-///     // Remember that tx is a Reactor.
-///     while let Ok(()) = tx.react(&countdown) {
-///         // Update the state.
-///         countdown -= 1;
+///     struct Tick;
+///     impl Reducer<Tick> for Countdown {
+///         fn reduce(&mut self, _: Tick) {
+///             self.0 -= 1;
+///         }
 ///     }
+///
+///     // Set-up the initial state.
+///     let mut store = Store::new(Countdown(10), tx);
+///
+///     // Count down to liftoff!
+///     while let Ok(()) = store.dispatch(Tick) {}
 /// }
 /// ```
 pub trait Reactor<S> {

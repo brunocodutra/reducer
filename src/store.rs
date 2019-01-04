@@ -6,7 +6,6 @@ use std::mem;
 ///
 /// Store promotes reactive programming by encapsulating the state of your application and
 /// notifying a [reactor](struct.Store.html#method.subscribe) upon every change.
-///
 /// The only way to mutate the internal state managed by Store is by
 /// [dispatching](struct.Store.html#method.dispatch) actions on it.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
