@@ -16,7 +16,7 @@ use glutin::WindowEvent::CloseRequested;
 use glutin::{ContextBuilder, EventsLoop, WindowBuilder};
 use reducer::*;
 use std::mem;
-use std::sync::mpsc::{channel, SendError};
+use std::sync::mpsc::{channel, Receiver, SendError, Sender};
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -111,10 +111,7 @@ impl State {
 widget_ids!(struct Ids { control, body, footer, button, input, list, all, done, pending });
 
 // Renders the widgets given the current state.
-fn render<D>(ui: &mut UiCell, ids: &Ids, state: &State, dispatch: &D) -> SendResult
-where
-    D: Fn(Action) -> SendResult + Send + 'static,
-{
+fn render(ui: &mut UiCell, ids: &Ids, state: &State, dispatcher: Sender<Action>) -> SendResult {
     // Setup the layout.
     widget::Canvas::new()
         .wh_of(ui.window)
@@ -151,7 +148,7 @@ where
         .label("Add Todo")
         .set(ids.button, ui)
     {
-        dispatch(Action::AddTodo)?
+        dispatcher.send(Action::AddTodo)?
     }
 
     // Render text input.
@@ -162,7 +159,7 @@ where
         .set(ids.input, ui)
     {
         if let widget::text_box::Event::Update(text) = input {
-            dispatch(Action::EditTodo(text))?
+            dispatcher.send(Action::EditTodo(text))?
         }
     }
 
@@ -184,7 +181,7 @@ where
             .color(color::LIGHT_BLUE);
 
         for _ in item.set(toggle, ui) {
-            dispatch(Action::ToggleTodo(idx))?
+            dispatcher.send(Action::ToggleTodo(idx))?
         }
     }
 
@@ -207,7 +204,7 @@ where
     }
 
     for _ in all.set(ids.all, ui) {
-        dispatch(Action::FilterTodos(View::All))?
+        dispatcher.send(Action::FilterTodos(View::All))?
     }
 
     // Render button to show only completed todos.
@@ -224,7 +221,7 @@ where
     }
 
     for _ in done.set(ids.done, ui) {
-        dispatch(Action::FilterTodos(View::Done))?
+        dispatcher.send(Action::FilterTodos(View::Done))?
     }
 
     // Render button to show only pending todos.
@@ -241,120 +238,106 @@ where
     }
 
     for _ in pending.set(ids.pending, ui) {
-        dispatch(Action::FilterTodos(View::Pending))?
+        dispatcher.send(Action::FilterTodos(View::Pending))?
     }
 
     Ok(())
 }
 
-fn start_conrod<D>(
-    dispatch: D,
-) -> impl Reactor<Arc<State>, Output = Result<(), SendError<Arc<State>>>>
-where
-    D: Fn(Action) -> SendResult + Send + 'static,
-{
-    // Create a channel to synchronize states.
-    let (tx, rx) = channel();
+fn run_conrod(dispatcher: Sender<Action>, states: Receiver<Arc<State>>) -> SendResult {
+    const WIDTH: u32 = 400;
+    const HEIGHT: u32 = 500;
 
-    thread::spawn(move || {
-        const WIDTH: u32 = 400;
-        const HEIGHT: u32 = 500;
+    let mut events_loop = EventsLoop::new();
+    let context = ContextBuilder::new();
+    let window = WindowBuilder::new()
+        .with_dimensions((WIDTH, HEIGHT).into())
+        .with_min_dimensions((WIDTH, HEIGHT).into())
+        .with_title("Reducer <3 Conrod");
 
-        let mut events_loop = EventsLoop::new();
-        let context = ContextBuilder::new();
-        let window = WindowBuilder::new()
-            .with_dimensions((WIDTH, HEIGHT).into())
-            .with_min_dimensions((WIDTH, HEIGHT).into())
-            .with_title("Reducer <3 Conrod");
+    let display = Display::new(window, context, &events_loop).unwrap();
+    let mut ui = UiBuilder::new([f64::from(WIDTH), f64::from(HEIGHT)]).build();
 
-        let display = Display::new(window, context, &events_loop).unwrap();
-        let mut ui = UiBuilder::new([f64::from(WIDTH), f64::from(HEIGHT)]).build();
+    ui.fonts.insert(
+        FontCollection::from_bytes(ttf_noto_sans::REGULAR)
+            .unwrap()
+            .into_font()
+            .unwrap(),
+    );
 
-        ui.fonts.insert(
-            FontCollection::from_bytes(ttf_noto_sans::REGULAR)
-                .unwrap()
-                .into_font()
-                .unwrap(),
-        );
+    let ids = Ids::new(ui.widget_id_generator());
+    let mut renderer = Renderer::new(&display).unwrap();
+    let image_map = image::Map::<texture::Texture2d>::new();
 
-        let ids = Ids::new(ui.widget_id_generator());
-        let mut renderer = Renderer::new(&display).unwrap();
-        let image_map = image::Map::<texture::Texture2d>::new();
+    // Keep a copy of the current state.
+    let mut state = Arc::new(State::default());
 
-        // Keep a copy of the current state.
-        let mut state = Arc::new(State::default());
+    // Point in time of the last refresh.
+    let mut rerendered_at = Instant::now();
 
-        // Point in time of the last refresh.
-        let mut rerendered_at = Instant::now();
+    loop {
+        let mut exit = false;
 
-        'render: loop {
-            let mut exit = false;
-
-            // Rerender at 60fps.
-            while Instant::now().duration_since(rerendered_at) < Duration::from_millis(16) {
-                events_loop.poll_events(|event| {
-                    if let WindowEvent { ref event, .. } = event {
-                        if let CloseRequested = event {
-                            exit = true;
-                        }
+        // Rerender at 60fps.
+        while Instant::now().duration_since(rerendered_at) < Duration::from_millis(16) {
+            events_loop.poll_events(|event| {
+                if let WindowEvent { ref event, .. } = event {
+                    if let CloseRequested = event {
+                        exit = true;
                     }
+                }
 
-                    if let Some(input) = winit::convert_event(event, &display) {
-                        ui.handle_event(input);
-                    }
-                });
+                if let Some(input) = winit::convert_event(event, &display) {
+                    ui.handle_event(input);
+                }
+            });
 
-                // Avoid spinning too fast.
-                thread::sleep(Duration::from_millis(1));
-            }
-
-            rerendered_at = Instant::now();
-
-            if exit {
-                break 'render;
-            }
-
-            // Synchronize the state.
-            if let Some(next) = rx.try_iter().last() {
-                state = next;
-            }
-
-            // Render widgets given the current state.
-            if render(&mut ui.set_widgets(), &ids, &state, &dispatch).is_err() {
-                break 'render;
-            }
-
-            // Draw the `Ui` if it has changed.
-            if let Some(primitives) = ui.draw_if_changed() {
-                renderer.fill(&display, primitives, &image_map);
-                let mut target = display.draw();
-                target.clear_color(0.0, 0.0, 0.0, 0.0);
-                renderer.draw(&display, &mut target, &image_map).unwrap();
-                target.finish().unwrap();
-            }
+            // Avoid spinning too fast.
+            thread::sleep(Duration::from_millis(1));
         }
-    });
 
-    tx
+        rerendered_at = Instant::now();
+
+        if exit {
+            return Ok(());
+        }
+
+        // Synchronize the state.
+        if let Some(next) = states.try_iter().last() {
+            state = next;
+        }
+
+        // Render widgets given the current state.
+        render(&mut ui.set_widgets(), &ids, &state, dispatcher.clone())?;
+
+        // Draw the `Ui` if it has changed.
+        if let Some(primitives) = ui.draw_if_changed() {
+            renderer.fill(&display, primitives, &image_map);
+            let mut target = display.draw();
+            target.clear_color(0.0, 0.0, 0.0, 0.0);
+            renderer.draw(&display, &mut target, &image_map).unwrap();
+            target.finish().unwrap();
+        }
+    }
 }
 
 fn main() {
     // Create a channel to synchronize actions.
-    let (tx, rx) = channel();
+    let (dispatcher, actions) = channel();
 
-    // A dispatcher makes it possible for the rendering thread to send actions to the store.
-    let dispatcher = move |action| tx.send(action);
+    // Create a channel to synchronize states.
+    let (reactor, states) = channel();
 
-    // Start the rendering thread.
-    let reactor = start_conrod(dispatcher);
+    // Run Reducer on a separate thread
+    thread::spawn(move || {
+        // Create a Store to manage the state.
+        let mut store = Store::new(Arc::new(State::default()), reactor);
 
-    // Create a Store to manage the state.
-    let mut store = Store::new(Arc::new(State::default()), reactor);
-
-    // Listen for actions.
-    while let Ok(action) = rx.recv() {
-        if store.dispatch(action).is_err() {
-            break;
+        // Listen for actions.
+        while let Ok(action) = actions.recv() {
+            store.dispatch(action).unwrap();
         }
-    }
+    });
+
+    run_conrod(dispatcher, states).unwrap();
 }

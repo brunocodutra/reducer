@@ -6,7 +6,7 @@ extern crate reducer;
 use iui::controls::*;
 use iui::prelude::*;
 use reducer::*;
-use std::sync::mpsc::channel;
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 use std::thread;
 
@@ -83,26 +83,7 @@ impl State {
     }
 }
 
-fn main() {
-    // Create a channel to synchronize actions.
-    let (dispatcher, actions) = channel();
-
-    // A dispatcher makes it possible for the rendering thread to send actions to the store.
-    let dispatch = move |action| dispatcher.send(action).unwrap();
-
-    // Create a channel to synchronize states.
-    let (reactor, states) = channel();
-
-    thread::spawn(move || {
-        // Create a Store to manage the state.
-        let mut store = Store::new(Arc::new(State::default()), reactor);
-
-        // Listen for actions.
-        while let Ok(action) = actions.recv() {
-            store.dispatch(action).unwrap();
-        }
-    });
-
+fn run_libui(dispatcher: Sender<Action>, states: Receiver<Arc<State>>) {
     let ui = UI::init().unwrap();
 
     // Layout.
@@ -119,11 +100,11 @@ fn main() {
     let mut add = Button::new(&ui, "Add Todo");
     add.on_clicked(&ui, {
         let mut input = input.clone();
-        let dispatch = dispatch.clone();
+        let dispatcher = dispatcher.clone();
         let ui = ui.clone();
 
         move |_| {
-            dispatch(Action::AddTodo(input.value(&ui)));
+            dispatcher.send(Action::AddTodo(input.value(&ui))).unwrap();
             input.set_value(&ui, "");
         }
     });
@@ -132,8 +113,12 @@ fn main() {
     const VIEWS: [View; 3] = [View::All, View::Done, View::Pending];
     let mut filter = Combobox::new(&ui);
     filter.on_selected(&ui, {
-        let dispatch = dispatch.clone();
-        move |i| dispatch(Action::FilterTodos(VIEWS[i as usize]))
+        let dispatcher = dispatcher.clone();
+        move |i| {
+            dispatcher
+                .send(Action::FilterTodos(VIEWS[i as usize]))
+                .unwrap()
+        }
     });
 
     for view in &VIEWS {
@@ -149,7 +134,7 @@ fn main() {
         let mut checkboxes: Vec<Checkbox> = vec![];
         let mut body = body.clone();
         let mut filter = filter.clone();
-        let dispatch = dispatch.clone();
+        let dispatcher = dispatcher.clone();
         let ui = ui.clone();
 
         move || {
@@ -160,8 +145,8 @@ fn main() {
                 for (i, (_, todo)) in todos.iter().enumerate().skip(checkboxes.len()) {
                     let mut checkbox = Checkbox::new(&ui, todo);
                     checkbox.on_toggled(&ui, {
-                        let dispatch = dispatch.clone();
-                        move |_| dispatch(Action::ToggleTodo(i))
+                        let dispatcher = dispatcher.clone();
+                        move |_| dispatcher.send(Action::ToggleTodo(i)).unwrap()
                     });
                     checkboxes.push(checkbox.clone());
                     body.append(&ui, checkbox, LayoutStrategy::Compact);
@@ -196,4 +181,25 @@ fn main() {
     window.show(&ui);
 
     event_loop.run(&ui);
+}
+
+fn main() {
+    // Create a channel to synchronize actions.
+    let (dispatcher, actions) = channel();
+
+    // Create a channel to synchronize states.
+    let (reactor, states) = channel();
+
+    // Run Reducer on a separate thread
+    thread::spawn(move || {
+        // Create a Store to manage the state.
+        let mut store = Store::new(Arc::new(State::default()), reactor);
+
+        // Listen for actions.
+        while let Ok(action) = actions.recv() {
+            store.dispatch(action).unwrap();
+        }
+    });
+
+    run_libui(dispatcher, states);
 }
