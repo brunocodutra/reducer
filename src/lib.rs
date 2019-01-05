@@ -1,10 +1,5 @@
 //! A predictable reactive framework for Rust apps.
 //!
-//! Reducer is a platform for reactive programming in Rust that can be used to manage the state of
-//! any kind of application. It shines when used to drive graphical user interfaces and integrates
-//! well with both immediate mode and retained mode GUI frameworks
-//! ([check out the examples](https://github.com/brunocodutra/reducer/tree/master/examples)).
-//!
 //! # Overview
 //! Reducer is inspired by the
 //! [Flux pattern](https://facebook.github.io/flux/docs/in-depth-overview.html), popular in
