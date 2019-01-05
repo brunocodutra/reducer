@@ -34,6 +34,10 @@ To run an example in particular, you can execute
 > cargo run --release --example <NAME>
 ```
 
+> **Note to macOS users:** due to an issue with `ui-sys` you might need to prepend 
+> `CXXFLAGS+=-stdlib=libc++` to the command above, see 
+> [brunocodutra/reducer#1](https://github.com/brunocodutra/reducer/issues/1).
+
 ## Contribution
 
 Reducer is an open source project and you're very welcome to contribute to this project by
