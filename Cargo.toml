@@ -1,13 +1,17 @@
 [package]
 name = "reducer"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Bruno Dutra <brunocodutra@gmail.com>"]
+description= "A predictable reactive framework for Rust apps"
 repository = "https://github.com/brunocodutra/reducer.git"
 license = "MIT"
 readme = "README.md"
+keywords = ["redux", "flux", "reactive", "state"]
+categories = ["asynchronous", "gui"]
 
 [badges]
 travis-ci = { repository = "brunocodutra/reducer" }
+codecov = { repository = "brunocodutra/reducer" }
 
 [dependencies]
 
