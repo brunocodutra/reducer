@@ -82,6 +82,8 @@
 //! }
 //! ```
 
+mod macros;
+
 mod reactor;
 mod reducer;
 mod store;
