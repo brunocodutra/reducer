@@ -82,6 +82,11 @@
 //! }
 //! ```
 
+#![cfg_attr(feature = "parallel", feature(specialization))]
+
+#[cfg(feature = "parallel")]
+extern crate rayon;
+
 mod macros;
 mod mock;
 

@@ -54,3 +54,24 @@ jobs:
     - cargo +nightly tarpaulin -v --all-features --out Xml
     after_success:
     - bash <(curl -s https://codecov.io/bash)
+
+  - name: experimental
+    stage: test
+    rust: nightly
+    os: linux
+    script:
+    - cargo +nightly test -v --all-features
+
+  - name: experimental
+    stage: test
+    rust: nightly
+    os: osx
+    script:
+    - cargo +nightly test -v --all-features
+
+  - name: experimental
+    stage: test
+    rust: nightly
+    os: windows
+    script:
+    - cargo +nightly test -v --all-features
