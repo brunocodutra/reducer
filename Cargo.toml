@@ -9,11 +9,15 @@ readme = "README.md"
 keywords = ["redux", "flux", "reactive", "state"]
 categories = ["asynchronous", "gui"]
 
+[features]
+parallel = ["rayon"]
+
 [badges]
 travis-ci = { repository = "brunocodutra/reducer" }
 codecov = { repository = "brunocodutra/reducer" }
 
 [dependencies]
+rayon = { version = "1.0.3", optional = true }
 
 [dev-dependencies]
 iui = "0.3.0"
