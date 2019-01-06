@@ -1,24 +1,13 @@
 use reducer::*;
 
-macro_rules! document_reducer_for_tuples {
-    ( ($head:ident), $( $body:tt )+ ) => {
-        /// Updates all reducers in the tuple in order.
-        ///
-        /// Currently implemented for tuples of up to 12 elements.
-        $( $body )+
-    };
-
-    ( ($head:ident $(, $tail:ident )+), $( $body:tt )+ ) => {
-        #[doc(hidden)]
-        $( $body )+
-    };
-}
-
 macro_rules! impl_reducer_for_tuples {
     () => {};
 
     ( $head:ident $(, $tail:ident )* $(,)* ) => {
-        document_reducer_for_tuples!(($head $(, $tail )*),
+        dedupe_docs!(($( $tail, )*),
+            /// Updates all reducers in the tuple in order.
+            ///
+            /// Currently implemented for tuples of up to 12 elements.
             impl<A, $head, $( $tail, )*> Reducer<A> for ($head, $( $tail, )*)
             where
                 A: Clone,

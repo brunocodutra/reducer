@@ -1,24 +1,13 @@
 use reactor::*;
 
-macro_rules! document_reactor_for_tuples {
-    ( ($head:ident), $( $body:tt )+ ) => {
-        /// Notifies all reactors in the tuple in order.
-        ///
-        /// Currently implemented for tuples of up to 12 elements.
-        $( $body )+
-    };
-
-    ( ($head:ident $(, $tail:ident )+), $( $body:tt )+ ) => {
-        #[doc(hidden)]
-        $( $body )+
-    };
-}
-
 macro_rules! impl_reactor_for_tuples {
     () => {};
 
     ( $head:ident $(, $tail:ident )* $(,)* ) => {
-        document_reactor_for_tuples!(($head $(, $tail )*),
+        dedupe_docs!(($( $tail, )*),
+            /// Notifies all reactors in the tuple in order.
+            ///
+            /// Currently implemented for tuples of up to 12 elements.
             impl<S, $head, $( $tail, )*> Reactor<S> for ($head, $( $tail, )*)
             where
                 $head: Reactor<S>,
