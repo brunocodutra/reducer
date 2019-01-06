@@ -14,10 +14,44 @@ macro_rules! impl_reducer_for_tuples {
                 $head: Reducer<A>,
                 $( $tail: Reducer<A>, )*
             {
+                specialize!(
+                    #[cfg(feature = "parallel")]
+                    default fn reduce(&mut self, action: A) {
+                        let ($head, $( $tail, )*) = self;
+                        $head.reduce(action.clone());
+                        $( $tail.reduce(action.clone()); )*
+                    }
+                );
+            }
+        );
+
+        dedupe_docs!(($( $tail, )*),
+            /// Updates all reducers in the tuple in parallel.
+            ///
+            /// Currently implemented for tuples of up to 12 elements.
+            #[cfg(feature = "parallel")]
+            impl<A, $head, $( $tail, )*> Reducer<A> for ($head, $( $tail, )*)
+            where
+                A: Clone + Send,
+                $head: Reducer<A> + Send,
+                $( $tail: Reducer<A> + Send, )*
+            {
                 fn reduce(&mut self, action: A) {
                     let ($head, $( $tail, )*) = self;
-                    $head.reduce(action.clone());
-                    $( $tail.reduce(action.clone()); )*
+
+                    let $head = {
+                        let action = action.clone();
+                        move || $head.reduce(action)
+                    };
+
+                    $(
+                        let $tail = {
+                            let action = action.clone();
+                            move || $tail.reduce(action)
+                        };
+                    )*
+
+                    join!($head $(, $tail )*);
                 }
             }
         );
