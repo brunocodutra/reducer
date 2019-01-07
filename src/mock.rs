@@ -2,6 +2,7 @@
 
 use reactor::Reactor;
 use reducer::Reducer;
+use std::marker::PhantomData;
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct MockReducer<A: 'static> {
@@ -21,9 +22,9 @@ impl<A> Reducer<A> for MockReducer<A> {
 }
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct MockReactor;
+pub struct MockReactor<S>(PhantomData<S>);
 
-impl<S: Clone> Reactor<S> for MockReactor {
+impl<S: Clone> Reactor<S> for MockReactor<S> {
     type Output = S;
 
     fn react(&self, state: &S) -> Self::Output {
@@ -37,7 +38,7 @@ mod tests {
 
     #[test]
     fn react() {
-        let reactor = MockReactor;
+        let reactor = MockReactor::default();
 
         assert_eq!(reactor.react(&5), 5);
         assert_eq!(reactor.react(&1), 1);
