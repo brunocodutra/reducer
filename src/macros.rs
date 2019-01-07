@@ -17,6 +17,16 @@ macro_rules! dedupe_docs {
     };
 }
 
+macro_rules! specialize {
+    ( #[cfg($conditional:meta)] default $( $definition:tt )+ ) => {
+        #[cfg($conditional)]
+        default $( $definition )+
+
+        #[cfg(not($conditional))]
+        $( $definition )+
+    }
+}
+
 #[cfg(feature = "parallel")]
 macro_rules! join {
     ( ) => {
