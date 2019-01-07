@@ -1,5 +1,4 @@
 mod arc;
-mod mock;
 mod rc;
 mod tuple;
 
@@ -102,11 +101,9 @@ pub trait Reducer<A>: 'static {
 }
 
 #[cfg(test)]
-pub use self::mock::*;
-
-#[cfg(test)]
 mod tests {
     use super::*;
+    use mock::*;
 
     #[test]
     fn reduce() {

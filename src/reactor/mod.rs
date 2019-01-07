@@ -1,5 +1,4 @@
 mod array;
-mod mock;
 mod option;
 mod reference;
 mod sender;
@@ -80,11 +79,9 @@ pub trait Reactor<S> {
 }
 
 #[cfg(test)]
-pub use self::mock::*;
-
-#[cfg(test)]
 mod tests {
     use super::*;
+    use mock::*;
 
     #[test]
     fn react() {

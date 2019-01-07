@@ -33,6 +33,7 @@ impl_reactor_for_array!(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mock::*;
 
     macro_rules! test_reactor_for_array {
         () => {};

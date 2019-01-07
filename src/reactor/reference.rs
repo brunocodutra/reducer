@@ -14,6 +14,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mock::*;
 
     #[test]
     fn react() {

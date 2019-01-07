@@ -83,6 +83,7 @@
 //! ```
 
 mod macros;
+mod mock;
 
 mod reactor;
 mod reducer;
