@@ -31,6 +31,7 @@ impl_reducer_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mock::*;
 
     macro_rules! test_reducer_for_tuples {
         () => {};

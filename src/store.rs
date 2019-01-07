@@ -44,8 +44,7 @@ impl<R, S: Reactor<R>> Store<R, S> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use reactor::MockReactor;
-    use reducer::MockReducer;
+    use mock::*;
 
     #[test]
     fn default() {
