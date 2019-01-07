@@ -85,7 +85,7 @@ mod tests {
 
     #[test]
     fn react() {
-        let reactor: &Reactor<_, Output = _> = &MockReactor;
+        let reactor: &Reactor<_, Output = _> = &MockReactor::default();
 
         assert_eq!(reactor.react(&5), 5);
         assert_eq!(reactor.react(&1), 1);

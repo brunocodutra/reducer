@@ -41,7 +41,7 @@ mod tests {
         ( $head:ident $(, $tail:ident )* $(,)* ) => {
             #[test]
             fn $head() {
-                let reactors = [MockReactor; count!($( $tail, )*)];
+                let reactors = [MockReactor::default(); count!($( $tail, )*)];
 
                 assert_eq!(reactors.react(&5), [5; count!($( $tail, )*)]);
                 assert_eq!(reactors.react(&1), [1; count!($( $tail, )*)]);

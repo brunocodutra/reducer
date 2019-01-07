@@ -22,7 +22,7 @@ mod tests {
 
     #[test]
     fn some() {
-        let reactor = Some(MockReactor);
+        let reactor = Some(MockReactor::default());
 
         assert_eq!(reactor.react(&5), Some(5));
         assert_eq!(reactor.react(&1), Some(1));
@@ -31,7 +31,7 @@ mod tests {
 
     #[test]
     fn none() {
-        let reactor: Option<MockReactor> = None;
+        let reactor: Option<MockReactor<_>> = None;
 
         assert_eq!(reactor.react(&5), None);
         assert_eq!(reactor.react(&1), None);

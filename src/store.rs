@@ -48,7 +48,7 @@ mod tests {
 
     #[test]
     fn default() {
-        let store = Store::<MockReducer<()>, MockReactor>::default();
+        let store = Store::<MockReducer<()>, MockReactor<_>>::default();
 
         assert_eq!(store.state, MockReducer::default());
         assert_eq!(store.reactor, MockReactor::default());
@@ -57,7 +57,7 @@ mod tests {
     #[test]
     fn new() {
         let state = MockReducer::new(vec![42]);
-        let reactor = MockReactor;
+        let reactor = MockReactor::default();
         let store = Store::new(state.clone(), &reactor);
 
         assert_eq!(store.state, state);
@@ -66,13 +66,13 @@ mod tests {
 
     #[test]
     fn clone() {
-        let store = Store::new(MockReducer::<()>::default(), MockReactor);
+        let store = Store::new(MockReducer::<()>::default(), MockReactor::default());
         assert_eq!(store, store.clone());
     }
 
     #[test]
     fn dispatch() {
-        let mut store = Store::<MockReducer<_>, MockReactor>::default();
+        let mut store = Store::<MockReducer<_>, MockReactor<_>>::default();
 
         assert_eq!(store.dispatch(5), MockReducer::new(vec![5]));
         assert_eq!(store.dispatch(1), MockReducer::new(vec![5, 1]));
@@ -81,11 +81,11 @@ mod tests {
 
     #[test]
     fn subscribe() {
-        let mut store: Store<_, Option<MockReactor>> = Store::new(MockReducer::default(), None);
+        let mut store: Store<_, Option<MockReactor<_>>> = Store::new(MockReducer::default(), None);
 
         assert_eq!(store.dispatch(0), None);
 
-        store.subscribe(Some(MockReactor));
+        store.subscribe(Some(MockReactor::default()));
 
         assert_eq!(store.dispatch(5), Some(MockReducer::new(vec![0, 5])));
         assert_eq!(store.dispatch(1), Some(MockReducer::new(vec![0, 5, 1])));
