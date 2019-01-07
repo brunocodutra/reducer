@@ -31,6 +31,7 @@ impl_reactor_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mock::*;
 
     macro_rules! test_reactor_for_tuples {
         () => {};
@@ -47,11 +48,14 @@ mod tests {
                 }
             }
 
-            impl<S: Clone> Reactor<S> for $head<S> {
+            impl<S, T: Clone + Default> Reactor<S> for $head<T>
+                where
+                    MockReactor<T>: Reactor<S, Output = T>,
+            {
                 type Output = Self;
 
                 fn react(&self, state: &S) -> Self::Output {
-                    $head::new(state.clone())
+                    $head::new(MockReactor::default().react(state))
                 }
             }
 
@@ -60,8 +64,8 @@ mod tests {
                 let reactor = ($head::default(), $( $tail::default(), )*);
 
                 assert_eq!(reactor.react(&5), ($head::new(5), $( $tail::new(5), )*));
-                assert_eq!(reactor.react(&1), ($head::new(1), $( $tail::new(1), )*));
-                assert_eq!(reactor.react(&3), ($head::new(3), $( $tail::new(3), )*));
+                assert_eq!(reactor.react(&NotSync::new(1)), ($head::new(1), $( $tail::new(1), )*));
+                assert_eq!(reactor.react(&NotSyncOrSend::new(3)), ($head::new(3), $( $tail::new(3), )*));
             }
 
             test_reactor_for_tuples!($( $tail, )*);

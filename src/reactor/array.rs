@@ -44,8 +44,8 @@ mod tests {
                 let reactors = [MockReactor::default(); count!($( $tail, )*)];
 
                 assert_eq!(reactors.react(&5), [5; count!($( $tail, )*)]);
-                assert_eq!(reactors.react(&1), [1; count!($( $tail, )*)]);
-                assert_eq!(reactors.react(&3), [3; count!($( $tail, )*)]);
+                assert_eq!(reactors.react(&NotSync::new(1)), [1; count!($( $tail, )*)]);
+                assert_eq!(reactors.react(&NotSyncOrSend::new(3)), [3; count!($( $tail, )*)]);
             }
 
             test_reactor_for_array!($( $tail, )*);

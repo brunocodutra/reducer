@@ -42,7 +42,10 @@ mod tests {
                 inner: MockReducer<A>,
             }
 
-            impl<A: 'static + Clone> Reducer<A> for $head<A> {
+            impl<A, T: 'static + Clone> Reducer<A> for $head<T>
+                where
+                    MockReducer<T>: Reducer<A>,
+            {
                 fn reduce(&mut self, action: A) {
                     self.inner.reduce(action);
                 }
@@ -53,8 +56,8 @@ mod tests {
                 let mut states = ($head::default(), $( $tail::default(), )*);
 
                 states.reduce(5);
-                states.reduce(1);
-                states.reduce(3);
+                states.reduce(NotSync::new(1));
+                states.reduce(NotSyncOrSend::new(3));
 
                 let ($head, $( $tail, )*) = states;
 
