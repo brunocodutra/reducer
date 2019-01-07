@@ -74,9 +74,14 @@ mod tests {
     fn dispatch() {
         let mut store = Store::<MockReducer<_>, MockReactor<_>>::default();
 
-        assert_eq!(store.dispatch(5), MockReducer::new(vec![5]));
-        assert_eq!(store.dispatch(1), MockReducer::new(vec![5, 1]));
-        assert_eq!(store.dispatch(3), MockReducer::new(vec![5, 1, 3]));
+        let a = NotSync::new(5);
+        assert_eq!(store.dispatch(a), MockReducer::new(vec![5]));
+
+        let a = NotSync::new(1);
+        assert_eq!(store.dispatch(a), MockReducer::new(vec![5, 1]));
+
+        let a = NotSyncOrSend::new(3);
+        assert_eq!(store.dispatch(a), MockReducer::new(vec![5, 1, 3]));
     }
 
     #[test]
@@ -87,8 +92,13 @@ mod tests {
 
         store.subscribe(Some(MockReactor::default()));
 
-        assert_eq!(store.dispatch(5), Some(MockReducer::new(vec![0, 5])));
-        assert_eq!(store.dispatch(1), Some(MockReducer::new(vec![0, 5, 1])));
-        assert_eq!(store.dispatch(3), Some(MockReducer::new(vec![0, 5, 1, 3])));
+        let a = NotSync::new(5);
+        assert_eq!(store.dispatch(a), Some(MockReducer::new(vec![0, 5])));
+
+        let a = NotSync::new(1);
+        assert_eq!(store.dispatch(a), Some(MockReducer::new(vec![0, 5, 1])));
+
+        let a = NotSyncOrSend::new(3);
+        assert_eq!(store.dispatch(a), Some(MockReducer::new(vec![0, 5, 1, 3])));
     }
 }
