@@ -81,6 +81,17 @@
 //!     store.dispatch(Div(7)).unwrap(); // displays "2"
 //! }
 //! ```
+//! # Experimental Features
+//!
+//! The following cargo feature flags are available:
+//! * `parallel` (depends on nightly Rust)
+//!
+//!     This feature flag takes advantage of the experimental support for specialization available
+//!     on nightly Rust ([RFC 1210](https://github.com/rust-lang/rust/issues/31844)), to
+//!     automatically parallelize tuples of
+//!     [Sync](https://doc.rust-lang.org/nightly/std/marker/trait.Sync.html) /
+//!     [Send](https://doc.rust-lang.org/nightly/std/marker/trait.Send.html) Reducers
+//!     using [Rayon](https://crates.io/crates/rayon).
 
 #![cfg_attr(feature = "parallel", feature(specialization))]
 
