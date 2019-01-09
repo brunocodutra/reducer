@@ -22,6 +22,12 @@ use reducer::*;
 
 The full API documentation is available on [docs.rs]
 
+# Experimental Features
+
+The following cargo feature flags are available (refer to the [documentation][docs.rs] for details):
+* `parallel` (depends on nightly Rust)
+
+    Relies on specialization ([RFC 1210]) to provide automatic fork-join parallelism using [Rayon].
 
 ## Examples
 
@@ -62,6 +68,9 @@ Reducer is distributed under the terms of the MIT license, see [LICENSE] for det
 
 [crates.io]:        https://crates.io/crates/reducer
 [docs.rs]:          https://docs.rs/reducer
+
+[RFC 1210]:         https://github.com/rust-lang/rust/issues/31844
+[Rayon]:            https://crates.io/crates/rayon
 
 [issues]:           https://github.com/brunocodutra/reducer/issues
 [pulls]:            https://github.com/brunocodutra/reducer/pulls
