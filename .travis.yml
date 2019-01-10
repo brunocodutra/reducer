@@ -13,6 +13,7 @@ os:
 stages:
 - check
 - test
+- benchmark
 
 env:
   global:
@@ -75,3 +76,17 @@ jobs:
     os: windows
     script:
     - cargo +nightly test -v --all-features
+
+  - stage: benchmark
+    rust: nightly
+    os: linux
+    script:
+    - cargo bench
+    - cargo bench --all-features
+
+  - stage: benchmark
+    rust: nightly
+    os: osx
+    script:
+    - cargo bench
+    - cargo bench --all-features
