@@ -1,4 +1,4 @@
-# Reducer [![merit.badge]][merit.reducer] [![travis.badge]][travis.home] [![codecov.badge]][codecov.reducer]
+# Reducer [![merit.badge]][merit.reducer] [![travis.badge]][travis.home] [![codecov.badge]][codecov.reducer] [![deps.rs.badge]][deps.rs.reducer]
 
 A platform for reactive programming in Rust that can be used to manage the state of
 any kind of application. It shines when used to drive graphical user interfaces and
@@ -34,8 +34,8 @@ To run an example in particular, you can execute
 > cargo run --release --example <NAME>
 ```
 
-> **Note to macOS users:** due to an issue with `ui-sys` you might need to prepend 
-> `CXXFLAGS+=-stdlib=libc++` to the command above, see 
+> **Note to macOS users:** due to an issue with `ui-sys` you might need to prepend
+> `CXXFLAGS+=-stdlib=libc++` to the command above, see
 > [brunocodutra/reducer#1](https://github.com/brunocodutra/reducer/issues/1).
 
 ## Contribution
@@ -56,6 +56,9 @@ Reducer is distributed under the terms of the MIT license, see [LICENSE] for det
 
 [codecov.reducer]:  https://codecov.io/gh/brunocodutra/reducer
 [codecov.badge]:    https://codecov.io/gh/brunocodutra/reducer/branch/master/graph/badge.svg
+
+[deps.rs.badge]:    https://deps.rs/repo/github/brunocodutra/reducer/status.svg
+[deps.rs.reducer]:  https://deps.rs/repo/github/brunocodutra/reducer
 
 [crates.io]:        https://crates.io/crates/reducer
 [docs.rs]:          https://docs.rs/reducer
