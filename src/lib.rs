@@ -101,10 +101,10 @@ extern crate rayon;
 mod macros;
 mod mock;
 
+mod dispatcher;
 mod reactor;
 mod reducer;
-mod store;
 
+pub use dispatcher::*;
 pub use reactor::*;
 pub use reducer::*;
-pub use store::*;
