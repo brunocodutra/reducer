@@ -1,13 +1,13 @@
+use dispatcher::Dispatcher;
 use reactor::Reactor;
 use reducer::Reducer;
 use std::mem;
 
 /// A reactive state container that manages the state of your application.
 ///
-/// Store promotes reactive programming by encapsulating the state of your application and
-/// notifying a [reactor](struct.Store.html#method.subscribe) upon every change.
 /// The only way to mutate the internal state managed by Store is by
-/// [dispatching](struct.Store.html#method.dispatch) actions on it.
+/// [dispatching](trait.Dispatcher.html) actions on it.
+/// The associated reactor is notified upon every state transition.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Store<R, S: Reactor<R>> {
     state: R,
@@ -20,24 +20,26 @@ impl<R, S: Reactor<R>> Store<R, S> {
         Self { state, reactor }
     }
 
+    /// Replaces the reactor and returns the previous one.
+    pub fn subscribe(&mut self, reactor: impl Into<S>) -> S {
+        mem::replace(&mut self.reactor, reactor.into())
+    }
+}
+
+impl<A, R, S> Dispatcher<A> for Store<R, S>
+where
+    R: Reducer<A>,
+    S: Reactor<R>,
+{
+    type Output = S::Output;
+
     /// Updates the state via [`<R as Reducer<A>>::reduce`](trait.Reducer.html#tymethod.reduce) and
     /// notifies the reactor, returning the result of calling
     /// [`<S as Reactor<R>>::react`](trait.Reactor.html#tymethod.react) with a reference to the
     /// new state.
-    pub fn dispatch<A>(&mut self, action: A) -> S::Output
-    where
-        R: Reducer<A>,
-    {
+    fn dispatch(&mut self, action: A) -> S::Output {
         self.state.reduce(action);
         self.reactor.react(&self.state)
-    }
-
-    /// Replaces the reactor and returns the previous one.
-    pub fn subscribe<T>(&mut self, reactor: T) -> S
-    where
-        T: Into<S>,
-    {
-        mem::replace(&mut self.reactor, reactor.into())
     }
 }
 

@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+use dispatcher::Dispatcher;
 use reactor::Reactor;
 use reducer::Reducer;
 use std::cell::RefCell;
@@ -80,6 +81,33 @@ impl<S: Clone> Reactor<NotSyncOrSend<S>> for MockReactor<S> {
     }
 }
 
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+pub struct MockDispatcher<A>(PhantomData<A>);
+
+impl<A> Dispatcher<A> for MockDispatcher<A> {
+    type Output = A;
+
+    fn dispatch(&mut self, state: A) -> Self::Output {
+        state
+    }
+}
+
+impl<A: Clone> Dispatcher<NotSync<A>> for MockDispatcher<A> {
+    type Output = A;
+
+    fn dispatch(&mut self, action: NotSync<A>) -> Self::Output {
+        action.0.into_inner()
+    }
+}
+
+impl<A: Clone> Dispatcher<NotSyncOrSend<A>> for MockDispatcher<A> {
+    type Output = A;
+
+    fn dispatch(&mut self, action: NotSyncOrSend<A>) -> Self::Output {
+        (*action.0).clone()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -102,5 +130,14 @@ mod tests {
         state.reduce(NotSyncOrSend::new(3));
 
         assert_eq!(state, MockReducer::new(vec![5, 1, 3]));
+    }
+
+    #[test]
+    fn dispatch() {
+        let mut dispatcher = MockDispatcher::default();
+
+        assert_eq!(dispatcher.dispatch(5), 5);
+        assert_eq!(dispatcher.dispatch(NotSync::new(1)), 1);
+        assert_eq!(dispatcher.dispatch(NotSyncOrSend::new(3)), 3);
     }
 }
