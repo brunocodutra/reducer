@@ -9,6 +9,9 @@ readme = "README.md"
 keywords = ["redux", "flux", "reactive", "state"]
 categories = ["asynchronous", "gui"]
 
+[package.metadata.docs.rs]
+all-features = true
+
 [features]
 async = ["futures-preview"]
 parallel = ["rayon"]
