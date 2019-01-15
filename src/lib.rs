@@ -12,7 +12,7 @@
 //! +------------------------------------|-----------------+
 //! |                                    |                 |
 //! |    ----------        ---------     |      --------   |
-//! +--> | Action | -----> | Store | --- | ---> | View | --+
+//! +--> | Action | -----> | State | --- | ---> | View | --+
 //!      ----------        ---------     |      --------
 //!                                      |
 //! ```
@@ -22,65 +22,6 @@
 //! [updates](trait.Reducer.html#tymethod.reduce) its internal state and
 //! [notifies](trait.Reactor.html#tymethod.react) back the _view_.
 //!
-//! # Usage
-//! ```rust
-//! extern crate reducer;
-//!
-//! use reducer::*;
-//! use std::io::{self, Write};
-//!
-//! // The state of your app.
-//! struct Calculator(i32);
-//!
-//! // Actions the user can trigger.
-//! struct Add(i32);
-//! struct Sub(i32);
-//! struct Mul(i32);
-//! struct Div(i32);
-//!
-//! impl Reducer<Add> for Calculator {
-//!     fn reduce(&mut self, Add(x): Add) {
-//!         self.0 += x;
-//!     }
-//! }
-//!
-//! impl Reducer<Sub> for Calculator {
-//!     fn reduce(&mut self, Sub(x): Sub) {
-//!         self.0 -= x;
-//!     }
-//! }
-//!
-//! impl Reducer<Mul> for Calculator {
-//!     fn reduce(&mut self, Mul(x): Mul) {
-//!         self.0 *= x;
-//!     }
-//! }
-//!
-//! impl Reducer<Div> for Calculator {
-//!     fn reduce(&mut self, Div(x): Div) {
-//!         self.0 /= x;
-//!     }
-//! }
-//!
-//! // The user interface.
-//! struct Display;
-//!
-//! impl Reactor<Calculator> for Display {
-//!     type Output = io::Result<()>;
-//!     fn react(&self, state: &Calculator) -> Self::Output {
-//!         io::stdout().write_fmt(format_args!("{}\n", state.0))
-//!     }
-//! }
-//!
-//! fn main() {
-//!     let mut store = Store::new(Calculator(0), Display);
-//!
-//!     store.dispatch(Add(5)).unwrap(); // displays "5"
-//!     store.dispatch(Mul(3)).unwrap(); // displays "15"
-//!     store.dispatch(Sub(1)).unwrap(); // displays "14"
-//!     store.dispatch(Div(7)).unwrap(); // displays "2"
-//! }
-//! ```
 //! # Experimental Features
 //!
 //! The following cargo feature flags are available:
@@ -94,6 +35,7 @@
 //!     using [Rayon](https://crates.io/crates/rayon).
 //!
 //! * `async` (depends on nightly Rust)
+//!
 //!     Enables integration with [futures-rs](https://crates.io/crates/futures-preview).
 
 #![cfg_attr(feature = "async", feature(async_await, await_macro, futures_api))]
