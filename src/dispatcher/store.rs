@@ -3,11 +3,69 @@ use reactor::Reactor;
 use reducer::Reducer;
 use std::mem;
 
-/// A reactive state container that manages the state of your application.
+/// A reactive state container.
 ///
 /// The only way to mutate the internal state managed by Store is by
 /// [dispatching](trait.Dispatcher.html) actions on it.
 /// The associated reactor is notified upon every state transition.
+///
+/// ## Example
+/// ```rust
+/// use reducer::*;
+/// use std::io::{self, Write};
+///
+/// // The state of your app.
+/// struct Calculator(i32);
+///
+/// // Actions the user can trigger.
+/// struct Add(i32);
+/// struct Sub(i32);
+/// struct Mul(i32);
+/// struct Div(i32);
+///
+/// impl Reducer<Add> for Calculator {
+///     fn reduce(&mut self, Add(x): Add) {
+///         self.0 += x;
+///     }
+/// }
+///
+/// impl Reducer<Sub> for Calculator {
+///     fn reduce(&mut self, Sub(x): Sub) {
+///         self.0 -= x;
+///     }
+/// }
+///
+/// impl Reducer<Mul> for Calculator {
+///     fn reduce(&mut self, Mul(x): Mul) {
+///         self.0 *= x;
+///     }
+/// }
+///
+/// impl Reducer<Div> for Calculator {
+///     fn reduce(&mut self, Div(x): Div) {
+///         self.0 /= x;
+///     }
+/// }
+///
+/// // The user interface.
+/// struct Display;
+///
+/// impl Reactor<Calculator> for Display {
+///     type Output = io::Result<()>;
+///     fn react(&self, state: &Calculator) -> Self::Output {
+///         io::stdout().write_fmt(format_args!("{}\n", state.0))
+///     }
+/// }
+///
+/// fn main() {
+///     let mut store = Store::new(Calculator(0), Display);
+///
+///     store.dispatch(Add(5)).unwrap(); // displays "5"
+///     store.dispatch(Mul(3)).unwrap(); // displays "15"
+///     store.dispatch(Sub(1)).unwrap(); // displays "14"
+///     store.dispatch(Div(7)).unwrap(); // displays "2"
+/// }
+/// ```
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Store<R, S: Reactor<R>> {
     state: R,
@@ -15,7 +73,7 @@ pub struct Store<R, S: Reactor<R>> {
 }
 
 impl<R, S: Reactor<R>> Store<R, S> {
-    /// Constructs the store given the initial state and a reactor.
+    /// Constructs the Store given the initial state and a reactor.
     pub fn new(state: R, reactor: S) -> Self {
         Self { state, reactor }
     }
