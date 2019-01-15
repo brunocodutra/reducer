@@ -10,6 +10,7 @@ keywords = ["redux", "flux", "reactive", "state"]
 categories = ["asynchronous", "gui"]
 
 [features]
+async = ["futures-preview"]
 parallel = ["rayon"]
 
 [badges]
@@ -17,6 +18,7 @@ travis-ci = { repository = "brunocodutra/reducer" }
 codecov = { repository = "brunocodutra/reducer" }
 
 [dependencies]
+futures-preview = { version = "0.3.0-alpha.12", optional = true }
 rayon = { version = "1.0.3", optional = true }
 
 [dev-dependencies]
