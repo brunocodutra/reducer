@@ -36,3 +36,8 @@ features = ["winit", "glium"]
 [[bench]]
 name = "parallel"
 harness = false
+
+[[bench]]
+name = "async"
+harness = false
+required-features = ["async"]
