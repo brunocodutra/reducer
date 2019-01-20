@@ -1,11 +1,11 @@
-use dispatcher::{Dispatcher, Store};
+use crate::dispatcher::{Dispatcher, Store};
+use crate::reactor::Reactor;
+use crate::reducer::Reducer;
 use futures::channel::{mpsc, oneshot};
 use futures::executor::ThreadPoolBuilder;
 use futures::io::Error;
 use futures::stream::StreamExt;
 use futures::task::{SpawnError, SpawnExt};
-use reactor::Reactor;
-use reducer::Reducer;
 use std::marker::PhantomData;
 
 /// An asynchronous and reactive state container
@@ -22,6 +22,7 @@ use std::marker::PhantomData;
 /// ## Example
 /// ```rust
 /// use reducer::*;
+/// use std::error::Error;
 /// use std::io::{self, Write};
 ///
 /// // The state of your app.
@@ -56,11 +57,11 @@ use std::marker::PhantomData;
 ///     }
 /// }
 ///
-/// fn main() {
+/// fn main() -> Result<(), Box<dyn Error>> {
 ///     let store = AsyncStore::new(Calculator(0), Display);
 ///
 ///     // Process incoming actions on a background thread.
-///     let mut dispatcher = store.spawn_thread().unwrap();
+///     let mut dispatcher = store.spawn_thread()?;
 ///
 ///     dispatcher.dispatch(Action::Add(5)); // displays "5"
 ///     dispatcher.dispatch(Action::Mul(3)); // displays "15"
@@ -68,7 +69,9 @@ use std::marker::PhantomData;
 ///     dispatcher.dispatch(Action::Div(7)); // displays "2"
 ///
 ///     // Allow the background thread to catch up.
-///     std::thread::sleep(std::time::Duration::from_millis(500))
+///     std::thread::sleep(std::time::Duration::from_millis(500));
+///
+///     Ok(())
 /// }
 /// ```
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
@@ -187,8 +190,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mock::*;
     use futures::executor::block_on;
-    use mock::*;
+    use std::error::Error;
 
     #[test]
     fn default() {
@@ -230,10 +234,11 @@ mod tests {
     }
 
     #[test]
-    fn spawn() {
+    fn spawn() -> Result<(), Box<dyn Error>> {
         let store = AsyncStore::<MockReducer<_>, MockReactor<_>, ()>::default();
-        let mut executor = ThreadPoolBuilder::new().pool_size(2).create().unwrap();
+        let mut executor = ThreadPoolBuilder::new().pool_size(2).create()?;
         assert!(store.spawn(&mut executor).is_ok());
+        Ok(())
     }
 
     #[test]
@@ -243,9 +248,9 @@ mod tests {
     }
 
     #[test]
-    fn dispatch() {
+    fn dispatch() -> Result<(), Box<dyn Error>> {
         let store = AsyncStore::<MockReducer<_>, MockReactor<_>, _>::default();
-        let mut dispatcher = store.spawn_thread().unwrap();
+        let mut dispatcher = store.spawn_thread()?;
 
         assert_eq!(
             block_on(dispatcher.dispatch(5)),
@@ -261,6 +266,8 @@ mod tests {
             block_on(dispatcher.dispatch(3)),
             Ok(MockReducer::new(vec![5, 1, 3]))
         );
+
+        Ok(())
     }
 
     #[test]

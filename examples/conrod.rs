@@ -15,6 +15,7 @@ use glutin::Event::WindowEvent;
 use glutin::WindowEvent::CloseRequested;
 use glutin::{ContextBuilder, EventsLoop, WindowBuilder};
 use reducer::*;
+use std::error::Error;
 use std::mem;
 use std::sync::mpsc::{channel, Receiver};
 use std::sync::Arc;
@@ -239,7 +240,10 @@ fn render(ui: &mut UiCell, ids: &Ids, state: &State, mut dispatcher: impl Dispat
     }
 }
 
-fn run_conrod(dispatcher: impl Dispatcher<Action> + Clone, states: Receiver<Arc<State>>) {
+fn run_conrod(
+    dispatcher: impl Dispatcher<Action> + Clone,
+    states: Receiver<Arc<State>>,
+) -> Result<(), Box<dyn Error>> {
     const WIDTH: u32 = 400;
     const HEIGHT: u32 = 500;
 
@@ -250,18 +254,14 @@ fn run_conrod(dispatcher: impl Dispatcher<Action> + Clone, states: Receiver<Arc<
         .with_min_dimensions((WIDTH, HEIGHT).into())
         .with_title("Reducer <3 Conrod");
 
-    let display = Display::new(window, context, &events_loop).unwrap();
+    let display = Display::new(window, context, &events_loop)?;
     let mut ui = UiBuilder::new([f64::from(WIDTH), f64::from(HEIGHT)]).build();
 
-    ui.fonts.insert(
-        FontCollection::from_bytes(ttf_noto_sans::REGULAR)
-            .unwrap()
-            .into_font()
-            .unwrap(),
-    );
+    ui.fonts
+        .insert(FontCollection::from_bytes(ttf_noto_sans::REGULAR)?.into_font()?);
 
     let ids = Ids::new(ui.widget_id_generator());
-    let mut renderer = Renderer::new(&display).unwrap();
+    let mut renderer = Renderer::new(&display)?;
     let image_map = image::Map::<texture::Texture2d>::new();
 
     // Keep a copy of the current state.
@@ -294,7 +294,7 @@ fn run_conrod(dispatcher: impl Dispatcher<Action> + Clone, states: Receiver<Arc<
         rerendered_at = Instant::now();
 
         if exit {
-            break;
+            break Ok(());
         }
 
         // Synchronize the state.
@@ -310,14 +310,14 @@ fn run_conrod(dispatcher: impl Dispatcher<Action> + Clone, states: Receiver<Arc<
             renderer.fill(&display, primitives, &image_map);
             let mut target = display.draw();
             target.clear_color(0.0, 0.0, 0.0, 0.0);
-            renderer.draw(&display, &mut target, &image_map).unwrap();
-            target.finish().unwrap();
+            renderer.draw(&display, &mut target, &image_map)?;
+            target.finish()?;
         }
     }
 }
 
 #[cfg(feature = "async")]
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     // Create a channel to synchronize states.
     let (reactor, states) = channel();
 
@@ -325,9 +325,9 @@ fn main() {
     let store = AsyncStore::new(Arc::new(State::default()), reactor);
 
     // Listen for actions on a separate thread
-    let dispatcher = store.spawn_thread().unwrap();
+    let dispatcher = store.spawn_thread()?;
 
-    run_conrod(dispatcher, states);
+    run_conrod(dispatcher, states)
 }
 
 #[cfg(not(feature = "async"))]
@@ -340,7 +340,7 @@ impl Dispatcher<Action> for std::sync::mpsc::Sender<Action> {
 }
 
 #[cfg(not(feature = "async"))]
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     // Create a channel to synchronize actions.
     let (dispatcher, actions) = channel();
 
@@ -358,5 +358,5 @@ fn main() {
         }
     });
 
-    run_conrod(dispatcher, states);
+    run_conrod(dispatcher, states)
 }

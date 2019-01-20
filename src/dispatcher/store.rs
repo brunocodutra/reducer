@@ -1,6 +1,6 @@
-use dispatcher::Dispatcher;
-use reactor::Reactor;
-use reducer::Reducer;
+use crate::dispatcher::Dispatcher;
+use crate::reactor::Reactor;
+use crate::reducer::Reducer;
 use std::mem;
 
 /// A reactive state container.
@@ -12,6 +12,7 @@ use std::mem;
 /// ## Example
 /// ```rust
 /// use reducer::*;
+/// use std::error::Error;
 /// use std::io::{self, Write};
 ///
 /// // The state of your app.
@@ -57,13 +58,15 @@ use std::mem;
 ///     }
 /// }
 ///
-/// fn main() {
+/// fn main() -> Result<(), Box<dyn Error>> {
 ///     let mut store = Store::new(Calculator(0), Display);
 ///
-///     store.dispatch(Add(5)).unwrap(); // displays "5"
-///     store.dispatch(Mul(3)).unwrap(); // displays "15"
-///     store.dispatch(Sub(1)).unwrap(); // displays "14"
-///     store.dispatch(Div(7)).unwrap(); // displays "2"
+///     store.dispatch(Add(5))?; // displays "5"
+///     store.dispatch(Mul(3))?; // displays "15"
+///     store.dispatch(Sub(1))?; // displays "14"
+///     store.dispatch(Div(7))?; // displays "2"
+///
+///     Ok(())
 /// }
 /// ```
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
@@ -104,7 +107,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mock::*;
+    use crate::mock::*;
 
     #[test]
     fn default() {

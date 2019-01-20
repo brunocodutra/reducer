@@ -1,8 +1,8 @@
 #![cfg(test)]
 
-use dispatcher::Dispatcher;
-use reactor::Reactor;
-use reducer::Reducer;
+use crate::dispatcher::Dispatcher;
+use crate::reactor::Reactor;
+use crate::reducer::Reducer;
 use std::marker::PhantomData;
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]

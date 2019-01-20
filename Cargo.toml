@@ -1,6 +1,7 @@
 [package]
 name = "reducer"
 version = "1.0.0"
+edition = "2018"
 authors = ["Bruno Dutra <brunocodutra@gmail.com>"]
 description= "A predictable reactive framework for Rust apps"
 repository = "https://github.com/brunocodutra/reducer.git"

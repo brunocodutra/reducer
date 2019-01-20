@@ -6,6 +6,7 @@ extern crate reducer;
 use iui::controls::*;
 use iui::prelude::*;
 use reducer::*;
+use std::error::Error;
 use std::sync::mpsc::{channel, Receiver};
 use std::sync::Arc;
 
@@ -183,7 +184,7 @@ fn run_libui(dispatcher: impl Dispatcher<Action> + Clone + 'static, states: Rece
 }
 
 #[cfg(feature = "async")]
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     // Create a channel to synchronize states.
     let (reactor, states) = channel();
 
@@ -191,9 +192,11 @@ fn main() {
     let store = AsyncStore::new(Arc::new(State::default()), reactor);
 
     // Listen for actions on a separate thread
-    let dispatcher = store.spawn_thread().unwrap();
+    let dispatcher = store.spawn_thread()?;
 
     run_libui(dispatcher, states);
+
+    Ok(())
 }
 
 #[cfg(not(feature = "async"))]
@@ -206,7 +209,7 @@ impl Dispatcher<Action> for std::sync::mpsc::Sender<Action> {
 }
 
 #[cfg(not(feature = "async"))]
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     // Create a channel to synchronize actions.
     let (dispatcher, actions) = channel();
 
@@ -225,4 +228,6 @@ fn main() {
     });
 
     run_libui(dispatcher, states);
+
+    Ok(())
 }

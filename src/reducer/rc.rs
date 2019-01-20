@@ -1,4 +1,4 @@
-use reducer::*;
+use crate::reducer::*;
 use std::rc::Rc;
 
 /// Lazy copy-on-write for single-threaded applications.
@@ -14,7 +14,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mock::*;
+    use crate::mock::*;
 
     #[test]
     fn reduce() {
