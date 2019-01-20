@@ -3,7 +3,7 @@
 macro_rules! count {
     () => { 0 };
 
-    ( $head:ident $(, $tail:ident )* $(,)* ) => { (1 + count!($($tail, )*)) };
+    ( $head:ident $(, $tail:ident )* $(,)? ) => { (1 + count!($($tail, )*)) };
 }
 
 macro_rules! dedupe_docs {
@@ -11,7 +11,7 @@ macro_rules! dedupe_docs {
         $( $definition )+
     };
 
-    ( ($head:ident $(, $tail:ident )* $(,)*), $( $definition:tt )+ ) => {
+    ( ($head:ident $(, $tail:ident )* $(,)?), $( $definition:tt )+ ) => {
         #[doc(hidden)]
         $( $definition )+
     };

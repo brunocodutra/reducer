@@ -1,4 +1,4 @@
-use reactor::*;
+use crate::reactor::*;
 use std::sync::mpsc::{SendError, Sender};
 
 impl<S> Reactor<S> for Sender<S>

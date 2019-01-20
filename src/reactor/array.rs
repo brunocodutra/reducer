@@ -1,9 +1,9 @@
-use reactor::*;
+use crate::reactor::*;
 
 macro_rules! impl_reactor_for_array {
     () => {};
 
-    ( $head:ident $(, $tail:ident )* $(,)* ) => {
+    ( $head:ident $(, $tail:ident )* $(,)? ) => {
         dedupe_docs!(($( $tail, )*),
             /// Notifies all reactors in the array in order.
             ///
@@ -33,12 +33,12 @@ impl_reactor_for_array!(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mock::*;
+    use crate::mock::*;
 
     macro_rules! test_reactor_for_array {
         () => {};
 
-        ( $head:ident $(, $tail:ident )* $(,)* ) => {
+        ( $head:ident $(, $tail:ident )* $(,)? ) => {
             #[test]
             fn $head() {
                 let reactors = [MockReactor::default(); count!($( $tail, )*)];

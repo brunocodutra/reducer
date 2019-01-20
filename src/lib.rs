@@ -31,9 +31,6 @@
 
 #![cfg_attr(feature = "async", feature(async_await, await_macro, futures_api))]
 
-#[cfg(feature = "async")]
-extern crate futures;
-
 mod macros;
 mod mock;
 
@@ -41,6 +38,6 @@ mod dispatcher;
 mod reactor;
 mod reducer;
 
-pub use dispatcher::*;
-pub use reactor::*;
-pub use reducer::*;
+pub use crate::dispatcher::*;
+pub use crate::reactor::*;
+pub use crate::reducer::*;

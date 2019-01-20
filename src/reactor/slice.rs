@@ -1,4 +1,4 @@
-use reactor::*;
+use crate::reactor::*;
 
 /// Notifies all reactors in the slice in order.
 impl<S, T> Reactor<S> for [T]
@@ -18,7 +18,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mock::*;
+    use crate::mock::*;
 
     #[test]
     fn react() {

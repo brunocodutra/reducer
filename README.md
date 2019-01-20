@@ -17,7 +17,7 @@ and import it in your `lib.rs`:
 
 ```
 extern crate reducer;
-use reducer::*;
+use crate::reducer::*;
 ```
 
 The full API documentation is available on [docs.rs]

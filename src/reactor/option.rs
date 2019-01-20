@@ -1,4 +1,4 @@
-use reactor::*;
+use crate::reactor::*;
 
 /// Forwards the event if `Some`, ignores if `None`.
 impl<S, T> Reactor<S> for Option<T>
@@ -18,7 +18,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mock::*;
+    use crate::mock::*;
 
     #[test]
     fn some() {

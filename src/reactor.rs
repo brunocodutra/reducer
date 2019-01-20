@@ -81,7 +81,7 @@ pub trait Reactor<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mock::*;
+    use crate::mock::*;
 
     #[test]
     fn react() {

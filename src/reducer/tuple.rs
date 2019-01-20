@@ -1,9 +1,9 @@
-use reducer::*;
+use crate::reducer::*;
 
 macro_rules! impl_reducer_for_tuples {
     () => {};
 
-    ( $head:ident $(, $tail:ident )* $(,)* ) => {
+    ( $head:ident $(, $tail:ident )* $(,)? ) => {
         dedupe_docs!(($( $tail, )*),
             /// Updates all reducers in the tuple in order.
             ///
@@ -31,12 +31,12 @@ impl_reducer_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mock::*;
+    use crate::mock::*;
 
     macro_rules! test_reducer_for_tuples {
         () => {};
 
-        ( $head:ident $(, $tail:ident )* $(,)* ) => {
+        ( $head:ident $(, $tail:ident )* $(,)? ) => {
             #[derive(Debug, Default, Clone, Eq, PartialEq)]
             struct $head<A: 'static> {
                 inner: MockReducer<A>,

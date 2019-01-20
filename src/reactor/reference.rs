@@ -1,4 +1,4 @@
-use reactor::*;
+use crate::reactor::*;
 
 impl<'a, S, T> Reactor<S> for &'a T
 where
@@ -14,7 +14,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mock::*;
+    use crate::mock::*;
 
     #[test]
     fn react() {
