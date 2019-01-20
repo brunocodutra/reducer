@@ -19,13 +19,16 @@ where
 mod tests {
     use super::*;
     use crate::mock::*;
+    use proptest::*;
 
-    #[test]
-    fn react() {
-        let reactor: &[MockReactor<_>] = &[MockReactor::default(); 42];
+    proptest! {
+        #[test]
+        fn react(states: Vec<u8>, len in 0..100usize) {
+            let reactor: &[MockReactor<_>] = &vec![MockReactor::default(); len];
 
-        assert_eq!(reactor.react(&5), vec![5; 42].into());
-        assert_eq!(reactor.react(&1), vec![1; 42].into());
-        assert_eq!(reactor.react(&3), vec![3; 42].into());
+            for state in states {
+                assert_eq!(reactor.react(&state), vec![state; len].into());
+            }
+        }
     }
 }

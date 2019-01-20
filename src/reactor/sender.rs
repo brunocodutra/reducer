@@ -15,19 +15,33 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::*;
     use std::sync::mpsc::channel;
 
-    #[test]
-    fn react() {
-        let (tx, rx) = channel();
+    proptest! {
+        #[test]
+        fn react(states: Vec<u8>) {
+            let (tx, rx) = channel();
 
-        assert!(tx.react(&5).is_ok());
-        assert!(tx.react(&1).is_ok());
-        assert!(tx.react(&3).is_ok());
+            for state in &states {
+                assert!(tx.react(state).is_ok());
+            }
 
-        // hang up tx
-        drop(tx);
+            // hang up tx
+            drop(tx);
 
-        assert_eq!(rx.iter().collect::<Vec<_>>(), vec![5, 1, 3]);
+            assert_eq!(rx.iter().collect::<Vec<_>>(), states);
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn err(states: Vec<u8>) {
+            let (tx, _) = channel();
+
+            for state in states {
+                assert_eq!(tx.react(&state), Err(SendError(state)));
+            }
+        }
     }
 }

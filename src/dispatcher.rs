@@ -16,13 +16,16 @@ pub trait Dispatcher<A> {
 mod tests {
     use super::*;
     use crate::mock::*;
+    use proptest::*;
 
-    #[test]
-    fn dispatch() {
-        let dispatcher: &mut Dispatcher<_, Output = _> = &mut MockDispatcher::default();
+    proptest! {
+        #[test]
+        fn dispatch(actions: Vec<u8>) {
+            let dispatcher: &mut Dispatcher<_, Output = _> = &mut MockDispatcher::default();
 
-        assert_eq!(dispatcher.dispatch(5), 5);
-        assert_eq!(dispatcher.dispatch(1), 1);
-        assert_eq!(dispatcher.dispatch(3), 3);
+            for action in actions {
+                assert_eq!(dispatcher.dispatch(action), action);
+            }
+        }
     }
 }

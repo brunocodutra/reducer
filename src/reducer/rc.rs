@@ -15,15 +15,17 @@ where
 mod tests {
     use super::*;
     use crate::mock::*;
+    use proptest::*;
 
-    #[test]
-    fn reduce() {
-        let mut state = Rc::new(MockReducer::default());
+    proptest! {
+        #[test]
+        fn reduce(actions: Vec<u8>) {
+            let mut reducer = Rc::new(MockReducer::default());
 
-        state.reduce(5);
-        state.reduce(1);
-        state.reduce(3);
-
-        assert_eq!(state, Rc::new(MockReducer::new(vec![5, 1, 3])));
+            for (i, &action) in actions.iter().enumerate() {
+                reducer.reduce(action);
+                assert_eq!(reducer, Rc::new(MockReducer::new(actions[0..=i].into())));
+            }
+        }
     }
 }

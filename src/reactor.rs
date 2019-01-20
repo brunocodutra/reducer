@@ -82,13 +82,16 @@ pub trait Reactor<S> {
 mod tests {
     use super::*;
     use crate::mock::*;
+    use proptest::*;
 
-    #[test]
-    fn react() {
-        let reactor: &Reactor<_, Output = _> = &MockReactor::default();
+    proptest! {
+        #[test]
+        fn react(states: Vec<u8>) {
+            let reactor: &Reactor<_, Output = _> = &MockReactor::default();
 
-        assert_eq!(reactor.react(&5), 5);
-        assert_eq!(reactor.react(&1), 1);
-        assert_eq!(reactor.react(&3), 3);
+            for state in states {
+                assert_eq!(reactor.react(&state), state);
+            }
+        }
     }
 }
