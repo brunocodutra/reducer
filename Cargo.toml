@@ -14,7 +14,6 @@ all-features = true
 
 [features]
 async = ["futures-preview"]
-parallel = ["rayon"]
 
 [badges]
 travis-ci = { repository = "brunocodutra/reducer" }
@@ -22,7 +21,6 @@ codecov = { repository = "brunocodutra/reducer" }
 
 [dependencies]
 futures-preview = { version = "0.3.0-alpha.12", optional = true }
-rayon = { version = "1.0.3", optional = true }
 
 [dev-dependencies]
 criterion = "0.2.7"
@@ -32,10 +30,6 @@ ttf-noto-sans = "0.1.1"
 [dev-dependencies.conrod]
 version = "0.61.1"
 features = ["winit", "glium"]
-
-[[bench]]
-name = "parallel"
-harness = false
 
 [[bench]]
 name = "async"

@@ -14,44 +14,10 @@ macro_rules! impl_reducer_for_tuples {
                 $head: Reducer<A>,
                 $( $tail: Reducer<A>, )*
             {
-                specialize!(
-                    #[cfg(feature = "parallel")]
-                    default fn reduce(&mut self, action: A) {
-                        let ($head, $( $tail, )*) = self;
-                        $head.reduce(action.clone());
-                        $( $tail.reduce(action.clone()); )*
-                    }
-                );
-            }
-        );
-
-        dedupe_docs!(($( $tail, )*),
-            /// Updates all reducers in the tuple in parallel.
-            ///
-            /// Currently implemented for tuples of up to 12 elements.
-            #[cfg(feature = "parallel")]
-            impl<A, $head, $( $tail, )*> Reducer<A> for ($head, $( $tail, )*)
-            where
-                A: Clone + Send,
-                $head: Reducer<A> + Send,
-                $( $tail: Reducer<A> + Send, )*
-            {
                 fn reduce(&mut self, action: A) {
                     let ($head, $( $tail, )*) = self;
-
-                    let $head = {
-                        let action = action.clone();
-                        move || $head.reduce(action)
-                    };
-
-                    $(
-                        let $tail = {
-                            let action = action.clone();
-                            move || $tail.reduce(action)
-                        };
-                    )*
-
-                    join!($head $(, $tail )*);
+                    $head.reduce(action.clone());
+                    $( $tail.reduce(action.clone()); )*
                 }
             }
         );
@@ -90,8 +56,8 @@ mod tests {
                 let mut states = ($head::default(), $( $tail::default(), )*);
 
                 states.reduce(5);
-                states.reduce(NotSync::new(1));
-                states.reduce(NotSyncOrSend::new(3));
+                states.reduce(1);
+                states.reduce(3);
 
                 let ($head, $( $tail, )*) = states;
 

@@ -25,8 +25,8 @@ mod tests {
         let reactor = Some(MockReactor::default());
 
         assert_eq!(reactor.react(&5), Some(5));
-        assert_eq!(reactor.react(&NotSync::new(1)), Some(1));
-        assert_eq!(reactor.react(&NotSyncOrSend::new(3)), Some(3));
+        assert_eq!(reactor.react(&1), Some(1));
+        assert_eq!(reactor.react(&3), Some(3));
     }
 
     #[test]
@@ -34,7 +34,7 @@ mod tests {
         let reactor: Option<MockReactor<_>> = None;
 
         assert_eq!(reactor.react(&5), None);
-        assert_eq!(reactor.react(&NotSync::new(1)), None);
-        assert_eq!(reactor.react(&NotSyncOrSend::new(3)), None);
+        assert_eq!(reactor.react(&1), None);
+        assert_eq!(reactor.react(&3), None);
     }
 }
