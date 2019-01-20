@@ -25,27 +25,14 @@
 //! # Experimental Features
 //!
 //! The following cargo feature flags are available:
-//! * `parallel` (depends on nightly Rust)
-//!
-//!     This feature flag takes advantage of the experimental support for specialization available
-//!     on nightly Rust ([RFC 1210](https://github.com/rust-lang/rust/issues/31844)), to
-//!     automatically parallelize tuples of
-//!     [Sync](https://doc.rust-lang.org/nightly/std/marker/trait.Sync.html) /
-//!     [Send](https://doc.rust-lang.org/nightly/std/marker/trait.Send.html) Reducers
-//!     using [Rayon](https://crates.io/crates/rayon).
-//!
 //! * `async` (depends on nightly Rust)
 //!
 //!     Enables integration with [futures-rs](https://crates.io/crates/futures-preview).
 
 #![cfg_attr(feature = "async", feature(async_await, await_macro, futures_api))]
-#![cfg_attr(feature = "parallel", feature(specialization))]
 
 #[cfg(feature = "async")]
 extern crate futures;
-
-#[cfg(feature = "parallel")]
-extern crate rayon;
 
 mod macros;
 mod mock;

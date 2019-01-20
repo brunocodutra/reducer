@@ -22,7 +22,7 @@ mod tests {
         let reactor = &reactor;
 
         assert_eq!(reactor.react(&5), 5);
-        assert_eq!(reactor.react(&NotSync::new(1)), 1);
-        assert_eq!(reactor.react(&NotSyncOrSend::new(3)), 3);
+        assert_eq!(reactor.react(&1), 1);
+        assert_eq!(reactor.react(&3), 3);
     }
 }

@@ -25,7 +25,7 @@ mod tests {
         let reactor: &[MockReactor<_>] = &[MockReactor::default(); 42];
 
         assert_eq!(reactor.react(&5), vec![5; 42].into());
-        assert_eq!(reactor.react(&NotSync::new(1)), vec![1; 42].into());
-        assert_eq!(reactor.react(&NotSyncOrSend::new(3)), vec![3; 42].into());
+        assert_eq!(reactor.react(&1), vec![1; 42].into());
+        assert_eq!(reactor.react(&3), vec![3; 42].into());
     }
 }

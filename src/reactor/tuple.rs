@@ -64,8 +64,8 @@ mod tests {
                 let reactor = ($head::default(), $( $tail::default(), )*);
 
                 assert_eq!(reactor.react(&5), ($head::new(5), $( $tail::new(5), )*));
-                assert_eq!(reactor.react(&NotSync::new(1)), ($head::new(1), $( $tail::new(1), )*));
-                assert_eq!(reactor.react(&NotSyncOrSend::new(3)), ($head::new(3), $( $tail::new(3), )*));
+                assert_eq!(reactor.react(&1), ($head::new(1), $( $tail::new(1), )*));
+                assert_eq!(reactor.react(&3), ($head::new(3), $( $tail::new(3), )*));
             }
 
             test_reactor_for_tuples!($( $tail, )*);

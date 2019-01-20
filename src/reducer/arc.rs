@@ -24,8 +24,8 @@ mod tests {
         let mut state = Arc::new(MockReducer::default());
 
         state.reduce(5);
-        state.reduce(NotSync::new(1));
-        state.reduce(NotSyncOrSend::new(3));
+        state.reduce(1);
+        state.reduce(3);
 
         assert_eq!(state, Arc::new(MockReducer::new(vec![5, 1, 3])));
     }
