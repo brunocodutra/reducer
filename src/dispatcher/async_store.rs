@@ -192,6 +192,8 @@ mod tests {
     use super::*;
     use crate::mock::*;
     use futures::executor::block_on;
+    use futures::future::join_all;
+    use proptest::*;
     use std::error::Error;
 
     #[test]
@@ -200,37 +202,67 @@ mod tests {
         assert_eq!(store.inner, Store::default());
     }
 
-    #[test]
-    fn new() {
-        let state = MockReducer::new(vec![42]);
-        let reactor = MockReactor::default();
-        let store = AsyncStore::<_, _, i32>::new(state.clone(), &reactor);
+    proptest! {
+        #[test]
+        fn new(actions: Vec<u8>) {
+            let state = MockReducer::new(actions);
+            let reactor = MockReactor::default();
+            let store = AsyncStore::new(state.clone(), &reactor);
 
-        assert_eq!(store.inner, Store::new(state, &reactor));
+            assert_eq!(store.inner, Store::new(state, &reactor));
+        }
     }
 
-    #[test]
-    fn from() {
-        let state = MockReducer::new(vec![42]);
-        let reactor = MockReactor::default();
-        let store = AsyncStore::<_, _, i32>::from(Store::new(state.clone(), &reactor));
+    proptest! {
+        #[test]
+        fn from(actions: Vec<u8>) {
+            let state = MockReducer::new(actions);
+            let reactor = MockReactor::default();
+            let store = AsyncStore::from(Store::new(state.clone(), &reactor));
 
-        assert_eq!(store.inner, Store::new(state, &reactor));
+            assert_eq!(store.inner, Store::new(state, &reactor));
+        }
     }
 
-    #[test]
-    fn into() {
-        let state = MockReducer::new(vec![42]);
-        let reactor = MockReactor::default();
-        let store: Store<_, _> = AsyncStore::<_, _, i32>::new(state.clone(), &reactor).into();
+    proptest! {
+        #[test]
+        fn into(actions: Vec<u8>) {
+            let state = MockReducer::new(actions);
+            let reactor = MockReactor::default();
+            let store: Store<_, _> = AsyncStore::new(state.clone(), &reactor).into();
 
-        assert_eq!(store, AsyncStore::<_, _, i32>::new(state, &reactor).inner);
+            assert_eq!(store, AsyncStore::new(state, &reactor).inner);
+        }
     }
 
-    #[test]
-    fn clone() {
-        let store = AsyncStore::<_, _, ()>::new(MockReducer::default(), MockReactor::default());
-        assert_eq!(store, store.clone());
+    proptest! {
+        #[test]
+        fn clone(actions: Vec<u8>) {
+            let store = AsyncStore::new(MockReducer::new(actions), MockReactor::default());
+            assert_eq!(store, store.clone());
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn subscribe(actions: Vec<u8>) {
+            let state = MockReducer::new(actions);
+            let mut store = AsyncStore::new(state.clone(), Some(MockReactor::default()));
+
+            assert_eq!(
+                store.inner,
+                Store::new(state.clone(), Some(MockReactor::default()))
+            );
+
+            assert_eq!(store.subscribe(None), Some(MockReactor::default()));
+            assert_eq!(store.inner, Store::new(state.clone(), None));
+            assert_eq!(store.subscribe(MockReactor::default()), None);
+
+            assert_eq!(
+                store.inner,
+                Store::new(state.clone(), Some(MockReactor::default()))
+            );
+        }
     }
 
     #[test]
@@ -247,36 +279,20 @@ mod tests {
         assert!(store.spawn_thread().is_ok());
     }
 
-    #[test]
-    fn dispatch() -> Result<(), Box<dyn Error>> {
-        let store = AsyncStore::<MockReducer<_>, MockReactor<_>, _>::default();
-        let mut dispatcher = store.spawn_thread()?;
+    proptest! {
+        #[test]
+        fn dispatch(actions: Vec<u8>) {
+            let store = AsyncStore::<MockReducer<_>, MockReactor<_>, _>::default();
+            let mut dispatcher = store.spawn_thread().unwrap();
 
-        assert_eq!(
-            block_on(dispatcher.dispatch(5)),
-            Ok(MockReducer::new(vec![5]))
-        );
+            let promises: Vec<_> = actions
+                .iter()
+                .map(|&action| dispatcher.dispatch(action))
+                .collect();
 
-        assert_eq!(
-            block_on(dispatcher.dispatch(1)),
-            Ok(MockReducer::new(vec![5, 1]))
-        );
-
-        assert_eq!(
-            block_on(dispatcher.dispatch(3)),
-            Ok(MockReducer::new(vec![5, 1, 3]))
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn subscribe() {
-        let state = MockReducer::default();
-        let reactor = MockReactor::default();
-        let mut store = AsyncStore::<_, _, ()>::new(state, Some(reactor));
-
-        store.subscribe(None);
-        assert_eq!(store.inner, Store::new(MockReducer::default(), None));
+            for (i, state) in block_on(join_all(promises)).drain(..).enumerate() {
+                assert_eq!(state, Ok(MockReducer::new(actions[0..=i].into())));
+            }
+        }
     }
 }

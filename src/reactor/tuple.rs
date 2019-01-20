@@ -32,6 +32,7 @@ impl_reactor_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, 
 mod tests {
     use super::*;
     use crate::mock::*;
+    use proptest::*;
 
     macro_rules! test_reactor_for_tuples {
         () => {};
@@ -59,18 +60,21 @@ mod tests {
                 }
             }
 
-            #[test]
-            fn $head() {
+            proptest!(|(states: Vec<u8>)| {
                 let reactor = ($head::default(), $( $tail::default(), )*);
 
-                assert_eq!(reactor.react(&5), ($head::new(5), $( $tail::new(5), )*));
-                assert_eq!(reactor.react(&1), ($head::new(1), $( $tail::new(1), )*));
-                assert_eq!(reactor.react(&3), ($head::new(3), $( $tail::new(3), )*));
-            }
+                for state in states {
+                    let expected = ($head::new(state), $( $tail::new(state), )*);
+                    assert_eq!(reactor.react(&state), expected);
+                }
+            });
 
             test_reactor_for_tuples!($( $tail, )*);
         };
     }
 
-    test_reactor_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, _01);
+    #[test]
+    fn react() {
+        test_reactor_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, _01);
+    }
 }

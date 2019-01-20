@@ -32,6 +32,7 @@ impl_reducer_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, 
 mod tests {
     use super::*;
     use crate::mock::*;
+    use proptest::*;
 
     macro_rules! test_reducer_for_tuples {
         () => {};
@@ -51,23 +52,24 @@ mod tests {
                 }
             }
 
-            #[test]
-            fn $head() {
-                let mut states = ($head::default(), $( $tail::default(), )*);
+            proptest!(|(actions: Vec<u8>)| {
+                let mut reducers = ($head::default(), $( $tail::default(), )*);
 
-                states.reduce(5);
-                states.reduce(1);
-                states.reduce(3);
-
-                let ($head, $( $tail, )*) = states;
-
-                assert_eq!($head.inner, MockReducer::new(vec![5, 1, 3]));
-                $( assert_eq!($tail.inner, MockReducer::new(vec![5, 1, 3])); )*
-            }
+                for (i, &action) in actions.iter().enumerate() {
+                    reducers.reduce(action);
+                    let ($head, $( $tail, )*) = &reducers;
+                    let expected = MockReducer::new(actions[0..=i].into());
+                    assert_eq!($head.inner, expected);
+                    $( assert_eq!($tail.inner, expected); )*
+                }
+            });
 
             test_reducer_for_tuples!($( $tail, )*);
         };
     }
 
-    test_reducer_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, _01);
+    #[test]
+    fn reduce() {
+        test_reducer_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, _01);
+    }
 }

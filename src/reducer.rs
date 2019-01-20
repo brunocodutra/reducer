@@ -104,19 +104,19 @@ pub trait Reducer<A>: 'static {
 mod tests {
     use super::*;
     use crate::mock::*;
+    use proptest::*;
 
-    #[test]
-    fn reduce() {
-        let mut mock = MockReducer::default();
+    proptest! {
+        #[test]
+        fn reduce(actions: Vec<u8>) {
+            let mut mock = MockReducer::default();
 
-        {
-            let state: &mut Reducer<_> = &mut mock;
+            for (i, &action) in actions.iter().enumerate() {
+                let state: &mut dyn Reducer<_> = &mut mock;
+                state.reduce(action);
+                assert_eq!(mock, MockReducer::new(actions[0..=i].into()));
+            }
 
-            state.reduce(5);
-            state.reduce(1);
-            state.reduce(3);
         }
-
-        assert_eq!(mock, MockReducer::new(vec![5, 1, 3]));
     }
 }

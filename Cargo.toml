@@ -26,6 +26,7 @@ futures-preview = { version = "0.3.0-alpha.12", optional = true }
 [dev-dependencies]
 criterion = "0.2.7"
 iui = "0.3.0"
+proptest = "0.8.7"
 ttf-noto-sans = "0.1.1"
 
 [dev-dependencies.conrod]

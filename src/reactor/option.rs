@@ -19,22 +19,27 @@ where
 mod tests {
     use super::*;
     use crate::mock::*;
+    use proptest::*;
 
-    #[test]
-    fn some() {
-        let reactor = Some(MockReactor::default());
+    proptest! {
+        #[test]
+        fn some(states: Vec<u8>) {
+            let reactor = Some(MockReactor::default());
 
-        assert_eq!(reactor.react(&5), Some(5));
-        assert_eq!(reactor.react(&1), Some(1));
-        assert_eq!(reactor.react(&3), Some(3));
+            for state in states {
+                assert_eq!(reactor.react(&state), Some(state));
+            }
+        }
     }
 
-    #[test]
-    fn none() {
-        let reactor: Option<MockReactor<_>> = None;
+    proptest! {
+        #[test]
+        fn none(states: Vec<u8>) {
+            let reactor: Option<MockReactor<_>> = None;
 
-        assert_eq!(reactor.react(&5), None);
-        assert_eq!(reactor.react(&1), None);
-        assert_eq!(reactor.react(&3), None);
+            for state in states {
+                assert_eq!(reactor.react(&state), None);
+            }
+        }
     }
 }

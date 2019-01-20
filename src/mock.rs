@@ -47,33 +47,40 @@ impl<A> Dispatcher<A> for MockDispatcher<A> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::*;
 
-    #[test]
-    fn react() {
-        let reactor = MockReactor::default();
+    proptest! {
+        #[test]
+        fn reduce(actions: Vec<u8>) {
+            let mut reducer = MockReducer::default();
 
-        assert_eq!(reactor.react(&5), 5);
-        assert_eq!(reactor.react(&1), 1);
-        assert_eq!(reactor.react(&3), 3);
+            for &action in &actions {
+                reducer.reduce(action);
+            }
+
+            assert_eq!(reducer, MockReducer::new(actions));
+        }
     }
 
-    #[test]
-    fn reduce() {
-        let mut state = MockReducer::default();
+    proptest! {
+        #[test]
+        fn react(states: Vec<u8>) {
+            let reactor = MockReactor::default();
 
-        state.reduce(5);
-        state.reduce(1);
-        state.reduce(3);
-
-        assert_eq!(state, MockReducer::new(vec![5, 1, 3]));
+            for state in states {
+                assert_eq!(reactor.react(&state), state);
+            }
+        }
     }
 
-    #[test]
-    fn dispatch() {
-        let mut dispatcher = MockDispatcher::default();
+    proptest! {
+        #[test]
+        fn dispatch(actions: Vec<u8>) {
+            let mut dispatcher = MockDispatcher::default();
 
-        assert_eq!(dispatcher.dispatch(5), 5);
-        assert_eq!(dispatcher.dispatch(1), 1);
-        assert_eq!(dispatcher.dispatch(3), 3);
+            for action in actions {
+                assert_eq!(dispatcher.dispatch(action), action);
+            }
+        }
     }
 }
