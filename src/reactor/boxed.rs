@@ -1,7 +1,7 @@
 use crate::reactor::*;
 
-/// Forwards the event to a potentially stack allocated reactor.
-impl<'a, S, T> Reactor<S> for &'a T
+/// Forwards the event to the potentially _unsized_ nested reactor.
+impl<S, T> Reactor<S> for Box<T>
 where
     T: Reactor<S> + ?Sized,
 {
@@ -21,7 +21,7 @@ mod tests {
     proptest! {
         #[test]
         fn react(states: Vec<u8>) {
-            let reactor = &&MockReactor::default();
+            let reactor = Box::new(MockReactor::default());
 
             for state in states {
                 assert_eq!(reactor.react(&state), state);

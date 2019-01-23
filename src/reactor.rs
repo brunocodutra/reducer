@@ -1,4 +1,5 @@
 mod array;
+mod boxed;
 mod option;
 mod reference;
 mod sender;
