@@ -1,6 +1,7 @@
 mod arc;
 mod array;
 mod rc;
+mod slice;
 mod tuple;
 
 /// Trait for types that represent the logical state of an application.
