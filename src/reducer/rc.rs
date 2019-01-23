@@ -1,7 +1,10 @@
 use crate::reducer::*;
 use std::rc::Rc;
 
-/// Lazy copy-on-write for single-threaded applications.
+/// Enhances a potentially _unsized_ reducer with copy-on-write semantics.
+///
+/// Helps avoiding cloning the entire state when it needs to be sent to other parts of the
+/// application.
 impl<A, R> Reducer<A> for Rc<R>
 where
     R: Reducer<A> + Clone + ?Sized,

@@ -1,10 +1,10 @@
 use crate::reducer::*;
 use std::sync::Arc;
 
-/// Lazy copy-on-write for multi-threaded applications.
+/// Enhances a potentially _unsized_ reducer with copy-on-write semantics.
 ///
-/// Helps avoiding cloning the entire state when it needs to be sent to a different thread
-/// (e.g to the rendering thread of a GUI).
+/// Helps avoiding cloning the entire state when it needs to be sent to other threads,
+/// e.g to the rendering thread of a GUI.
 impl<A, R> Reducer<A> for Arc<R>
 where
     R: Reducer<A> + Clone + ?Sized,
