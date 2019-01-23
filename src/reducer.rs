@@ -1,5 +1,6 @@
 mod arc;
 mod array;
+mod boxed;
 mod rc;
 mod slice;
 mod tuple;
