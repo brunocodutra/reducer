@@ -32,19 +32,19 @@ jobs:
   include:
   - name: fmt
     stage: check
-    rust: nightly
+    rust: stable
     os: linux
     install:
-    - rustup component add rustfmt-preview --toolchain nightly
+    - rustup component add rustfmt
     script:
-    - cargo +nightly fmt --all -- --check
+    - cargo fmt --all -- --check
 
   - name: clippy
     stage: check
     rust: nightly
     os: linux
     install:
-    - rustup component add clippy-preview --toolchain nightly
+    - rustup component add clippy --toolchain nightly || cargo install --git https://github.com/rust-lang/rust-clippy/ --force clippy
     script:
     - cargo +nightly clippy --all-targets --all-features -- -D warnings
 
