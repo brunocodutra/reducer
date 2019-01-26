@@ -3,7 +3,6 @@ language: rust
 rust:
 - stable
 - beta
-- nightly
 
 os:
 - linux
@@ -59,22 +58,19 @@ jobs:
     after_success:
     - bash <(curl -s https://codecov.io/bash)
 
-  - name: experimental
-    stage: test
+  - stage: test
     rust: nightly
     os: linux
     script:
     - cargo +nightly test -v --all-features
 
-  - name: experimental
-    stage: test
+  - stage: test
     rust: nightly
     os: osx
     script:
     - cargo +nightly test -v --all-features
 
-  - name: experimental
-    stage: test
+  - stage: test
     rust: nightly
     os: windows
     script:
@@ -83,11 +79,5 @@ jobs:
   - stage: benchmark
     rust: nightly
     os: linux
-    script:
-    - cargo bench --all-features
-
-  - stage: benchmark
-    rust: nightly
-    os: osx
     script:
     - cargo bench --all-features
