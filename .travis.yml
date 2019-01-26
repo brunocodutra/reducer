@@ -77,6 +77,7 @@ jobs:
     - cargo +nightly test -v --all-features
 
   - stage: benchmark
+    if: type = pull_request
     rust: nightly
     os: linux
     script:
