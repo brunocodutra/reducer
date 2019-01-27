@@ -1,9 +1,9 @@
 #[cfg(feature = "async")]
-mod async_store;
+mod r#async;
 mod store;
 
 #[cfg(feature = "async")]
-pub use self::async_store::*;
+pub use self::r#async::*;
 pub use self::store::*;
 
 /// Trait for types that allow dispatching actions.

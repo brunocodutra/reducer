@@ -190,7 +190,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let (reactor, states) = channel();
 
     // Create a Store to manage the state.
-    let store = AsyncStore::new(Arc::new(State::default()), reactor);
+    let store = Async::new(Store::new(Arc::new(State::default()), reactor));
 
     // Spin up a thread-pool to run our application
     let mut executor = futures::executor::ThreadPoolBuilder::new().create()?;
