@@ -183,6 +183,7 @@ fn run_libui(dispatcher: impl Dispatcher<Action> + Clone + 'static, states: Rece
     event_loop.run(&ui);
 }
 
+// Use Reducer's experimental support for async/await.
 #[cfg(feature = "async")]
 fn main() -> Result<(), Box<dyn Error>> {
     // Create a channel to synchronize states.
@@ -191,14 +192,19 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Create a Store to manage the state.
     let store = AsyncStore::new(Arc::new(State::default()), reactor);
 
-    // Listen for actions on a separate thread
-    let dispatcher = store.spawn_thread()?;
+    // Spin up a thread-pool to run our application
+    let mut executor = futures::executor::ThreadPoolBuilder::new().create()?;
 
-    run_libui(dispatcher, states);
+    // Listen for actions on a separate thread
+    let dispatcher = store.spawn(&mut executor).unwrap();
+
+    // Spin up the rendering thread
+    executor.run(futures::future::lazy(|_| run_libui(dispatcher, states)));
 
     Ok(())
 }
 
+// Fallback to features available in stable Rust.
 #[cfg(not(feature = "async"))]
 impl Dispatcher<Action> for std::sync::mpsc::Sender<Action> {
     type Output = Result<(), std::sync::mpsc::SendError<Action>>;
