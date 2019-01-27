@@ -2,8 +2,6 @@ use crate::dispatcher::{Dispatcher, Store};
 use crate::reactor::Reactor;
 use crate::reducer::Reducer;
 use futures::channel::{mpsc, oneshot};
-use futures::executor::ThreadPoolBuilder;
-use futures::io::Error;
 use futures::stream::StreamExt;
 use futures::task::{SpawnError, SpawnExt};
 use std::marker::PhantomData;
@@ -21,6 +19,7 @@ use std::marker::PhantomData;
 ///
 /// ## Example
 /// ```rust
+/// use futures::executor::ThreadPoolBuilder;
 /// use reducer::*;
 /// use std::error::Error;
 /// use std::io::{self, Write};
@@ -60,8 +59,11 @@ use std::marker::PhantomData;
 /// fn main() -> Result<(), Box<dyn Error>> {
 ///     let store = AsyncStore::new(Calculator(0), Display);
 ///
+///     // Spin up a thread-pool.
+///     let mut executor = ThreadPoolBuilder::new().create()?;
+///
 ///     // Process incoming actions on a background thread.
-///     let mut dispatcher = store.spawn_thread()?;
+///     let mut dispatcher = store.spawn(&mut executor).unwrap();
 ///
 ///     dispatcher.dispatch(Action::Add(5)); // displays "5"
 ///     dispatcher.dispatch(Action::Mul(3)); // displays "15"
@@ -129,16 +131,6 @@ where
         executor.spawn(run_async(self, rx))?;
         Ok(AsyncStoreHandle { tx })
     }
-
-    /// Spawns a new thread to run the AsyncStore and returns an
-    /// [AsyncStoreHandle](struct.AsyncStoreHandle.html) that may be used to dispatch actions.
-    ///
-    /// The spawned AsyncStore and its associated thread will live as long as the handle
-    /// (or one of its clones) lives.
-    pub fn spawn_thread(self) -> Result<AsyncStoreHandle<R, S, A>, Error> {
-        let mut executor = ThreadPoolBuilder::new().pool_size(1).create()?;
-        Ok(self.spawn(&mut executor).unwrap())
-    }
 }
 
 // Free function for now to workaround compiler issues.
@@ -191,7 +183,7 @@ where
 mod tests {
     use super::*;
     use crate::mock::*;
-    use futures::executor::block_on;
+    use futures::executor::{block_on, ThreadPoolBuilder};
     use futures::future::join_all;
     use proptest::*;
     use std::error::Error;
@@ -268,22 +260,17 @@ mod tests {
     #[test]
     fn spawn() -> Result<(), Box<dyn Error>> {
         let store = AsyncStore::<MockReducer<_>, MockReactor<_>, ()>::default();
-        let mut executor = ThreadPoolBuilder::new().pool_size(2).create()?;
+        let mut executor = ThreadPoolBuilder::new().create()?;
         assert!(store.spawn(&mut executor).is_ok());
         Ok(())
-    }
-
-    #[test]
-    fn spawn_thread() {
-        let store = AsyncStore::<MockReducer<_>, MockReactor<_>, ()>::default();
-        assert!(store.spawn_thread().is_ok());
     }
 
     proptest! {
         #[test]
         fn dispatch(actions: Vec<u8>) {
             let store = AsyncStore::<MockReducer<_>, MockReactor<_>, _>::default();
-            let mut dispatcher = store.spawn_thread().unwrap();
+            let mut executor = ThreadPoolBuilder::new().create()?;
+            let mut dispatcher = store.spawn(&mut executor).unwrap();
 
             let promises: Vec<_> = actions
                 .iter()
