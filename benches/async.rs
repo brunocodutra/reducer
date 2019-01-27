@@ -24,7 +24,7 @@ impl<T: Copy> Reactor<T> for BlackBox {
 }
 
 fn bench(c: &mut Criterion) {
-    let store = AsyncStore::new(BlackBox, BlackBox);
+    let store = Async::new(Store::new(BlackBox, BlackBox));
     let mut executor = ThreadPoolBuilder::new().create().unwrap();
     let handle = store.spawn(&mut executor).unwrap();
 
