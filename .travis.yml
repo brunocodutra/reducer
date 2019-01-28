@@ -40,12 +40,12 @@ jobs:
 
   - name: clippy
     stage: check
-    rust: nightly
+    rust: stable
     os: linux
     install:
-    - rustup component add clippy --toolchain nightly || cargo install --git https://github.com/rust-lang/rust-clippy/ --force clippy
+    - rustup component add clippy
     script:
-    - cargo +nightly clippy --all-targets --all-features -- -D warnings
+    - cargo clippy --all-targets -- -D warnings
 
   - name: coverage
     stage: check
