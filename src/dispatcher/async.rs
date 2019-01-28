@@ -1,5 +1,6 @@
 use crate::dispatcher::Dispatcher;
 use futures::channel::{mpsc, oneshot};
+use futures::future::{FutureExt, TryFutureExt};
 use futures::stream::StreamExt;
 use futures::task::{SpawnError, SpawnExt};
 use std::marker::PhantomData;
@@ -156,7 +157,7 @@ impl<D, A> Dispatcher<A> for AsyncHandle<D, A>
 where
     D: Dispatcher<A>,
 {
-    type Output = oneshot::Receiver<D::Output>;
+    existential type Output: FutureExt<Output = D::Output>;
 
     /// Asynchronously sends an action through the dispatcher managed by [Async](struct.Async.html)
     /// and returns a *promise* to its output.
@@ -170,7 +171,7 @@ where
     fn dispatch(&mut self, action: A) -> Self::Output {
         let (tx, rx) = oneshot::channel();
         self.tx.unbounded_send((action, tx)).unwrap();
-        rx
+        rx.unwrap_or_else(|_| panic!())
     }
 }
 
@@ -240,9 +241,9 @@ mod tests {
                 .map(|&action| handle.dispatch(action))
                 .collect();
 
-            for (&state, action) in block_on(join_all(promises)).iter().zip(actions) {
-                assert_eq!(state, Ok(action));
-            }
+            drop(handle);
+
+            assert_eq!(block_on(join_all(promises)), actions);
         }
     }
 }
