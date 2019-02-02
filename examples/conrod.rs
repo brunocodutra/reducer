@@ -1,4 +1,4 @@
-//! A simple example demonstrating how to implement a Todo app using Reducer & Conrod.
+//! A simple example demonstrating how to implement a Todo List app using Reducer & Conrod.
 
 #[macro_use]
 extern crate conrod;
