@@ -1,4 +1,4 @@
-//! A simple example demonstrating how to implement a Todo app using Reducer & libui.
+//! A simple example demonstrating how to implement a Todo List app using Reducer & iui.
 
 extern crate iui;
 extern crate reducer;
@@ -83,7 +83,7 @@ impl State {
     }
 }
 
-fn run_libui(dispatcher: impl Dispatcher<Action> + Clone + 'static, states: Receiver<Arc<State>>) {
+fn run_iui(dispatcher: impl Dispatcher<Action> + Clone + 'static, states: Receiver<Arc<State>>) {
     let ui = UI::init().unwrap();
 
     // Layout.
@@ -128,8 +128,8 @@ fn run_libui(dispatcher: impl Dispatcher<Action> + Clone + 'static, states: Rece
     let mut event_loop = ui.event_loop();
 
     event_loop.on_tick(&ui, {
-        // keep track of todos displayed as libui doesn't yet provide a way of introspecting that.
-        let mut checkboxes: Vec<Checkbox> = vec![];
+        // keep track of todos displayed as iui doesn't yet provide a way of introspecting that.
+        let mut checklist: Vec<Checkbox> = vec![];
         let mut body = body.clone();
         let mut filter = filter.clone();
         let dispatcher = dispatcher.clone();
@@ -140,7 +140,7 @@ fn run_libui(dispatcher: impl Dispatcher<Action> + Clone + 'static, states: Rece
             if let Some(state) = states.try_iter().last() {
                 // Add new todos
                 let todos = state.get_todos();
-                for (i, (_, todo)) in todos.iter().enumerate().skip(checkboxes.len()) {
+                for (i, (_, todo)) in todos.iter().enumerate().skip(checklist.len()) {
                     let mut checkbox = Checkbox::new(&ui, todo);
                     checkbox.on_toggled(&ui, {
                         let mut dispatcher = dispatcher.clone();
@@ -148,12 +148,12 @@ fn run_libui(dispatcher: impl Dispatcher<Action> + Clone + 'static, states: Rece
                             dispatcher.dispatch(Action::ToggleTodo(i));
                         }
                     });
-                    checkboxes.push(checkbox.clone());
+                    checklist.push(checkbox.clone());
                     body.append(&ui, checkbox, LayoutStrategy::Compact);
                 }
 
-                // Synchronize checkboxes with the state.
-                for (&(done, _), checkbox) in todos.iter().zip(checkboxes.iter_mut()) {
+                // Synchronize checklist with the state.
+                for (&(done, _), checkbox) in todos.iter().zip(checklist.iter_mut()) {
                     checkbox.set_checked(&ui, done);
                     match state.get_filter() {
                         View::Done if !done => checkbox.hide(&ui),
@@ -176,7 +176,7 @@ fn run_libui(dispatcher: impl Dispatcher<Action> + Clone + 'static, states: Rece
     body.append(&ui, HorizontalSeparator::new(&ui), LayoutStrategy::Compact);
 
     // The window allows all constituent components to be displayed.
-    let mut window = Window::new(&ui, "Reducer <3 libui", 400, 300, WindowType::NoMenubar);
+    let mut window = Window::new(&ui, "Reducer <3 iui", 400, 500, WindowType::NoMenubar);
     window.set_child(&ui, body);
     window.show(&ui);
 
@@ -199,7 +199,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let dispatcher = store.spawn(&mut executor).unwrap();
 
     // Spin up the rendering thread
-    executor.run(futures::future::lazy(|_| run_libui(dispatcher, states)));
+    executor.run(futures::future::lazy(|_| run_iui(dispatcher, states)));
 
     Ok(())
 }
@@ -233,7 +233,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     });
 
-    run_libui(dispatcher, states);
+    run_iui(dispatcher, states);
 
     Ok(())
 }
