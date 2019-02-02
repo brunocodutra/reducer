@@ -25,6 +25,7 @@ futures-preview = { version = "0.3.0-alpha.12", optional = true }
 
 [dev-dependencies]
 criterion = "0.2.9"
+gtk = "0.5.0"
 iui = "0.3.0"
 proptest = "0.9.0"
 ttf-noto-sans = "0.1.1"

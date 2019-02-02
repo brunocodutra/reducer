@@ -34,7 +34,7 @@ To run an example, execute
 > cargo run --release --example <NAME>
 ```
 
-where `<NAME>` can be one of [conrod] or [iui].
+where `<NAME>` can be one of [conrod], [gtk] or [iui].
 
 > **Note to macOS users:** due to an issue with `ui-sys` you might need to prepend
 > `CXXFLAGS+=-stdlib=libc++` to the command above, see
@@ -70,6 +70,7 @@ Reducer is distributed under the terms of the MIT license, see [LICENSE] for det
 [examples]:         https://github.com/brunocodutra/reducer/tree/master/examples
 
 [conrod]:           https://crates.io/crates/Conrod
+[gtk]:              https://crates.io/crates/GTK
 [iui]:              https://crates.io/crates/iui
 
 [LICENSE]:          https://github.com/brunocodutra/reducer/blob/master/LICENSE
