@@ -1,6 +1,6 @@
 use crate::dispatcher::Dispatcher;
 use futures::channel::{mpsc, oneshot};
-use futures::future::{FutureExt, TryFutureExt};
+use futures::future::{TryFutureExt, UnwrapOrElse};
 use futures::stream::StreamExt;
 use futures::task::{SpawnError, SpawnExt};
 use std::marker::PhantomData;
@@ -157,7 +157,11 @@ impl<D, A> Dispatcher<A> for AsyncHandle<D, A>
 where
     D: Dispatcher<A>,
 {
-    existential type Output: FutureExt<Output = D::Output>;
+    /// A type that implements `FutureExt<Output = D::Output>`.
+    ///
+    /// _**Important:** do not rely on the actual type,_
+    /// _this will become an existential type once issues with rustdoc are solved._
+    type Output = Promise<D::Output>;
 
     /// Asynchronously sends an action through the dispatcher managed by [Async](struct.Async.html)
     /// and returns a *promise* to its output.
@@ -174,6 +178,8 @@ where
         rx.unwrap_or_else(|_| panic!())
     }
 }
+
+type Promise<T> = UnwrapOrElse<oneshot::Receiver<T>, fn(oneshot::Canceled) -> T>;
 
 #[cfg(test)]
 mod tests {
