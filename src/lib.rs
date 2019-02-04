@@ -29,10 +29,7 @@
 //!
 //!     Enables integration with [futures-rs](https://crates.io/crates/futures-preview).
 
-#![cfg_attr(
-    feature = "async",
-    feature(async_await, await_macro, futures_api, existential_type)
-)]
+#![cfg_attr(feature = "async", feature(async_await, await_macro, futures_api))]
 
 mod macros;
 mod mock;
