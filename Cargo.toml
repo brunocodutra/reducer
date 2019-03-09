@@ -24,14 +24,16 @@ codecov = { repository = "brunocodutra/reducer" }
 futures-preview = { version = "0.3.0-alpha.12", optional = true }
 
 [dev-dependencies]
+conrod_core = "0.63.0"
+conrod_gfx = "0.63.0"
+conrod_winit = "0.63.0"
 criterion = "0.2.9"
+gfx = "0.17.0"
+gfx_window_glutin = "0.28.0"
+glutin = "0.19.0"
 iui = "0.3.0"
 proptest = "0.9.0"
 ttf-noto-sans = "0.1.1"
-
-[dev-dependencies.conrod]
-version = "0.61.1"
-features = ["winit", "glium"]
 
 [[bench]]
 name = "async"
