@@ -1,25 +1,33 @@
 //! A simple example demonstrating how to implement a Todo List app using Reducer & Conrod.
 
 #[macro_use]
-extern crate conrod;
+extern crate conrod_core;
+extern crate conrod_gfx;
+extern crate conrod_winit;
+extern crate gfx;
+extern crate gfx_window_glutin;
+extern crate glutin;
 extern crate reducer;
 extern crate ttf_noto_sans;
 
-use conrod::backend::glium::{glium, Renderer};
-use conrod::backend::winit;
-use conrod::text::FontCollection;
-use conrod::{color, image, UiBuilder, UiCell};
-use conrod::{widget, Borderable, Colorable, Labelable, Positionable, Sizeable, Widget};
-use glium::{glutin, texture, Display, Surface};
+use conrod_core::text::FontCollection;
+use conrod_core::{
+    color, image, widget, Borderable, Colorable, Labelable, Positionable, Sizeable, UiBuilder,
+    UiCell, Widget,
+};
+use conrod_gfx::{ColorFormat, Renderer};
+use conrod_winit::convert_event;
+use gfx::format::DepthStencil;
+use gfx::Device;
+use glutin::dpi::LogicalSize;
 use glutin::Event::WindowEvent;
-use glutin::WindowEvent::CloseRequested;
+use glutin::WindowEvent::{CloseRequested, Resized};
 use glutin::{ContextBuilder, EventsLoop, WindowBuilder};
 use reducer::*;
 use std::error::Error;
 use std::mem;
 use std::sync::mpsc::{channel, Receiver};
 use std::sync::Arc;
-use std::thread;
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -125,8 +133,8 @@ fn render(ui: &mut UiCell, ids: &Ids, state: &State, mut dispatcher: impl Dispat
         .pad(20.0)
         .pad_right(130.0)
         .mid_top_of(ui.window)
-        .rgba(0.0, 0.0, 0.0, 0.0)
-        .border_rgba(0.0, 0.0, 0.0, 0.0)
+        .color(color::DARK_CHARCOAL)
+        .border_color(color::DARK_CHARCOAL)
         .set(ids.control, ui);
 
     widget::Canvas::new()
@@ -134,8 +142,8 @@ fn render(ui: &mut UiCell, ids: &Ids, state: &State, mut dispatcher: impl Dispat
         .w_of(ui.window)
         .pad(20.0)
         .mid_bottom_of(ui.window)
-        .rgba(0.0, 0.0, 0.0, 0.0)
-        .border_rgba(0.0, 0.0, 0.0, 0.0)
+        .color(color::DARK_CHARCOAL)
+        .border_color(color::DARK_CHARCOAL)
         .set(ids.footer, ui);
 
     // Render button to add a todo.
@@ -244,25 +252,28 @@ fn run_conrod(
     dispatcher: impl Dispatcher<Action> + Clone,
     states: Receiver<Arc<State>>,
 ) -> Result<(), Box<dyn Error>> {
-    const WIDTH: u32 = 400;
-    const HEIGHT: u32 = 500;
+    const WIDTH: f64 = 400.;
+    const HEIGHT: f64 = 500.;
 
     let mut events_loop = EventsLoop::new();
     let context = ContextBuilder::new();
-    let window = WindowBuilder::new()
+    let builder = WindowBuilder::new()
         .with_dimensions((WIDTH, HEIGHT).into())
         .with_min_dimensions((WIDTH, HEIGHT).into())
         .with_title("Reducer <3 Conrod");
 
-    let display = Display::new(window, context, &events_loop)?;
-    let mut ui = UiBuilder::new([f64::from(WIDTH), f64::from(HEIGHT)]).build();
+    let (window, mut device, mut factory, rtv, _) =
+        gfx_window_glutin::init::<ColorFormat, DepthStencil>(builder, context, &events_loop)?;
 
-    ui.fonts
-        .insert(FontCollection::from_bytes(ttf_noto_sans::REGULAR)?.into_font()?);
+    let mut encoder = factory.create_command_buffer().into();
+    let mut renderer = Renderer::new(&mut factory, &rtv, window.get_hidpi_factor())?;
+
+    let font = FontCollection::from_bytes(ttf_noto_sans::REGULAR)?.into_font()?;
+    let mut ui = UiBuilder::new([WIDTH, HEIGHT]).build();
+    ui.fonts.insert(font);
 
     let ids = Ids::new(ui.widget_id_generator());
-    let mut renderer = Renderer::new(&display)?;
-    let image_map = image::Map::<texture::Texture2d>::new();
+    let image_map = image::Map::new();
 
     // Keep a copy of the current state.
     let mut state = Arc::new(State::default());
@@ -271,47 +282,63 @@ fn run_conrod(
     let mut rerendered_at = Instant::now();
 
     loop {
-        let mut exit = false;
+        // If the window is closed, this will be None for one tick, so to avoid panicking with
+        // unwrap, instead break the loop
+        let LogicalSize { width, height } = match window.get_inner_size() {
+            Some(s) => s,
+            None => break Ok(()),
+        };
 
-        // Rerender at 60fps.
-        while Instant::now().duration_since(rerendered_at) < Duration::from_millis(16) {
-            events_loop.poll_events(|event| {
-                if let WindowEvent { ref event, .. } = event {
-                    if let CloseRequested = event {
-                        exit = true;
-                    }
-                }
+        // Draw the `Ui` if it has changed.
+        if let Some(primitives) = ui.draw_if_changed() {
+            let dpi_factor = window.get_hidpi_factor();
+            let dims = ((width * dpi_factor) as f32, (height * dpi_factor) as f32);
 
-                if let Some(input) = winit::convert_event(event, &display) {
-                    ui.handle_event(input);
-                }
-            });
-
-            // Avoid spinning too fast.
-            thread::sleep(Duration::from_millis(1));
+            renderer.clear(&mut encoder, color::DARK_CHARCOAL.to_fsa());
+            renderer.fill(&mut encoder, dims, dpi_factor, primitives, &image_map);
+            renderer.draw(&mut factory, &mut encoder, &image_map);
+            encoder.flush(&mut device);
+            window.swap_buffers()?;
+            device.cleanup();
         }
 
-        rerendered_at = Instant::now();
+        let mut exit = false;
+
+        events_loop.poll_events(|event| {
+            if let WindowEvent { ref event, .. } = event {
+                if let CloseRequested = event {
+                    exit = true;
+                }
+
+                if let Resized(logical_size) = event {
+                    let hidpi_factor = window.get_hidpi_factor();
+                    let physical_size = logical_size.to_physical(hidpi_factor);
+                    window.resize(physical_size);
+                    let (new_color, _) =
+                        gfx_window_glutin::new_views::<ColorFormat, DepthStencil>(&window);
+                    renderer.on_resize(new_color);
+                }
+            }
+
+            if let Some(event) = convert_event(event.clone(), window.window()) {
+                ui.handle_event(event);
+            }
+        });
 
         if exit {
             break Ok(());
         }
 
-        // Synchronize the state.
-        if let Some(next) = states.try_iter().last() {
-            state = next;
-        }
+        // Render at 60fps.
+        if Instant::now().duration_since(rerendered_at) > Duration::from_millis(16) {
+            // Synchronize the state.
+            if let Some(next) = states.try_iter().last() {
+                state = next;
+            }
 
-        // Render widgets given the current state.
-        render(&mut ui.set_widgets(), &ids, &state, dispatcher.clone());
-
-        // Draw the `Ui` if it has changed.
-        if let Some(primitives) = ui.draw_if_changed() {
-            renderer.fill(&display, primitives, &image_map);
-            let mut target = display.draw();
-            target.clear_color(0.0, 0.0, 0.0, 0.0);
-            renderer.draw(&display, &mut target, &image_map)?;
-            target.finish()?;
+            // Render widgets given the current state.
+            render(&mut ui.set_widgets(), &ids, &state, dispatcher.clone());
+            rerendered_at = Instant::now();
         }
     }
 }
@@ -354,7 +381,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let (reactor, states) = channel();
 
     // Run Reducer on a separate thread
-    thread::spawn(move || {
+    std::thread::spawn(move || {
         // Create a Store to manage the state.
         let mut store = Store::new(Arc::new(State::default()), reactor);
 
