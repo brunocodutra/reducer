@@ -20,9 +20,6 @@ addons:
       - libssl-dev
 
 jobs:
-  allow_failures:
-  - name: coverage # FIXME
-
   include:
   - name: fmt
     stage: check
