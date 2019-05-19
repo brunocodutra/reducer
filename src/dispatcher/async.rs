@@ -1,8 +1,8 @@
 use crate::dispatcher::Dispatcher;
 use futures::channel::{mpsc, oneshot};
-use futures::future::{TryFutureExt, UnwrapOrElse};
+use futures::future::{FutureObj, TryFutureExt, UnwrapOrElse};
 use futures::stream::StreamExt;
-use futures::task::{SpawnError, SpawnExt};
+use futures::task::{Spawn, SpawnError};
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
@@ -129,16 +129,16 @@ where
     /// that may be used to dispatch actions.
     ///
     /// The spawned Async will live as long as the handle (or one of its clones) lives.
-    pub fn spawn(mut self, executor: &mut impl SpawnExt) -> Result<AsyncHandle<D, A>, SpawnError> {
+    pub fn spawn(mut self, executor: &mut impl Spawn) -> Result<AsyncHandle<D, A>, SpawnError> {
         let (tx, mut rx) = mpsc::unbounded::<(A, oneshot::Sender<D::Output>)>();
 
-        executor.spawn(
+        executor.spawn_obj(FutureObj::new(Box::new(
             async move {
                 while let Some((action, tx)) = await!(rx.next()) {
                     tx.send(self.inner.dispatch(action)).ok();
                 }
             },
-        )?;
+        )))?;
 
         Ok(AsyncHandle { tx })
     }
