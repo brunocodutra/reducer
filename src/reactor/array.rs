@@ -52,7 +52,7 @@ mod tests {
         };
     }
 
-    #[allow(clippy::cyclomatic_complexity)]
+    #[allow(clippy::cognitive_complexity)]
     #[test]
     fn react() {
         test_reactor_for_array!(

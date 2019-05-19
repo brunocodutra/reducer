@@ -54,7 +54,7 @@ mod tests {
         };
     }
 
-    #[allow(clippy::cyclomatic_complexity)]
+    #[allow(clippy::cognitive_complexity)]
     #[test]
     fn reduce() {
         test_reducer_for_array!(
