@@ -132,13 +132,11 @@ where
     pub fn spawn(mut self, executor: &mut impl SpawnExt) -> Result<AsyncHandle<D, A>, SpawnError> {
         let (tx, mut rx) = mpsc::unbounded::<(A, oneshot::Sender<D::Output>)>();
 
-        executor.spawn(
-            async move {
-                while let Some((action, tx)) = await!(rx.next()) {
-                    tx.send(self.inner.dispatch(action)).ok();
-                }
-            },
-        )?;
+        executor.spawn(async move {
+            while let Some((action, tx)) = await!(rx.next()) {
+                tx.send(self.inner.dispatch(action)).ok();
+            }
+        })?;
 
         Ok(AsyncHandle { tx })
     }
