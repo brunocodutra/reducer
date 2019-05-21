@@ -21,7 +21,7 @@ travis-ci = { repository = "brunocodutra/reducer" }
 codecov = { repository = "brunocodutra/reducer" }
 
 [dependencies]
-futures-preview = { version = "0.3.0-alpha.14", optional = true }
+futures-preview = { version = "0.3.0-alpha.16", optional = true }
 
 [dev-dependencies]
 conrod_core = "0.63.0"
