@@ -1,6 +1,7 @@
 use crate::dispatcher::Dispatcher;
 use futures::channel::{mpsc, oneshot};
-use futures::future::{FutureObj, TryFutureExt, UnwrapOrElse};
+use futures::future::{BoxFuture, FutureObj};
+use futures::sink::SinkExt;
 use futures::stream::StreamExt;
 use futures::task::{Spawn, SpawnError};
 use std::marker::PhantomData;
@@ -130,7 +131,7 @@ where
     ///
     /// The spawned Async will live as long as the handle (or one of its clones) lives.
     pub fn spawn(mut self, executor: &mut impl Spawn) -> Result<AsyncHandle<D, A>, SpawnError> {
-        let (tx, mut rx) = mpsc::unbounded::<(A, oneshot::Sender<D::Output>)>();
+        let (tx, mut rx) = mpsc::channel::<(A, oneshot::Sender<D::Output>)>(0);
 
         executor.spawn_obj(FutureObj::new(Box::new(async move {
             while let Some((action, tx)) = await!(rx.next()) {
@@ -148,43 +149,44 @@ where
 /// As the name suggests, this is just a lightweight handle that may be cloned and passed around.
 #[derive(Debug, Clone)]
 pub struct AsyncHandle<D: Dispatcher<A>, A> {
-    tx: mpsc::UnboundedSender<(A, oneshot::Sender<D::Output>)>,
+    tx: mpsc::Sender<(A, oneshot::Sender<D::Output>)>,
 }
 
 impl<D, A> Dispatcher<A> for AsyncHandle<D, A>
 where
-    D: Dispatcher<A>,
+    D: Dispatcher<A> + 'static,
+    D::Output: Send + 'static,
+    A: Send + 'static,
 {
-    /// A type that implements `FutureExt<Output = D::Output>`.
+    /// A Future that represents asynchronously dispatched actions.
     ///
     /// _**Important:** do not rely on the actual type,_
     /// _this will become an existential type once issues with rustdoc are solved._
-    type Output = Promise<D::Output>;
+    type Output = BoxFuture<'static, D::Output>;
 
     /// Asynchronously sends an action through the dispatcher managed by [Async](struct.Async.html)
-    /// and returns a *promise* to its output.
-    ///
-    /// After this call returns, the action is guaranteed to eventually be delivered and to trigger
-    /// a state transition, even if the *promise* is dropped or otherwise not polled.
-    ///
-    /// Once the action is received by [Async](struct.Async.html),
-    /// the *promise* is fulfilled with the result of calling
+    /// and returns a future to the result of calling
     /// [`<D as Dispatcher<A>>::dispatch`](trait.Dispatcher.html#tymethod.dispatch).
+    ///
+    /// **The action is only guaranteed to be delivered if the future is polled to completion.**
     fn dispatch(&mut self, action: A) -> Self::Output {
-        let (tx, rx) = oneshot::channel();
-        self.tx.unbounded_send((action, tx)).unwrap();
-        rx.unwrap_or_else(|_| panic!())
+        let mut sender = self.tx.clone();
+
+        Box::pin(async move {
+            let (tx, rx) = oneshot::channel();
+            await!(sender.send((action, tx))).unwrap();
+            await!(rx).unwrap()
+        })
     }
 }
-
-type Promise<T> = UnwrapOrElse<oneshot::Receiver<T>, fn(oneshot::Canceled) -> T>;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::mock::*;
-    use futures::executor::{block_on, ThreadPoolBuilder};
+    use futures::executor::{block_on, ThreadPool};
     use futures::future::join_all;
+    use futures::task::SpawnExt;
     use proptest::*;
     use std::error::Error;
 
@@ -228,26 +230,30 @@ mod tests {
     #[test]
     fn spawn() -> Result<(), Box<dyn Error>> {
         let dispatcher = Async::new(MockDispatcher::<()>::default());
-        let mut executor = ThreadPoolBuilder::new().create()?;
+        let mut executor = ThreadPool::new()?;
         assert!(dispatcher.spawn(&mut executor).is_ok());
         Ok(())
     }
 
     proptest! {
         #[test]
-        fn dispatch(actions: Vec<u8>) {
+        fn dispatch(actions: Vec<String>) {
             let dispatcher = Async::new(MockDispatcher::default());
-            let mut executor = ThreadPoolBuilder::new().create()?;
+            let mut executor = ThreadPool::new()?;
             let mut handle = dispatcher.spawn(&mut executor).unwrap();
 
-            let promises: Vec<_> = actions
-                .iter()
-                .map(|&action| handle.dispatch(action))
-                .collect();
+            let futures = join_all(
+                actions
+                    .clone()
+                    .drain(..)
+                    .map(|action| handle.dispatch(action))
+                    .map(|f| executor.spawn_with_handle(f))
+                    .map(Result::unwrap),
+            );
 
             drop(handle);
 
-            assert_eq!(block_on(join_all(promises)), actions);
+            assert_eq!(block_on(futures), actions);
         }
     }
 }
