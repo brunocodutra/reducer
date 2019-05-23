@@ -9,18 +9,22 @@ mod tuple;
 ///
 /// Perhaps a more accurate mental model for types that implement this trait is that of a
 /// _state machine_, where the nodes correspond to the universe of all possible representable
-/// values and the edges correspond to [_actions_](trait.Reducer.html#associatedtype.Action).
+/// values and the edges correspond to [_actions_].
 ///
 /// Types that implement this trait must be self-contained and should not depend on any external
 /// state, hence the required `'static` bound.
 ///
 /// # Splitting Up State Logic
+///
 /// Handling the entire state and its transitions in a single Reducer quickly grows out of hand for
 /// any meaningful application. As the complexity of your application grows, it's a good idea to
 /// break up the state into smaller independent pieces. To help assembling the pieces back
 /// together, Reducer is implicitly implemented for tuples.
 ///
+/// [_actions_]: trait.Reducer.html#associatedtype.Action
+///
 /// ## Example
+///
 /// ```rust
 /// use reducer::Reducer;
 ///
@@ -58,6 +62,7 @@ pub trait Reducer<A>: 'static {
     /// them idempotent, that is to leave the state unchanged.
     ///
     /// # Example
+    ///
     /// ```rust
     /// use reducer::Reducer;
     ///

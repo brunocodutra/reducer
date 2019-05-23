@@ -18,6 +18,7 @@ mod tuple;
 /// for [`mpsc::Sender`](trait.Reactor.html#impl-Reactor<S>) out of the box.
 ///
 /// ## Example
+///
 /// ```rust
 /// use reducer::*;
 ///
@@ -62,6 +63,7 @@ pub trait Reactor<S> {
     /// Reacts to `S` and produces `Self::Output`.
     ///
     /// # Example
+    ///
     /// ```rust
     /// use reducer::*;
     /// use std::fmt::Debug;

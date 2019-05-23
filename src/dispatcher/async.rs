@@ -4,21 +4,66 @@ use futures::future::{BoxFuture, FutureObj};
 use futures::sink::SinkExt;
 use futures::stream::StreamExt;
 use futures::task::{Spawn, SpawnError};
-use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut};
 
-/// An asynchronous adapter for dispatchers
-/// (requires [`async`](index.html#experimental-features)).
+/// Trait for types that can spawn dispatchers as an asynchronous task.
+pub trait SpawnDispatcher {
+    /// Spawns a [Dispatcher] as a task that will listen to actions dispatched through the
+    /// [AsyncDispatcher] returned.
+    ///
+    /// The task completes once [AsyncDispatcher] (or the last of its clones) is dropped.
+    ///
+    /// [Dispatcher]: trait.Dispatcher.html
+    /// [AsyncDispatcher]: struct.AsyncDispatcher.html
+    fn spawn_dispatcher<D, A>(
+        &mut self,
+        dispatcher: D,
+    ) -> Result<AsyncDispatcher<A, D::Output>, SpawnError>
+    where
+        D: Dispatcher<A> + Send + 'static,
+        D::Output: Send + 'static,
+        A: Send + 'static;
+}
+
+impl<S> SpawnDispatcher for S
+where
+    S: Spawn + ?Sized,
+{
+    fn spawn_dispatcher<D, A>(
+        &mut self,
+        mut dispatcher: D,
+    ) -> Result<AsyncDispatcher<A, D::Output>, SpawnError>
+    where
+        D: Dispatcher<A> + Send + 'static,
+        D::Output: Send + 'static,
+        A: Send + 'static,
+    {
+        let (tx, mut rx) = mpsc::channel::<(A, oneshot::Sender<D::Output>)>(0);
+
+        self.spawn_obj(FutureObj::new(Box::new(async move {
+            while let Some((action, tx)) = await!(rx.next()) {
+                tx.send(dispatcher.dispatch(action)).ok();
+            }
+        })))?;
+
+        Ok(AsyncDispatcher { tx })
+    }
+}
+
+/// A handle that allows dispatching actions on a [spawned] [Dispatcher] (requires [`async`]).
 ///
-/// Once Async is [spawned](struct.Async.html#method.spawn) actions may be
-/// [dispatched](trait.Dispatcher.html) on it through its [AsyncHandle](struct.AsyncHandle.html).
+/// AsyncDispatcher requires all actions to be of the same type `A`.
+/// An effective way to fulfill this requirement is to define actions as `enum` variants.
 ///
-/// Async requires all actions to be of the same type `A`.
-/// An effective way to fulfill this requirement, is to use an `enum` to represent actions.
+/// This type is a just lightweight handle that may be cloned and sent to other threads.
+///
+/// [spawned]: trait.SpawnDispatcher.html
+/// [Dispatcher]: trait.Dispatcher.html
+/// [`async`]: index.html#experimental-features
 ///
 /// ## Example
+///
 /// ```rust
-/// use futures::executor::ThreadPoolBuilder;
+/// use futures::executor::{block_on, ThreadPool};
 /// use reducer::*;
 /// use std::error::Error;
 /// use std::io::{self, Write};
@@ -56,18 +101,20 @@ use std::ops::{Deref, DerefMut};
 /// }
 ///
 /// fn main() -> Result<(), Box<dyn Error>> {
-///     let store = Async::new(Store::new(Calculator(0), Display));
+///     let store = Store::new(Calculator(0), Display);
 ///
 ///     // Spin up a thread-pool.
-///     let mut executor = ThreadPoolBuilder::new().create()?;
+///     let mut executor = ThreadPool::new()?;
 ///
 ///     // Process incoming actions on a background thread.
-///     let mut dispatcher = store.spawn(&mut executor).unwrap();
+///     let mut dispatcher = executor.spawn_dispatcher(store).unwrap();
 ///
-///     dispatcher.dispatch(Action::Add(5)); // displays "5"
-///     dispatcher.dispatch(Action::Mul(3)); // displays "15"
-///     dispatcher.dispatch(Action::Sub(1)); // displays "14"
-///     dispatcher.dispatch(Action::Div(7)); // displays "2"
+///     block_on(dispatcher.dispatch(Action::Add(5)))?; // displays "5"
+///     block_on(dispatcher.dispatch(Action::Mul(3)))?; // displays "15"
+///     block_on(dispatcher.dispatch(Action::Sub(1)))?; // displays "14"
+///     block_on(dispatcher.dispatch(Action::Div(7)))?; // displays "2"
+///
+///     drop(dispatcher.dispatch(Action::Div(0))); // never delivered
 ///
 ///     // Allow the background thread to catch up.
 ///     std::thread::sleep(std::time::Duration::from_millis(500));
@@ -75,100 +122,30 @@ use std::ops::{Deref, DerefMut};
 ///     Ok(())
 /// }
 /// ```
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct Async<D: Dispatcher<A>, A> {
-    inner: D,
-    marker: PhantomData<A>,
-}
-
-impl<D, A> From<D> for Async<D, A>
-where
-    D: Dispatcher<A>,
-{
-    fn from(dispatcher: D) -> Self {
-        Async::new(dispatcher)
-    }
-}
-
-impl<D, A> Deref for Async<D, A>
-where
-    D: Dispatcher<A>,
-{
-    type Target = D;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl<D, A> DerefMut for Async<D, A>
-where
-    D: Dispatcher<A>,
-{
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
-    }
-}
-
-impl<D: Dispatcher<A>, A> Async<D, A> {
-    /// Constructs Async given any dispatcher.
-    pub fn new(inner: D) -> Self {
-        Self {
-            inner,
-            marker: PhantomData,
-        }
-    }
-}
-
-impl<D, A> Async<D, A>
-where
-    D: Dispatcher<A> + Send + 'static,
-    D::Output: Send + 'static,
-    A: Send + 'static,
-{
-    /// Spawns Async onto an Executor and returns an [AsyncHandle](struct.AsyncHandle.html)
-    /// that may be used to dispatch actions.
-    ///
-    /// The spawned Async will live as long as the handle (or one of its clones) lives.
-    pub fn spawn(mut self, executor: &mut impl Spawn) -> Result<AsyncHandle<D, A>, SpawnError> {
-        let (tx, mut rx) = mpsc::channel::<(A, oneshot::Sender<D::Output>)>(0);
-
-        executor.spawn_obj(FutureObj::new(Box::new(async move {
-            while let Some((action, tx)) = await!(rx.next()) {
-                tx.send(self.inner.dispatch(action)).ok();
-            }
-        })))?;
-
-        Ok(AsyncHandle { tx })
-    }
-}
-
-/// A handle that allows dispatching actions on a spawned [Async](struct.Async.html)
-/// (requires [`async`](index.html#experimental-features)).
-///
-/// As the name suggests, this is just a lightweight handle that may be cloned and passed around.
 #[derive(Debug, Clone)]
-pub struct AsyncHandle<D: Dispatcher<A>, A> {
-    tx: mpsc::Sender<(A, oneshot::Sender<D::Output>)>,
+pub struct AsyncDispatcher<A, O> {
+    tx: mpsc::Sender<(A, oneshot::Sender<O>)>,
 }
 
-impl<D, A> Dispatcher<A> for AsyncHandle<D, A>
+impl<A, O> Dispatcher<A> for AsyncDispatcher<A, O>
 where
-    D: Dispatcher<A> + 'static,
-    D::Output: Send + 'static,
     A: Send + 'static,
+    O: Send + 'static,
 {
     /// A Future that represents asynchronously dispatched actions.
     ///
     /// _**Important:** do not rely on the actual type,_
     /// _this will become an existential type once issues with rustdoc are solved._
-    type Output = BoxFuture<'static, D::Output>;
+    type Output = BoxFuture<'static, O>;
 
-    /// Asynchronously sends an action through the dispatcher managed by [Async](struct.Async.html)
-    /// and returns a future to the result of calling
-    /// [`<D as Dispatcher<A>>::dispatch`](trait.Dispatcher.html#tymethod.dispatch).
+    /// Asynchronously sends an action to the associated [spawned] [Dispatcher]
+    /// and returns a future to the result.
     ///
-    /// **The action is only guaranteed to be delivered if the future is polled to completion.**
+    /// _**Important:** The action is only guaranteed to be delivered
+    /// if the future is polled to completion._
+    ///
+    /// [spawned]: trait.SpawnDispatcher.html
+    /// [Dispatcher]: trait.Dispatcher.html
     fn dispatch(&mut self, action: A) -> Self::Output {
         let mut sender = self.tx.clone();
 
@@ -188,59 +165,13 @@ mod tests {
     use futures::future::join_all;
     use futures::task::SpawnExt;
     use proptest::*;
-    use std::error::Error;
-
-    #[test]
-    fn default() {
-        let dispatcher = Async::<MockDispatcher<_>, ()>::default();
-        assert_eq!(dispatcher.inner, MockDispatcher::default());
-    }
-
-    #[test]
-    fn new() {
-        let dispatcher = Async::new(MockDispatcher::<()>::default());
-        assert_eq!(dispatcher.inner, MockDispatcher::default());
-    }
-
-    #[test]
-    fn from() {
-        let dispatcher = Async::from(MockDispatcher::<()>::default());
-        assert_eq!(dispatcher.inner, MockDispatcher::default());
-    }
-
-    #[test]
-    fn deref() {
-        let dispatcher = Async::from(MockDispatcher::<()>::default());
-        assert_eq!(&*dispatcher, &MockDispatcher::default());
-    }
-
-    #[test]
-    fn deref_mut() {
-        let mut dispatcher = Async::from(MockDispatcher::<()>::default());
-        assert_eq!(&mut *dispatcher, &mut MockDispatcher::default());
-    }
-
-    #[allow(clippy::clone_on_copy)]
-    #[test]
-    fn clone() {
-        let dispatcher = Async::from(MockDispatcher::<()>::default());
-        assert_eq!(dispatcher, dispatcher.clone());
-    }
-
-    #[test]
-    fn spawn() -> Result<(), Box<dyn Error>> {
-        let dispatcher = Async::new(MockDispatcher::<()>::default());
-        let mut executor = ThreadPool::new()?;
-        assert!(dispatcher.spawn(&mut executor).is_ok());
-        Ok(())
-    }
 
     proptest! {
         #[test]
         fn dispatch(actions: Vec<String>) {
-            let dispatcher = Async::new(MockDispatcher::default());
+            let dispatcher = MockDispatcher::default();
             let mut executor = ThreadPool::new()?;
-            let mut handle = dispatcher.spawn(&mut executor).unwrap();
+            let mut handle = executor.spawn_dispatcher(dispatcher).unwrap();
 
             let futures = join_all(
                 actions

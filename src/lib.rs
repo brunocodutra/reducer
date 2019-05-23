@@ -2,8 +2,8 @@
 //!
 //! # Overview
 //! Reducer is inspired by the
-//! [Flux pattern](https://facebook.github.io/flux/docs/in-depth-overview.html), popular in
-//! the JavaScript community as an effective idiom to build scalable and maintainable apps.
+//! [Flux pattern], popular in the JavaScript community as an effective idiom to build
+//! scalable and maintainable apps.
 //!
 //! The core mental model behind Reducer is the unidirectional data flow depicted below.
 //!
@@ -17,10 +17,14 @@
 //!                                      |
 //! ```
 //!
-//! The _view_, often a \[G\]UI, [dispatches](struct.Store.html#method.dispatch)
-//! _actions_ on the [_store_](struct.Store.html), which in turn
-//! [updates](trait.Reducer.html#tymethod.reduce) its internal state and
-//! [notifies](trait.Reactor.html#tymethod.react) back the _view_.
+//! The _view_, often a \[G\]UI, [dispatches] _actions_ on the [_store_], which in turn
+//! [updates] its internal state and [notifies] back the _view_.
+//!
+//! [Flux pattern]: https://facebook.github.io/flux/docs/in-depth-overview.html
+//! [dispatches]: struct.Store.html#method.dispatch
+//! [_store_]: struct.Store.html
+//! [updates]: trait.Reducer.html#tymethod.reduce
+//! [notifies]: trait.Reactor.html#tymethod.react
 //!
 //! # Experimental Features
 //!
