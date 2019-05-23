@@ -35,8 +35,8 @@ fn bench(c: &mut Criterion) {
             format!("{}x{}", CONCURRENCY, ACTIONS / CONCURRENCY),
             move |b| {
                 let mut executor = ThreadPool::new().unwrap();
-                let store = Async::new(Store::new(Action(0), BlackBox));
-                let dispatcher = store.spawn(&mut executor).unwrap();
+                let store = Store::new(Action(0), BlackBox);
+                let dispatcher = executor.spawn_dispatcher(store).unwrap();
 
                 b.iter(|| {
                     block_on(join_all(

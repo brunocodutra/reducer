@@ -190,13 +190,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     let (reactor, states) = channel();
 
     // Create a Store to manage the state.
-    let store = Async::new(Store::new(Arc::new(State::default()), reactor));
+    let store = Store::new(Arc::new(State::default()), reactor);
 
     // Spin up a thread-pool to run our application
-    let mut executor = futures::executor::ThreadPoolBuilder::new().create()?;
+    let mut executor = futures::executor::ThreadPool::new()?;
 
     // Listen for actions on a separate thread
-    let dispatcher = store.spawn(&mut executor).unwrap();
+    let dispatcher = executor.spawn_dispatcher(store).unwrap();
 
     // Spin up the rendering thread
     executor.run(futures::future::lazy(|_| run_iui(dispatcher, states)));

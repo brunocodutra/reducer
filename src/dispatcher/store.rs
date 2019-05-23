@@ -6,10 +6,13 @@ use std::mem;
 /// A reactive state container.
 ///
 /// The only way to mutate the internal state managed by Store is by
-/// [dispatching](trait.Dispatcher.html) actions on it.
+/// [dispatching] actions on it.
 /// The associated reactor is notified upon every state transition.
 ///
+/// [dispatching]: trait.Dispatcher.html
+///
 /// ## Example
+///
 /// ```rust
 /// use reducer::*;
 /// use std::error::Error;
@@ -94,10 +97,12 @@ where
 {
     type Output = S::Output;
 
-    /// Updates the state via [`<R as Reducer<A>>::reduce`](trait.Reducer.html#tymethod.reduce) and
-    /// notifies the reactor, returning the result of calling
-    /// [`<S as Reactor<R>>::react`](trait.Reactor.html#tymethod.react) with a reference to the
-    /// new state.
+    /// Updates the state via [`Reducer<A>::reduce`][reduce] and notifies the reactor,
+    /// returning the result of calling [`Reactor<R>::react`][react] with a reference
+    /// to the new state.
+    ///
+    /// [reduce]: trait.Reducer.html#tymethod.reduce
+    /// [react]: trait.Reactor.html#tymethod.react
     fn dispatch(&mut self, action: A) -> S::Output {
         self.state.reduce(action);
         self.reactor.react(&self.state)
