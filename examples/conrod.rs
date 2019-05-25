@@ -26,8 +26,9 @@ use glutin::{ContextBuilder, EventsLoop, WindowBuilder};
 use reducer::*;
 use std::error::Error;
 use std::mem;
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::{channel, Receiver, SendError, Sender};
 use std::sync::Arc;
+use std::thread;
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -343,36 +344,15 @@ fn run_conrod(
     }
 }
 
-// Use Reducer's experimental support for async/await.
-#[cfg(feature = "async")]
-fn main() -> Result<(), Box<dyn Error>> {
-    // Create a channel to synchronize states.
-    let (reactor, states) = channel();
-
-    // Create a Store to manage the state.
-    let store = Store::new(Arc::new(State::default()), reactor);
-
-    // Spin up a thread-pool to run our application
-    let mut executor = futures::executor::ThreadPool::new()?;
-
-    // Listen for actions on a separate thread
-    let dispatcher = executor.spawn_dispatcher(store).unwrap();
-
-    // Spin up the rendering thread
-    executor.run(futures::future::lazy(|_| run_conrod(dispatcher, states)))
-}
-
-// Fallback to features available in stable Rust.
-#[cfg(not(feature = "async"))]
-impl Dispatcher<Action> for std::sync::mpsc::Sender<Action> {
-    type Output = Result<(), std::sync::mpsc::SendError<Action>>;
+// Turn mpsc::Sender into a Dispatcher.
+impl Dispatcher<Action> for Sender<Action> {
+    type Output = Result<(), SendError<Action>>;
 
     fn dispatch(&mut self, action: Action) -> Self::Output {
         self.send(action)
     }
 }
 
-#[cfg(not(feature = "async"))]
 fn main() -> Result<(), Box<dyn Error>> {
     // Create a channel to synchronize actions.
     let (dispatcher, actions) = channel();
@@ -381,7 +361,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let (reactor, states) = channel();
 
     // Run Reducer on a separate thread
-    std::thread::spawn(move || {
+    thread::spawn(move || {
         // Create a Store to manage the state.
         let mut store = Store::new(Arc::new(State::default()), reactor);
 
