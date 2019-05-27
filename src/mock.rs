@@ -3,33 +3,37 @@
 use crate::dispatcher::Dispatcher;
 use crate::reactor::Reactor;
 use crate::reducer::Reducer;
-use std::marker::PhantomData;
+use std::{cell::RefCell, marker::PhantomData};
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
-pub struct MockReducer<A: 'static> {
-    actions: Vec<A>,
-}
+pub struct MockReducer<A: 'static>(Vec<A>);
 
-impl<A> MockReducer<A> {
-    pub fn new(actions: Vec<A>) -> Self {
-        Self { actions }
+impl<A: 'static> MockReducer<A> {
+    pub fn new(actions: impl Into<Vec<A>>) -> Self {
+        MockReducer(actions.into())
     }
 }
 
 impl<A> Reducer<A> for MockReducer<A> {
     fn reduce(&mut self, action: A) {
-        self.actions.push(action);
+        self.0.push(action);
     }
 }
 
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct MockReactor<S>(PhantomData<S>);
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct MockReactor<S>(RefCell<Vec<S>>);
+
+impl<S> MockReactor<S> {
+    pub fn new(states: impl Into<Vec<S>>) -> Self {
+        MockReactor(RefCell::new(states.into()))
+    }
+}
 
 impl<S: Clone> Reactor<S> for MockReactor<S> {
-    type Output = S;
+    type Output = ();
 
-    fn react(&self, state: &S) -> Self::Output {
-        state.clone()
+    fn react(&self, state: &S) {
+        self.0.borrow_mut().push(state.clone());
     }
 }
 
@@ -39,8 +43,8 @@ pub struct MockDispatcher<A>(PhantomData<A>);
 impl<A> Dispatcher<A> for MockDispatcher<A> {
     type Output = A;
 
-    fn dispatch(&mut self, state: A) -> Self::Output {
-        state
+    fn dispatch(&mut self, action: A) -> Self::Output {
+        action
     }
 }
 
@@ -51,7 +55,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn reduce(actions: Vec<u8>) {
+        fn reduce(actions: Vec<char>) {
             let mut reducer = MockReducer::default();
 
             for &action in &actions {
@@ -64,18 +68,20 @@ mod tests {
 
     proptest! {
         #[test]
-        fn react(states: Vec<u8>) {
+        fn react(states: Vec<char>) {
             let reactor = MockReactor::default();
 
-            for state in states {
-                assert_eq!(reactor.react(&state), state);
+            for action in &states {
+                assert_eq!(reactor.react(action), ());
             }
+
+            assert_eq!(reactor, MockReactor::new(states));
         }
     }
 
     proptest! {
         #[test]
-        fn dispatch(actions: Vec<u8>) {
+        fn dispatch(actions: Vec<char>) {
             let mut dispatcher = MockDispatcher::default();
 
             for action in actions {

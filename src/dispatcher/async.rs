@@ -168,7 +168,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn dispatch(actions: Vec<String>) {
+        fn dispatch(actions: Vec<char>) {
             let dispatcher = MockDispatcher::default();
             let mut executor = ThreadPool::new()?;
             let mut handle = executor.spawn_dispatcher(dispatcher).unwrap();

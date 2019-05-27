@@ -20,10 +20,11 @@ mod tests {
 
     proptest! {
         #[test]
-        fn dispatch(actions: Vec<u8>) {
-            let dispatcher: &mut Dispatcher<_, Output = _> = &mut MockDispatcher::default();
+        fn dispatch(actions: Vec<char>) {
+            let mut mock = MockDispatcher::default();
 
             for action in actions {
+                let dispatcher: &mut dyn Dispatcher<_, Output = _> = &mut mock;
                 assert_eq!(dispatcher.dispatch(action), action);
             }
         }

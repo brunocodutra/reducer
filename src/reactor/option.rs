@@ -23,22 +23,24 @@ mod tests {
 
     proptest! {
         #[test]
-        fn some(states: Vec<u8>) {
+        fn some(states: Vec<char>) {
             let reactor = Some(MockReactor::default());
 
-            for state in states {
-                assert_eq!(reactor.react(&state), Some(state));
+            for (i, state) in states.iter().enumerate() {
+                assert_eq!(reactor.react(state), Some(()));
+                assert_eq!(reactor, Some(MockReactor::new(&states[0..=i])))
             }
         }
     }
 
     proptest! {
         #[test]
-        fn none(states: Vec<u8>) {
+        fn none(states: Vec<char>) {
             let reactor: Option<MockReactor<_>> = None;
 
             for state in states {
                 assert_eq!(reactor.react(&state), None);
+                assert_eq!(reactor, None);
             }
         }
     }
