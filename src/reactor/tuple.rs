@@ -39,33 +39,29 @@ mod tests {
 
         ( $head:ident $(, $tail:ident )* $(,)? ) => {
             #[derive(Debug, Default, Clone, Eq, PartialEq)]
-            struct $head<S: Clone> {
-                value: S,
-            }
+            struct $head<S>(MockReactor<S>);
 
-            impl<S: Clone> $head<S> {
-                fn new(value: S) -> Self {
-                    $head { value }
-                }
-            }
-
-            impl<S, T: Clone + Default> Reactor<S> for $head<T>
+            impl<S, T: Clone> Reactor<S> for $head<T>
                 where
-                    MockReactor<T>: Reactor<S, Output = T>,
+                    MockReactor<T>: Reactor<S>,
             {
-                type Output = Self;
+                type Output = <MockReactor<T> as Reactor<S>>::Output;
 
                 fn react(&self, state: &S) -> Self::Output {
-                    $head::new(MockReactor::default().react(state))
+                    self.0.react(state)
                 }
             }
 
-            proptest!(|(states: Vec<u8>)| {
-                let reactor = ($head::default(), $( $tail::default(), )*);
+            proptest!(|(states: Vec<char>)| {
+                let reactors = ($head::default(), $( $tail::default(), )*);
 
-                for state in states {
-                    let expected = ($head::new(state), $( $tail::new(state), )*);
-                    assert_eq!(reactor.react(&state), expected);
+                for (i, state) in states.iter().enumerate() {
+                    assert_eq!(reactors.react(state), Default::default());
+
+                    assert_eq!(reactors, (
+                        $head(MockReactor::new(&states[0..=i])),
+                        $( $tail(MockReactor::new(&states[0..=i])), )*
+                    ));
                 }
             });
 

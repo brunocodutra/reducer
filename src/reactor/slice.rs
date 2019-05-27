@@ -23,11 +23,12 @@ mod tests {
 
     proptest! {
         #[test]
-        fn react(states: Vec<u8>, len in 0..100usize) {
+        fn react(states: Vec<char>, len in 0..100usize) {
             let reactor: &[MockReactor<_>] = &vec![MockReactor::default(); len];
 
-            for state in states {
-                assert_eq!(reactor.react(&state), vec![state; len].into());
+            for (i, state) in states.iter().enumerate() {
+                assert_eq!(reactor.react(state), vec![(); len].into());
+                assert_eq!(reactor, &*vec![MockReactor::new(&states[0..=i]); len])
             }
         }
     }

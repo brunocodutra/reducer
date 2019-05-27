@@ -20,11 +20,12 @@ mod tests {
 
     proptest! {
         #[test]
-        fn react(states: Vec<u8>) {
+        fn react(states: Vec<char>) {
             let reactor = Box::new(MockReactor::default());
 
-            for state in states {
-                assert_eq!(reactor.react(&state), state);
+            for (i, state) in states.iter().enumerate() {
+                assert_eq!(reactor.react(state), ());
+                assert_eq!(reactor, Box::new(MockReactor::new(&states[0..=i])))
             }
         }
     }

@@ -116,15 +116,14 @@ mod tests {
 
     proptest! {
         #[test]
-        fn reduce(actions: Vec<u8>) {
+        fn reduce(actions: Vec<char>) {
             let mut mock = MockReducer::default();
 
             for (i, &action) in actions.iter().enumerate() {
-                let state: &mut dyn Reducer<_> = &mut mock;
-                state.reduce(action);
-                assert_eq!(mock, MockReducer::new(actions[0..=i].into()));
+                let reducer: &mut dyn Reducer<_> = &mut mock;
+                reducer.reduce(action);
+                assert_eq!(mock, MockReducer::new(&actions[0..=i]));
             }
-
         }
     }
 }

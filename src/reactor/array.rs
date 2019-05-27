@@ -40,11 +40,14 @@ mod tests {
         () => {};
 
         ( $head:ident $(, $tail:ident )* $(,)? ) => {
-            proptest!(|(states: Vec<u8>)| {
-                let reactors = [MockReactor::default(); count!($( $tail, )*)];
+            type $head<S> = MockReactor<S>;
 
-                for state in states {
-                    assert_eq!(reactors.react(&state), [state; count!($( $tail, )*)]);
+            proptest!(|(states: Vec<char>)| {
+                let reactors: [MockReactor<_>; count!($( $tail, )*)] = Default::default();
+
+                for (_i, state) in states.iter().enumerate() {
+                    assert_eq!(reactors.react(state), [(); count!($( $tail, )*)]);
+                    assert_eq!(reactors, [$( $tail::new(&states[0..=_i]), )*]);
                 }
             });
 

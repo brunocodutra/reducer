@@ -125,7 +125,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn new(actions: Vec<u8>) {
+        fn new(actions: Vec<char>) {
             let state = MockReducer::new(actions);
             let reactor = MockReactor::default();
             let store = Store::new(state.clone(), &reactor);
@@ -137,7 +137,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn clone(actions: Vec<u8>) {
+        fn clone(actions: Vec<char>) {
             let store = Store::new(MockReducer::new(actions), MockReactor::default());
             assert_eq!(store, store.clone());
         }
@@ -145,7 +145,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn subscribe(actions: Vec<u8>) {
+        fn subscribe(actions: Vec<char>) {
             let state = MockReducer::new(actions);
             let mut store = Store::new(state.clone(), Some(MockReactor::default()));
 
@@ -166,13 +166,21 @@ mod tests {
 
     proptest! {
         #[test]
-        fn dispatch(actions: Vec<u8>) {
+        fn dispatch(actions: Vec<char>) {
             let mut store = Store::<MockReducer<_>, MockReactor<_>>::default();
 
             for (i, &action) in actions.iter().enumerate() {
+                store.dispatch(action);
+
+                assert_eq!(store.state, MockReducer::new(&actions[0..=i]));
+
                 assert_eq!(
-                    store.dispatch(action),
-                    MockReducer::new(actions[0..=i].into())
+                    store.reactor,
+                    MockReactor::new(
+                        (0..=i)
+                            .map(|j| MockReducer::new(&actions[0..=j]))
+                            .collect::<Vec<_>>(),
+                    )
                 );
             }
         }

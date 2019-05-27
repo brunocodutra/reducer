@@ -20,11 +20,11 @@ mod tests {
 
     proptest! {
         #[test]
-        fn react(states: Vec<u8>) {
+        fn react(states: Vec<char>) {
             let (tx, rx) = channel();
 
             for state in &states {
-                assert!(tx.react(state).is_ok());
+                assert_eq!(tx.react(state), Ok(()));
             }
 
             // hang up tx
@@ -36,7 +36,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn err(states: Vec<u8>) {
+        fn err(states: Vec<char>) {
             let (tx, _) = channel();
 
             for state in states {

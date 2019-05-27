@@ -18,12 +18,12 @@ mod tests {
 
     proptest! {
         #[test]
-        fn reduce(actions: Vec<u8>) {
+        fn reduce(actions: Vec<char>) {
             let mut reducer = Box::new(MockReducer::default());
 
             for (i, &action) in actions.iter().enumerate() {
                 reducer.reduce(action);
-                assert_eq!(reducer, Box::new(MockReducer::new(actions[0..=i].into())));
+                assert_eq!(reducer, Box::new(MockReducer::new(&actions[0..=i])));
             }
         }
     }
