@@ -1,8 +1,5 @@
 //! A simple example demonstrating how to implement a Todo List app using Reducer & iui.
 
-extern crate iui;
-extern crate reducer;
-
 use iui::controls::*;
 use iui::prelude::*;
 use reducer::*;

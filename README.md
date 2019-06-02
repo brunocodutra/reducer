@@ -16,8 +16,7 @@ reducer = "1.2"
 and import it in your `lib.rs`:
 
 ```
-extern crate reducer;
-use crate::reducer::*;
+use reducer::*;
 ```
 
 The full API documentation is available on [docs.rs][docs.home]
