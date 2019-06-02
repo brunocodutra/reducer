@@ -1,24 +1,9 @@
 //! A simple example demonstrating how to implement a Todo List app using Reducer & Conrod.
 
-#[macro_use]
-extern crate conrod_core;
-extern crate conrod_gfx;
-extern crate conrod_winit;
-extern crate gfx;
-extern crate gfx_window_glutin;
-extern crate glutin;
-extern crate reducer;
-extern crate ttf_noto_sans;
-
-use conrod_core::text::FontCollection;
-use conrod_core::{
-    color, image, widget, Borderable, Colorable, Labelable, Positionable, Sizeable, UiBuilder,
-    UiCell, Widget,
-};
-use conrod_gfx::{ColorFormat, Renderer};
-use conrod_winit::convert_event;
-use gfx::format::DepthStencil;
-use gfx::Device;
+use conrod_core::*;
+use conrod_gfx::*;
+use conrod_winit::*;
+use gfx::{format::DepthStencil, Device};
 use glutin::dpi::LogicalSize;
 use glutin::Event::WindowEvent;
 use glutin::WindowEvent::{CloseRequested, Resized};
@@ -269,7 +254,7 @@ fn run_conrod(
     let mut encoder = factory.create_command_buffer().into();
     let mut renderer = Renderer::new(&mut factory, &rtv, window.get_hidpi_factor())?;
 
-    let font = FontCollection::from_bytes(ttf_noto_sans::REGULAR)?.into_font()?;
+    let font = text::FontCollection::from_bytes(ttf_noto_sans::REGULAR)?.into_font()?;
     let mut ui = UiBuilder::new([WIDTH, HEIGHT]).build();
     ui.fonts.insert(font);
 
