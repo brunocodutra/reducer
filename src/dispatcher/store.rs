@@ -1,7 +1,7 @@
 use crate::dispatcher::Dispatcher;
 use crate::reactor::Reactor;
 use crate::reducer::Reducer;
-use std::mem;
+use std::{mem, ops::Deref};
 
 /// A reactive state container.
 ///
@@ -73,37 +73,46 @@ use std::mem;
 /// }
 /// ```
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct Store<R, S: Reactor<R>> {
-    state: R,
-    reactor: S,
+pub struct Store<S, R: Reactor<S>> {
+    state: S,
+    reactor: R,
 }
 
-impl<R, S: Reactor<R>> Store<R, S> {
+impl<S, R: Reactor<S>> Store<S, R> {
     /// Constructs the Store given the initial state and a reactor.
-    pub fn new(state: R, reactor: S) -> Self {
+    pub fn new(state: S, reactor: R) -> Self {
         Self { state, reactor }
     }
 
     /// Replaces the reactor and returns the previous one.
-    pub fn subscribe(&mut self, reactor: impl Into<S>) -> S {
+    pub fn subscribe(&mut self, reactor: impl Into<R>) -> R {
         mem::replace(&mut self.reactor, reactor.into())
     }
 }
 
-impl<A, R, S> Dispatcher<A> for Store<R, S>
+impl<S, R: Reactor<S>> Deref for Store<S, R> {
+    type Target = S;
+
+    /// Grants read access to the current state.
+    fn deref(&self) -> &Self::Target {
+        &self.state
+    }
+}
+
+impl<A, S, R> Dispatcher<A> for Store<S, R>
 where
-    R: Reducer<A>,
-    S: Reactor<R>,
+    S: Reducer<A>,
+    R: Reactor<S>,
 {
-    type Output = S::Output;
+    type Output = R::Output;
 
     /// Updates the state via [`Reducer<A>::reduce`][reduce] and notifies the reactor,
-    /// returning the result of calling [`Reactor<R>::react`][react] with a reference
+    /// returning the result of calling [`Reactor<S>::react`][react] with a reference
     /// to the new state.
     ///
     /// [reduce]: trait.Reducer.html#tymethod.reduce
     /// [react]: trait.Reactor.html#tymethod.react
-    fn dispatch(&mut self, action: A) -> S::Output {
+    fn dispatch(&mut self, action: A) -> R::Output {
         self.state.reduce(action);
         self.reactor.react(&self.state)
     }
@@ -140,6 +149,14 @@ mod tests {
         fn clone(actions: Vec<char>) {
             let store = Store::new(MockReducer::new(actions), MockReactor::default());
             assert_eq!(store, store.clone());
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn deref(actions: Vec<char>) {
+            let store = Store::new(MockReducer::new(actions), MockReactor::default());
+            assert_eq!(*store, store.state);
         }
     }
 
