@@ -34,6 +34,12 @@ mod tests {
     use crate::mock::*;
     use proptest::*;
 
+    macro_rules! always {
+        ($any:tt, $val:expr) => {
+            $val
+        };
+    }
+
     macro_rules! test_reactor_for_tuples {
         () => {};
 
@@ -56,7 +62,10 @@ mod tests {
                 let reactors = ($head::default(), $( $tail::default(), )*);
 
                 for (i, state) in states.iter().enumerate() {
-                    assert_eq!(reactors.react(state), Default::default());
+                    assert_eq!(reactors.react(state), (
+                        always!($head, Ok(())),
+                        $( always!($tail, Ok(())), )*
+                    ));
 
                     assert_eq!(reactors, (
                         $head(MockReactor::new(&states[0..=i])),

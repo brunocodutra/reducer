@@ -24,7 +24,7 @@ mod tests {
             let reactor = &&MockReactor::default();
 
             for (i, state) in states.iter().enumerate() {
-                assert_eq!(reactor.react(state), ());
+                assert_eq!(reactor.react(state), Ok(()));
                 assert_eq!(reactor, &&MockReactor::new(&states[0..=i]))
             }
         }

@@ -94,7 +94,7 @@ mod tests {
 
             for (i, state) in states.iter().enumerate() {
                 let reactor: &mut dyn Reactor<_, Output = _> = &mut mock;
-                assert_eq!(reactor.react(state), ());
+                assert_eq!(reactor.react(state), Ok(()));
                 assert_eq!(mock, MockReactor::new(&states[0..=i]));
             }
         }
