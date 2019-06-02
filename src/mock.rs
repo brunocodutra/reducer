@@ -5,6 +5,9 @@ use crate::reactor::Reactor;
 use crate::reducer::Reducer;
 use std::{cell::RefCell, marker::PhantomData};
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum Never {}
+
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct MockReducer<A: 'static>(Vec<A>);
 
@@ -30,10 +33,11 @@ impl<S> MockReactor<S> {
 }
 
 impl<S: Clone> Reactor<S> for MockReactor<S> {
-    type Output = ();
+    type Output = Result<(), Never>;
 
-    fn react(&self, state: &S) {
+    fn react(&self, state: &S) -> Self::Output {
         self.0.borrow_mut().push(state.clone());
+        Ok(())
     }
 }
 
@@ -72,7 +76,7 @@ mod tests {
             let reactor = MockReactor::default();
 
             for action in &states {
-                assert_eq!(reactor.react(action), ());
+                assert_eq!(reactor.react(action), Ok(()));
             }
 
             assert_eq!(reactor, MockReactor::new(states));

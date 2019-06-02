@@ -27,7 +27,7 @@ mod tests {
             let reactor: &[MockReactor<_>] = &vec![MockReactor::default(); len];
 
             for (i, state) in states.iter().enumerate() {
-                assert_eq!(reactor.react(state), vec![(); len].into());
+                assert_eq!(reactor.react(state), vec![Ok(()); len].into());
                 assert_eq!(reactor, &*vec![MockReactor::new(&states[0..=i]); len])
             }
         }

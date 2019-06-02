@@ -46,7 +46,7 @@ mod tests {
                 let reactors: [MockReactor<_>; count!($( $tail, )*)] = Default::default();
 
                 for (_i, state) in states.iter().enumerate() {
-                    assert_eq!(reactors.react(state), [(); count!($( $tail, )*)]);
+                    assert_eq!(reactors.react(state), [Ok(()); count!($( $tail, )*)]);
                     assert_eq!(reactors, [$( $tail::new(&states[0..=_i]), )*]);
                 }
             });

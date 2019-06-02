@@ -187,7 +187,7 @@ mod tests {
             let mut store = Store::<MockReducer<_>, MockReactor<_>>::default();
 
             for (i, &action) in actions.iter().enumerate() {
-                store.dispatch(action);
+                assert_eq!(store.dispatch(action), Ok(()));
 
                 assert_eq!(store.state, MockReducer::new(&actions[0..=i]));
 
