@@ -5,7 +5,9 @@ use futures::sink::SinkExt;
 use futures::stream::StreamExt;
 use futures::task::{Spawn, SpawnError};
 
-/// Trait for types that can spawn dispatchers as an asynchronous task.
+/// Trait for types that can spawn dispatchers as an asynchronous task (requires [`async`]).
+///
+/// [`async`]: index.html#experimental-features
 pub trait SpawnDispatcher {
     /// Spawns a [Dispatcher] as a task that will listen to actions dispatched through the
     /// [AsyncDispatcher] returned.
