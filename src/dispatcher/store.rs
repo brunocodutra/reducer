@@ -90,6 +90,7 @@ impl<S, R: Reactor<S>> Store<S, R> {
     }
 }
 
+/// View Store as a read-only owning smart pointer to the state.
 impl<S, R: Reactor<S>> Deref for Store<S, R> {
     type Target = S;
 
@@ -118,11 +119,68 @@ where
     }
 }
 
+#[cfg(feature = "async")]
+use futures::sink::Sink;
+
+#[cfg(feature = "async")]
+use futures::task::{Context, Poll};
+
+#[cfg(feature = "async")]
+use std::pin::Pin;
+
+#[cfg(feature = "async")]
+use pin_utils::unsafe_pinned;
+
+#[cfg(feature = "async")]
+impl<S, R: Reactor<S>> Store<S, R> {
+    unsafe_pinned!(state: S);
+    unsafe_pinned!(reactor: R);
+}
+
+impl<S: Unpin, R: Reactor<S> + Unpin> Unpin for Store<S, R> {}
+
+/// View Store as a Sink of actions (requires [`async`]).
+///
+/// [`async`]: index.html#experimental-features
+#[cfg(feature = "async")]
+impl<A, S, R, E> Sink<A> for Store<S, R>
+where
+    S: Reducer<A> + Unpin + Clone,
+    R: Reactor<S, Output = Result<(), E>> + Sink<S, SinkError = E>,
+{
+    type SinkError = E;
+
+    fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
+        self.reactor().poll_ready(cx)
+    }
+
+    fn start_send(mut self: Pin<&mut Self>, action: A) -> Result<(), Self::SinkError> {
+        let state = {
+            let state: &mut S = self.as_mut().state().get_mut();
+            state.reduce(action);
+            state.clone()
+        };
+
+        self.reactor().start_send(state)
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
+        self.reactor().poll_flush(cx)
+    }
+
+    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
+        self.reactor().poll_close(cx)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::mock::*;
     use proptest::*;
+
+    #[cfg(feature = "async")]
+    use futures::{executor::block_on, sink::SinkExt};
 
     #[test]
     fn default() {
@@ -189,8 +247,52 @@ mod tests {
             for (i, &action) in actions.iter().enumerate() {
                 assert_eq!(store.dispatch(action), Ok(()));
 
+                // The state is updated.
                 assert_eq!(store.state, MockReducer::new(&actions[0..=i]));
 
+                // The reactor is notified.
+                assert_eq!(
+                    store.reactor,
+                    MockReactor::new(
+                        (0..=i)
+                            .map(|j| MockReducer::new(&actions[0..=j]))
+                            .collect::<Vec<_>>(),
+                    )
+                );
+            }
+        }
+    }
+
+    proptest! {
+        #[cfg(feature = "async")]
+        #[test]
+        fn sink(actions: Vec<char>) {
+            let mut store = Store::<MockReducer<_>, MockReactor<_>>::default();
+
+            for (i, &action) in actions.iter().enumerate() {
+                // Futures do nothing unless polled, so the action is effectivelly dropped.
+                drop(store.send(action));
+
+                // No change.
+                assert_eq!(store.state, MockReducer::new(&actions[0..i]));
+
+                // No change.
+                assert_eq!(
+                    store.reactor,
+                    MockReactor::new(
+                        (0..i)
+                            .map(|j| MockReducer::new(&actions[0..=j]))
+                            .collect::<Vec<_>>(),
+                    )
+                );
+
+                // Polling the future to completion guarantees the action is delivered.
+                assert_eq!(block_on(store.send(action)), Ok(()));
+
+                // The state is updated.
+                assert_eq!(store.state, MockReducer::new(&actions[0..=i]));
+
+                // The reactor is notified.
                 assert_eq!(
                     store.reactor,
                     MockReactor::new(
