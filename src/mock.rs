@@ -41,6 +41,37 @@ impl<S: Clone> Reactor<S> for MockReactor<S> {
     }
 }
 
+#[cfg(feature = "async")]
+use futures::sink::Sink;
+
+#[cfg(feature = "async")]
+use futures::task::{Context, Poll};
+
+#[cfg(feature = "async")]
+use std::pin::Pin;
+
+#[cfg(feature = "async")]
+impl<S: Unpin> Sink<S> for MockReactor<S> {
+    type SinkError = Never;
+
+    fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn start_send(self: Pin<&mut Self>, state: S) -> Result<(), Self::SinkError> {
+        self.get_mut().0.borrow_mut().push(state);
+        Ok(())
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
+        Poll::Ready(Ok(()))
+    }
+}
+
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 pub struct MockDispatcher<A>(PhantomData<A>);
 
