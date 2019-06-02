@@ -1,8 +1,8 @@
 mod array;
 mod boxed;
+mod mpsc;
 mod option;
 mod reference;
-mod sender;
 mod slice;
 mod tuple;
 
