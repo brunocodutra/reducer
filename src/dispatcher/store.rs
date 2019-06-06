@@ -52,9 +52,9 @@ use std::{mem, ops::Deref};
 /// }
 ///
 /// // The user interface.
-/// struct Display;
+/// struct Console;
 ///
-/// impl Reactor<Calculator> for Display {
+/// impl Reactor<Calculator> for Console {
 ///     type Output = io::Result<()>;
 ///     fn react(&self, state: &Calculator) -> Self::Output {
 ///         io::stdout().write_fmt(format_args!("{}\n", state.0))
@@ -62,7 +62,7 @@ use std::{mem, ops::Deref};
 /// }
 ///
 /// fn main() -> Result<(), Box<dyn Error>> {
-///     let mut store = Store::new(Calculator(0), Display);
+///     let mut store = Store::new(Calculator(0), Console);
 ///
 ///     store.dispatch(Add(5))?; // displays "5"
 ///     store.dispatch(Mul(3))?; // displays "15"
