@@ -1,6 +1,6 @@
 use crate::reducer::*;
 
-/// Updates the potentially _unsized_ nested reducer.
+/// Updates the potentially _unsized_ nested [`Reducer`].
 impl<A, R> Reducer<A> for Box<R>
 where
     R: Reducer<A> + Clone + ?Sized,

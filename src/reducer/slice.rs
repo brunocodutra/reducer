@@ -1,6 +1,6 @@
 use crate::reducer::*;
 
-/// Updates all reducers in the slice in order.
+/// Updates all [`Reducer`]s in the slice in order.
 impl<A, R> Reducer<A> for [R]
 where
     A: Clone,

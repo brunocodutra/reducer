@@ -5,7 +5,7 @@ macro_rules! impl_reactor_for_array {
 
     ( $head:ident $(, $tail:ident )* $(,)? ) => {
         dedupe_docs!(($( $tail, )*),
-            /// Notifies all reactors in the array in order.
+            /// Notifies all [`Reactor`]s in the array in order.
             ///
             /// Currently implemented for arrays of up to 32 elements.
             impl<S, T> Reactor<S> for [T; count!($( $tail, )*)]

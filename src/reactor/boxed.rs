@@ -1,6 +1,6 @@
 use crate::reactor::*;
 
-/// Forwards the event to the potentially _unsized_ nested reactor.
+/// Forwards the event to the potentially _unsized_ nested [`Reactor`].
 impl<S, T> Reactor<S> for Box<T>
 where
     T: Reactor<S> + ?Sized,

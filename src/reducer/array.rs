@@ -5,7 +5,7 @@ macro_rules! impl_reducer_for_array {
 
     ( $head:ident $(, $tail:ident )* $(,)? ) => {
         dedupe_docs!(($( $tail, )*),
-            /// Updates all reducers in the array in order.
+            /// Updates all [`Reducer`]s in the array in order.
             ///
             /// Currently implemented for arrays of up to 32 elements.
             impl<A, R> Reducer<A> for [R; count!($( $tail, )*)]

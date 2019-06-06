@@ -1,6 +1,6 @@
 use crate::reactor::*;
 
-/// Notifies all reactors in the slice in order.
+/// Notifies all [`Reactor`]s in the slice in order.
 impl<S, T> Reactor<S> for [T]
 where
     T: Reactor<S>,

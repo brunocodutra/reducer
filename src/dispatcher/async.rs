@@ -7,7 +7,7 @@ use futures::stream::StreamExt;
 use futures::task::{Context, Poll, Spawn, SpawnError};
 use std::{error::Error, fmt, pin::Pin};
 
-/// Trait for types that can spawn dispatchers as an asynchronous task (requires [`async`]).
+/// Trait for types that can spawn [`Dispatcher`]s as an asynchronous task (requires [`async`]).
 ///
 /// [`async`]: index.html#experimental-features
 pub trait SpawnDispatcher {

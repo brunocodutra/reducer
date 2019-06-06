@@ -15,7 +15,7 @@ mod tuple;
 /// # Reactor as a Data Channel
 /// For GUI applications, it is a good practice to have a separate thread dedicated to rendering.
 /// To help wiring up the Flux pattern in such multi-threaded scenarios, Reactor is implemented
-/// for [`mpsc::Sender`](trait.Reactor.html#impl-Reactor<S>) out of the box.
+/// for [`mpsc::Sender`] out of the box.
 ///
 /// ## Example
 ///

@@ -1,6 +1,6 @@
 use crate::reactor::*;
 
-/// Forwards the event if `Some`, ignores if `None`.
+/// Forwards the event if [`Some`], ignores if [`None`].
 impl<S, T> Reactor<S> for Option<T>
 where
     T: Reactor<S>,

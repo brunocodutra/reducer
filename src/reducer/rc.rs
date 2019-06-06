@@ -1,7 +1,7 @@
 use crate::reducer::*;
 use std::rc::Rc;
 
-/// Enhances a potentially _unsized_ reducer with copy-on-write semantics.
+/// Enhances a potentially _unsized_ [`Reducer`] with copy-on-write semantics.
 ///
 /// Helps avoiding cloning the entire state when it needs to be sent to other parts of the
 /// application.

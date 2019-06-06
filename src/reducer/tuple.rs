@@ -5,7 +5,7 @@ macro_rules! impl_reducer_for_tuples {
 
     ( $head:ident $(, $tail:ident )* $(,)? ) => {
         dedupe_docs!(($( $tail, )*),
-            /// Updates all reducers in the tuple in order.
+            /// Updates all [`Reducer`]s in the tuple in order.
             ///
             /// Currently implemented for tuples of up to 12 elements.
             impl<A, $head, $( $tail, )*> Reducer<A> for ($head, $( $tail, )*)
