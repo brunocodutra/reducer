@@ -1,56 +1,76 @@
 use criterion::*;
 use futures::executor::*;
-use futures::future::*;
+use futures::sink::*;
 use futures::task::*;
 use reducer::*;
 use std::iter::repeat;
-
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
-struct Action<T>(T);
-
-impl<T: 'static> Reducer<Action<T>> for Action<T> {
-    fn reduce(&mut self, val: Action<T>) {
-        *self = val;
-    }
-}
+use std::pin::Pin;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 struct BlackBox;
 
-impl<T: Copy> Reactor<T> for BlackBox {
-    type Output = T;
-
-    fn react(&self, &val: &T) -> Self::Output {
-        black_box(val)
+impl<T: 'static> Reducer<T> for BlackBox {
+    fn reduce(&mut self, val: T) {
+        black_box(val);
     }
 }
 
-const ACTIONS: usize = 500;
-const CONCURRENCY: usize = 100;
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum Never {}
+
+impl<T: Copy> Reactor<T> for BlackBox {
+    type Output = Result<(), Never>;
+
+    fn react(&self, &val: &T) -> Self::Output {
+        black_box(val);
+        Ok(())
+    }
+}
+
+impl<T: Copy> Sink<T> for BlackBox {
+    type SinkError = Never;
+
+    fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn start_send(self: Pin<&mut Self>, val: T) -> Result<(), Self::SinkError> {
+        black_box(val);
+        Ok(())
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
+        Poll::Ready(Ok(()))
+    }
+}
+
+const ACTIONS: usize = 1000;
 
 fn bench(c: &mut Criterion) {
     c.bench(
         "async/dispatch",
-        Benchmark::new(
-            format!("{}x{}", CONCURRENCY, ACTIONS / CONCURRENCY),
-            move |b| {
-                let mut executor = ThreadPool::new().unwrap();
-                let store = Store::new(Action(0), BlackBox);
-                let dispatcher = executor.spawn_dispatcher(store).unwrap();
+        Benchmark::new(ACTIONS.to_string(), |b| {
+            let mut executor = ThreadPool::new().unwrap();
 
-                b.iter(|| {
-                    block_on(join_all(
-                        repeat(dispatcher.clone())
-                            .take(CONCURRENCY)
-                            .flat_map(|mut d| {
-                                (0..ACTIONS / CONCURRENCY).map(move |a| d.dispatch(Action(a)))
-                            })
-                            .map(|f| executor.spawn_with_handle(f))
-                            .map(Result::unwrap),
-                    ));
-                });
-            },
-        )
+            b.iter_batched(
+                || {
+                    let store = Store::new(BlackBox, BlackBox);
+                    executor.spawn_dispatcher(store).unwrap()
+                },
+                |(dispatcher, handle)| {
+                    for (a, mut d) in repeat(dispatcher).enumerate().take(ACTIONS) {
+                        d.dispatch(a).unwrap();
+                    }
+
+                    block_on(handle).unwrap();
+                },
+                BatchSize::SmallInput,
+            );
+        })
         .throughput(Throughput::Elements(ACTIONS as u32)),
     );
 }

@@ -1,76 +1,79 @@
 use crate::dispatcher::Dispatcher;
-use futures::channel::{mpsc, oneshot};
-use futures::future::{BoxFuture, FutureObj};
-use futures::sink::SinkExt;
+use futures::channel::mpsc;
+use futures::executor::block_on;
+use futures::future::{FutureExt, FutureObj, RemoteHandle};
+use futures::sink::{Sink, SinkExt};
 use futures::stream::StreamExt;
 use futures::task::{Spawn, SpawnError};
+use std::{error::Error, fmt};
 
 /// Trait for types that can spawn dispatchers as an asynchronous task (requires [`async`]).
 ///
 /// [`async`]: index.html#experimental-features
 pub trait SpawnDispatcher {
-    /// Spawns a [Dispatcher] as a task that will listen to actions dispatched through the
-    /// [AsyncDispatcher] returned.
+    /// Spawns a [`Dispatcher`] as a task that will listen to actions dispatched through the
+    /// [`AsyncDispatcher`] returned.
     ///
-    /// The task completes once [AsyncDispatcher] (or the last of its clones) is dropped.
-    ///
-    /// [Dispatcher]: trait.Dispatcher.html
-    /// [AsyncDispatcher]: struct.AsyncDispatcher.html
-    fn spawn_dispatcher<D, A>(
+    /// The task completes
+    /// * successfuly if [`AsyncDispatcher`] (or the last of its clones) is dropped.
+    /// * successfuly if [`RemoteHandle`] is is dropped, unless [`RemoteHandle::forget`] is called.
+    /// * with an error if [`Dispatcher::dispatch`] fails.
+    ///     * The error can be retrieved by polling [`RemoteHandle`] to completion.
+    #[allow(clippy::type_complexity)]
+    fn spawn_dispatcher<D, A, E>(
         &mut self,
         dispatcher: D,
-    ) -> Result<AsyncDispatcher<A, D::Output>, SpawnError>
+    ) -> Result<(AsyncDispatcher<A, E>, RemoteHandle<D::Output>), SpawnError>
     where
-        D: Dispatcher<A> + Send + 'static,
-        D::Output: Send + 'static,
-        A: Send + 'static;
+        D: Dispatcher<A, Output = Result<(), E>> + Sink<A, SinkError = E> + Send + 'static,
+        A: Send + 'static,
+        E: Send + 'static;
 }
 
 impl<S> SpawnDispatcher for S
 where
     S: Spawn + ?Sized,
 {
-    fn spawn_dispatcher<D, A>(
+    #[allow(clippy::type_complexity)]
+    fn spawn_dispatcher<D, A, E>(
         &mut self,
-        mut dispatcher: D,
-    ) -> Result<AsyncDispatcher<A, D::Output>, SpawnError>
+        dispatcher: D,
+    ) -> Result<(AsyncDispatcher<A, E>, RemoteHandle<D::Output>), SpawnError>
     where
-        D: Dispatcher<A> + Send + 'static,
-        D::Output: Send + 'static,
+        D: Dispatcher<A, Output = Result<(), E>> + Sink<A, SinkError = E> + Send + 'static,
         A: Send + 'static,
+        E: Send + 'static,
     {
-        let (tx, mut rx) = mpsc::channel::<(A, oneshot::Sender<D::Output>)>(0);
-
-        self.spawn_obj(FutureObj::new(Box::new(async move {
-            while let Some((action, tx)) = await!(rx.next()) {
-                tx.send(dispatcher.dispatch(action)).ok();
-            }
-        })))?;
-
-        Ok(AsyncDispatcher { tx })
+        let (tx, rx) = mpsc::channel(0);
+        let (future, handle) = rx.forward(dispatcher).remote_handle();
+        self.spawn_obj(FutureObj::new(Box::new(future)))?;
+        Ok((AsyncDispatcher { tx }, handle))
     }
 }
 
-/// A handle that allows dispatching actions on a [spawned] [Dispatcher] (requires [`async`]).
+/// A handle that allows dispatching actions on a [spawned] [`Dispatcher`] (requires [`async`]).
 ///
-/// AsyncDispatcher requires all actions to be of the same type `A`.
+/// [`AsyncDispatcher`] requires all actions to be of the same type `A`.
 /// An effective way to fulfill this requirement is to define actions as `enum` variants.
 ///
 /// This type is a just lightweight handle that may be cloned and sent to other threads.
 ///
 /// [spawned]: trait.SpawnDispatcher.html
-/// [Dispatcher]: trait.Dispatcher.html
 /// [`async`]: index.html#experimental-features
 ///
 /// ## Example
 ///
 /// ```rust
-/// use futures::executor::{block_on, ThreadPool};
+/// use futures::executor::*;
+/// use futures::prelude::*;
+/// use futures::task::*;
 /// use reducer::*;
 /// use std::error::Error;
 /// use std::io::{self, Write};
+/// use std::pin::Pin;
 ///
 /// // The state of your app.
+/// #[derive(Clone)]
 /// struct Calculator(i32);
 ///
 /// // Actions the user can trigger.
@@ -93,69 +96,105 @@ where
 /// }
 ///
 /// // The user interface.
-/// struct Display;
+/// struct Console;
 ///
-/// impl Reactor<Calculator> for Display {
+/// impl Reactor<Calculator> for Console {
 ///     type Output = io::Result<()>;
 ///     fn react(&self, state: &Calculator) -> Self::Output {
 ///         io::stdout().write_fmt(format_args!("{}\n", state.0))
 ///     }
 /// }
 ///
+/// // Implementing Sink for Console, means it can asynchronously react to state changes.
+/// impl Sink<Calculator> for Console {
+///     type SinkError = io::Error;
+///
+///     fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+///         Poll::Ready(Ok(()))
+///     }
+///
+///     fn start_send(self: Pin<&mut Self>, state: Calculator) -> io::Result<()> {
+///         self.react(&state)
+///     }
+///
+///     fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+///         Poll::Ready(Ok(()))
+///     }
+///
+///     fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+///         Poll::Ready(Ok(()))
+///     }
+/// }
+///
 /// fn main() -> Result<(), Box<dyn Error>> {
-///     let store = Store::new(Calculator(0), Display);
+///     let store = Store::new(Calculator(0), Console);
 ///
 ///     // Spin up a thread-pool.
 ///     let mut executor = ThreadPool::new()?;
 ///
-///     // Process incoming actions on a background thread.
-///     let mut dispatcher = executor.spawn_dispatcher(store).unwrap();
+///     // Process incoming actions on a background task.
+///     let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
 ///
-///     block_on(dispatcher.dispatch(Action::Add(5)))?; // displays "5"
-///     block_on(dispatcher.dispatch(Action::Mul(3)))?; // displays "15"
-///     block_on(dispatcher.dispatch(Action::Sub(1)))?; // displays "14"
-///     block_on(dispatcher.dispatch(Action::Div(7)))?; // displays "2"
+///     dispatcher.dispatch(Action::Add(5))?; // eventually displays "5"
+///     dispatcher.dispatch(Action::Mul(3))?; // eventually displays "15"
+///     dispatcher.dispatch(Action::Sub(1))?; // eventually displays "14"
+///     dispatcher.dispatch(Action::Div(7))?; // eventually displays "2"
 ///
-///     drop(dispatcher.dispatch(Action::Div(0))); // never delivered
+///     // Dropping the AsyncDispatcher signals to the background task that
+///     // it can terminate once all pending actions have been processed.
+///     drop(dispatcher);
 ///
-///     // Allow the background thread to catch up.
-///     std::thread::sleep(std::time::Duration::from_millis(500));
+///     // Wait for the background task to terminate.
+///     block_on(handle)?;
 ///
 ///     Ok(())
 /// }
 /// ```
 #[derive(Debug, Clone)]
-pub struct AsyncDispatcher<A, O> {
-    tx: mpsc::Sender<(A, oneshot::Sender<O>)>,
+pub struct AsyncDispatcher<A, E> {
+    tx: mpsc::Sender<Result<A, E>>,
 }
 
-impl<A, O> Dispatcher<A> for AsyncDispatcher<A, O>
-where
-    A: Send + 'static,
-    O: Send + 'static,
-{
-    /// A Future that represents asynchronously dispatched actions.
-    ///
-    /// _**Important:** do not rely on the actual type,_
-    /// _this will become an existential type once issues with rustdoc are solved._
-    type Output = BoxFuture<'static, O>;
-
-    /// Asynchronously sends an action to the associated [spawned] [Dispatcher]
-    /// and returns a future to the result.
-    ///
-    /// _**Important:** The action is only guaranteed to be delivered
-    /// if the future is polled to completion._
+/// The error returned when [`AsyncDispatcher`] is unable to dispatch an action (requires [`async`]).
+///
+/// [`async`]: index.html#experimental-features
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum AsyncDispatcherError {
+    /// The [spawned] [`Dispatcher`] has terminated and cannot receive further actions.
     ///
     /// [spawned]: trait.SpawnDispatcher.html
-    /// [Dispatcher]: trait.Dispatcher.html
-    fn dispatch(&mut self, action: A) -> Self::Output {
-        let mut sender = self.tx.clone();
+    Terminated,
+}
 
-        Box::pin(async move {
-            let (tx, rx) = oneshot::channel();
-            await!(sender.send((action, tx))).unwrap();
-            await!(rx).unwrap()
-        })
+impl fmt::Display for AsyncDispatcherError {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            fmt,
+            "The spawned Dispatcher has terminated and cannot receive further actions"
+        )
+    }
+}
+
+impl Error for AsyncDispatcherError {}
+
+impl<A, E> Dispatcher<A> for AsyncDispatcher<A, E> {
+    /// Either confirmation that action has been dispatched or the reason why not.
+    type Output = Result<(), AsyncDispatcherError>;
+
+    /// Sends an action to the associated [spawned] [`Dispatcher`].
+    ///
+    /// Once this call returns, the action may or may not have taken effect,
+    /// but it's guaranteed to eventually do,
+    /// unless the [spawned] [`Dispatcher`] terminates in between.
+    ///
+    /// [spawned]: trait.SpawnDispatcher.html
+    fn dispatch(&mut self, action: A) -> Self::Output {
+        if let Err(e) = block_on(self.tx.send(Ok(action))) {
+            debug_assert!(e.is_disconnected());
+            return Err(AsyncDispatcherError::Terminated);
+        }
+
+        Ok(())
     }
 }
 
@@ -163,30 +202,62 @@ where
 mod tests {
     use super::*;
     use crate::mock::*;
-    use futures::executor::{block_on, ThreadPool};
-    use futures::future::join_all;
-    use futures::task::SpawnExt;
+    use crate::Store;
+    use futures::channel::mpsc::channel;
+    use futures::executor::{block_on_stream, ThreadPool};
     use proptest::*;
+    use std::{error::Error, thread};
 
     proptest! {
         #[test]
         fn dispatch(actions: Vec<char>) {
-            let dispatcher = MockDispatcher::default();
+            let (tx, rx) = channel(actions.len());
+            let store = Store::new(MockReducer::default(), tx);
             let mut executor = ThreadPool::new()?;
-            let mut handle = executor.spawn_dispatcher(dispatcher).unwrap();
+            let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
 
-            let futures = join_all(
-                actions
-                    .clone()
-                    .drain(..)
-                    .map(|action| handle.dispatch(action))
-                    .map(|f| executor.spawn_with_handle(f))
-                    .map(Result::unwrap),
+            for &action in &actions {
+                assert_eq!(dispatcher.dispatch(action), Ok(()));
+            }
+
+            drop(dispatcher);
+
+            assert_eq!(block_on(handle), Ok(()));
+
+            assert_eq!(
+                block_on_stream(rx).collect::<Vec<_>>(),
+                (0..actions.len())
+                    .map(|i| MockReducer::new(&actions[0..=i]))
+                    .collect::<Vec<_>>()
             );
-
-            drop(handle);
-
-            assert_eq!(block_on(futures), actions);
         }
+    }
+
+    #[test]
+    fn error() -> Result<(), Box<dyn Error>> {
+        let (tx, rx) = channel(0);
+        let store = Store::new(MockReducer::default(), tx);
+        let mut executor = ThreadPool::new()?;
+        let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
+
+        drop(rx);
+
+        // Poll the spawned dispatcher so it sees the dead channel.
+        dispatcher.dispatch('!').ok();
+
+        assert_ne!(block_on(handle), Ok(()));
+
+        while let Ok(()) = dispatcher.dispatch('!') {
+            // Wait for the information to propagate,
+            // that the spawned dispatcher has terminated.
+            thread::yield_now();
+        }
+
+        assert_eq!(
+            dispatcher.dispatch('!'),
+            Err(AsyncDispatcherError::Terminated)
+        );
+
+        Ok(())
     }
 }
