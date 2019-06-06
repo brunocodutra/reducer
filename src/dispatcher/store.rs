@@ -5,11 +5,11 @@ use std::{mem, ops::Deref};
 
 /// A reactive state container.
 ///
-/// The only way to mutate the internal state managed by Store is by
+/// The only way to mutate the internal state managed by [`Store`] is by
 /// [dispatching] actions on it.
-/// The associated reactor is notified upon every state transition.
+/// The associated [`Reactor`] is notified upon every state transition.
 ///
-/// [dispatching]: trait.Dispatcher.html
+/// [dispatching]: trait.Dispatcher.html#tymethod.dispatch
 ///
 /// ## Example
 ///
@@ -79,12 +79,12 @@ pub struct Store<S, R: Reactor<S>> {
 }
 
 impl<S, R: Reactor<S>> Store<S, R> {
-    /// Constructs the Store given the initial state and a reactor.
+    /// Constructs the Store given the initial state and a [`Reactor`].
     pub fn new(state: S, reactor: R) -> Self {
         Self { state, reactor }
     }
 
-    /// Replaces the reactor and returns the previous one.
+    /// Replaces the [`Reactor`] and returns the previous one.
     pub fn subscribe(&mut self, reactor: impl Into<R>) -> R {
         mem::replace(&mut self.reactor, reactor.into())
     }
@@ -107,12 +107,9 @@ where
 {
     type Output = R::Output;
 
-    /// Updates the state via [`Reducer<A>::reduce`][reduce] and notifies the reactor,
-    /// returning the result of calling [`Reactor<S>::react`][react] with a reference
+    /// Updates the state via [`Reducer::reduce`] and notifies the [`Reactor`],
+    /// returning the result of calling [`Reactor::react`] with a reference
     /// to the new state.
-    ///
-    /// [reduce]: trait.Reducer.html#tymethod.reduce
-    /// [react]: trait.Reactor.html#tymethod.react
     fn dispatch(&mut self, action: A) -> R::Output {
         self.state.reduce(action);
         self.reactor.react(&self.state)

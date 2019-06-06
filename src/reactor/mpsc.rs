@@ -1,6 +1,7 @@
 use crate::reactor::*;
 use std::sync::mpsc::{SendError, Sender};
 
+/// Turns [`std::sync::mpsc::Sender`] into a [`Reactor`].
 impl<S> Reactor<S> for Sender<S>
 where
     S: Clone,
@@ -18,6 +19,9 @@ use futures::{executor::block_on, sink::SinkExt};
 #[cfg(feature = "async")]
 use futures::channel::mpsc::{SendError as AsyncSendError, Sender as AsyncSender};
 
+/// Turns [`futures::channel::mpsc::Sender`] into a [`Reactor`] (requires [`async`]).
+///
+/// [`async`]: index.html#experimental-features
 #[cfg(feature = "async")]
 impl<S> Reactor<S> for AsyncSender<S>
 where
@@ -33,6 +37,9 @@ where
 #[cfg(feature = "async")]
 use futures::channel::mpsc::{TrySendError, UnboundedSender};
 
+/// Turns [`futures::channel::mpsc::UnboundedSender`] into a [`Reactor`] (requires [`async`]).
+///
+/// [`async`]: index.html#experimental-features
 #[cfg(feature = "async")]
 impl<S> Reactor<S> for UnboundedSender<S>
 where

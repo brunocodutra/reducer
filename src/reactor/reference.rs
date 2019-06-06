@@ -1,6 +1,6 @@
 use crate::reactor::*;
 
-/// Forwards the event to a potentially stack allocated reactor.
+/// Forwards the event to a potentially stack allocated [`Reactor`].
 impl<'a, S, T> Reactor<S> for &'a T
 where
     T: Reactor<S> + ?Sized,

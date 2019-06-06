@@ -5,7 +5,7 @@ macro_rules! impl_reactor_for_tuples {
 
     ( $head:ident $(, $tail:ident )* $(,)? ) => {
         dedupe_docs!(($( $tail, )*),
-            /// Notifies all reactors in the tuple in order.
+            /// Notifies all [`Reactor`]s in the tuple in order.
             ///
             /// Currently implemented for tuples of up to 12 elements.
             impl<S, $head, $( $tail, )*> Reactor<S> for ($head, $( $tail, )*)
