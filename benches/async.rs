@@ -1,3 +1,5 @@
+#![feature(async_await)]
+
 use criterion::*;
 use futures::executor::*;
 use futures::sink::*;
@@ -50,14 +52,14 @@ impl<T: Copy> Sink<T> for BlackBox {
 
 const ACTIONS: usize = 1000;
 
-fn bench(c: &mut Criterion) {
+fn dispatch(c: &mut Criterion) {
     c.bench(
         "async/dispatch",
         Benchmark::new(ACTIONS.to_string(), |b| {
             let mut executor = ThreadPool::new().unwrap();
 
             b.iter_batched(
-                || {
+                move || {
                     let store = Store::new(BlackBox, BlackBox);
                     executor.spawn_dispatcher(store).unwrap()
                 },
@@ -75,5 +77,34 @@ fn bench(c: &mut Criterion) {
     );
 }
 
-criterion_group!(benches, bench);
+fn sink(c: &mut Criterion) {
+    c.bench(
+        "async/sink",
+        Benchmark::new(ACTIONS.to_string(), |b| {
+            let mut executor = ThreadPool::new().unwrap();
+
+            b.iter_batched(
+                move || {
+                    let store = Store::new(BlackBox, BlackBox);
+                    let (dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
+                    (dispatcher, handle, executor.clone())
+                },
+                |(dispatcher, handle, mut executor)| {
+                    for (a, mut d) in repeat(dispatcher).enumerate().take(ACTIONS) {
+                        executor
+                            .spawn(async move {
+                                d.send(a).await.unwrap();
+                            })
+                            .unwrap();
+                    }
+
+                    block_on(handle).unwrap();
+                },
+                BatchSize::SmallInput,
+            );
+        })
+        .throughput(Throughput::Elements(ACTIONS as u32)),
+    );
+}
+criterion_group!(benches, dispatch, sink);
 criterion_main!(benches);
