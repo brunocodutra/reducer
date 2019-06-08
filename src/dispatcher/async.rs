@@ -4,8 +4,8 @@ use futures::executor::block_on;
 use futures::future::{FutureExt, FutureObj, RemoteHandle};
 use futures::sink::{Sink, SinkExt};
 use futures::stream::StreamExt;
-use futures::task::{Spawn, SpawnError};
-use std::{error::Error, fmt};
+use futures::task::{Context, Poll, Spawn, SpawnError};
+use std::{error::Error, fmt, pin::Pin};
 
 /// Trait for types that can spawn dispatchers as an asynchronous task (requires [`async`]).
 ///
@@ -47,7 +47,7 @@ where
         let (tx, rx) = mpsc::channel(0);
         let (future, handle) = rx.forward(dispatcher).remote_handle();
         self.spawn_obj(FutureObj::new(Box::new(future)))?;
-        Ok((AsyncDispatcher { tx }, handle))
+        Ok((AsyncDispatcher(tx), handle))
     }
 }
 
@@ -151,9 +151,7 @@ where
 /// }
 /// ```
 #[derive(Debug, Clone)]
-pub struct AsyncDispatcher<A, E> {
-    tx: mpsc::Sender<Result<A, E>>,
-}
+pub struct AsyncDispatcher<A, E>(mpsc::Sender<Result<A, E>>);
 
 /// The error returned when [`AsyncDispatcher`] is unable to dispatch an action (requires [`async`]).
 ///
@@ -189,12 +187,44 @@ impl<A, E> Dispatcher<A> for AsyncDispatcher<A, E> {
     ///
     /// [spawned]: trait.SpawnDispatcher.html
     fn dispatch(&mut self, action: A) -> Self::Output {
-        if let Err(e) = block_on(self.tx.send(Ok(action))) {
-            debug_assert!(e.is_disconnected());
-            return Err(AsyncDispatcherError::Terminated);
-        }
+        block_on(self.send(action))
+    }
+}
 
-        Ok(())
+impl<A, E> Sink<A> for AsyncDispatcher<A, E> {
+    type SinkError = AsyncDispatcherError;
+
+    fn poll_ready(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<(), Self::SinkError>> {
+        Pin::new(&mut self.0)
+            .poll_ready(cx)
+            .map_err(|_| AsyncDispatcherError::Terminated)
+    }
+
+    fn start_send(mut self: Pin<&mut Self>, action: A) -> Result<(), Self::SinkError> {
+        Pin::new(&mut self.0)
+            .start_send(Ok(action))
+            .map_err(|_| AsyncDispatcherError::Terminated)
+    }
+
+    fn poll_flush(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<(), Self::SinkError>> {
+        Pin::new(&mut self.0)
+            .poll_flush(cx)
+            .map_err(|_| AsyncDispatcherError::Terminated)
+    }
+
+    fn poll_close(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<(), Self::SinkError>> {
+        Pin::new(&mut self.0)
+            .poll_close(cx)
+            .map_err(|_| AsyncDispatcherError::Terminated)
     }
 }
 
@@ -204,7 +234,8 @@ mod tests {
     use crate::mock::*;
     use crate::Store;
     use futures::channel::mpsc::channel;
-    use futures::executor::{block_on_stream, ThreadPool};
+    use futures::executor::*;
+    use futures::stream::*;
     use proptest::*;
     use std::{error::Error, thread};
 
@@ -219,6 +250,32 @@ mod tests {
             for &action in &actions {
                 assert_eq!(dispatcher.dispatch(action), Ok(()));
             }
+
+            drop(dispatcher);
+
+            assert_eq!(block_on(handle), Ok(()));
+
+            assert_eq!(
+                block_on_stream(rx).collect::<Vec<_>>(),
+                (0..actions.len())
+                    .map(|i| MockReducer::new(&actions[0..=i]))
+                    .collect::<Vec<_>>()
+            );
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn sink(actions: Vec<char>) {
+            let (tx, rx) = channel(actions.len());
+            let store = Store::new(MockReducer::default(), tx);
+            let mut executor = ThreadPool::new()?;
+            let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
+
+            assert_eq!(
+                block_on(dispatcher.send_all(&mut iter(actions.clone()))),
+                Ok(())
+            );
 
             drop(dispatcher);
 
