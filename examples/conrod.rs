@@ -11,10 +11,14 @@ use glutin::{ContextBuilder, EventsLoop, WindowBuilder};
 use reducer::*;
 use std::error::Error;
 use std::mem;
-use std::sync::mpsc::{channel, Receiver, SendError, Sender};
 use std::sync::Arc;
-use std::thread;
 use std::time::{Duration, Instant};
+
+#[cfg(feature = "async")]
+use futures::channel::mpsc::{channel, Receiver};
+
+#[cfg(not(feature = "async"))]
+use std::sync::mpsc::{channel, Receiver};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum View {
@@ -103,7 +107,12 @@ impl State {
 widget_ids!(struct Ids { control, body, footer, button, input, list, all, done, pending });
 
 // Renders the widgets given the current state.
-fn render(ui: &mut UiCell, ids: &Ids, state: &State, mut dispatcher: impl Dispatcher<Action>) {
+fn render<E: Error + 'static>(
+    ui: &mut UiCell,
+    ids: &Ids,
+    state: &State,
+    dispatcher: &mut impl Dispatcher<Action, Output = Result<(), E>>,
+) -> Result<(), Box<dyn Error>> {
     // Setup the layout.
     widget::Canvas::new()
         .wh_of(ui.window)
@@ -140,7 +149,7 @@ fn render(ui: &mut UiCell, ids: &Ids, state: &State, mut dispatcher: impl Dispat
         .label("Add Todo")
         .set(ids.button, ui)
     {
-        dispatcher.dispatch(Action::AddTodo);
+        dispatcher.dispatch(Action::AddTodo)?;
     }
 
     // Render text input.
@@ -151,7 +160,7 @@ fn render(ui: &mut UiCell, ids: &Ids, state: &State, mut dispatcher: impl Dispat
         .set(ids.input, ui)
     {
         if let widget::text_box::Event::Update(text) = input {
-            dispatcher.dispatch(Action::EditTodo(text));
+            dispatcher.dispatch(Action::EditTodo(text))?;
         }
     }
 
@@ -173,7 +182,7 @@ fn render(ui: &mut UiCell, ids: &Ids, state: &State, mut dispatcher: impl Dispat
             .color(color::LIGHT_BLUE);
 
         for _ in item.set(toggle, ui) {
-            dispatcher.dispatch(Action::ToggleTodo(idx));
+            dispatcher.dispatch(Action::ToggleTodo(idx))?;
         }
     }
 
@@ -196,7 +205,7 @@ fn render(ui: &mut UiCell, ids: &Ids, state: &State, mut dispatcher: impl Dispat
     }
 
     for _ in all.set(ids.all, ui) {
-        dispatcher.dispatch(Action::FilterTodos(View::All));
+        dispatcher.dispatch(Action::FilterTodos(View::All))?;
     }
 
     // Render button to show only completed todos.
@@ -213,7 +222,7 @@ fn render(ui: &mut UiCell, ids: &Ids, state: &State, mut dispatcher: impl Dispat
     }
 
     for _ in done.set(ids.done, ui) {
-        dispatcher.dispatch(Action::FilterTodos(View::Done));
+        dispatcher.dispatch(Action::FilterTodos(View::Done))?;
     }
 
     // Render button to show only pending todos.
@@ -230,16 +239,22 @@ fn render(ui: &mut UiCell, ids: &Ids, state: &State, mut dispatcher: impl Dispat
     }
 
     for _ in pending.set(ids.pending, ui) {
-        dispatcher.dispatch(Action::FilterTodos(View::Pending));
+        dispatcher.dispatch(Action::FilterTodos(View::Pending))?;
     }
+
+    Ok(())
 }
 
-fn run_conrod(
-    dispatcher: impl Dispatcher<Action> + Clone,
+fn run_conrod<E: Error + 'static>(
+    mut dispatcher: impl Dispatcher<Action, Output = Result<(), E>>,
     states: Receiver<Arc<State>>,
 ) -> Result<(), Box<dyn Error>> {
     const WIDTH: f64 = 400.;
     const HEIGHT: f64 = 500.;
+
+    // Workaround clippy warning.
+    #[cfg(feature = "async")]
+    let mut states = states;
 
     let mut events_loop = EventsLoop::new();
     let context = ContextBuilder::new();
@@ -317,27 +332,57 @@ fn run_conrod(
 
         // Render at 60fps.
         if Instant::now().duration_since(rerendered_at) > Duration::from_millis(16) {
-            // Synchronize the state.
-            if let Some(next) = states.try_iter().last() {
+            #[cfg(feature = "async")]
+            while let Ok(Some(next)) = states.try_next() {
+                state = next;
+            }
+
+            #[cfg(not(feature = "async"))]
+            while let Ok(next) = states.try_recv() {
                 state = next;
             }
 
             // Render widgets given the current state.
-            render(&mut ui.set_widgets(), &ids, &state, dispatcher.clone());
+            render(&mut ui.set_widgets(), &ids, &state, &mut dispatcher)?;
             rerendered_at = Instant::now();
         }
     }
 }
 
+#[cfg(feature = "async")]
+fn main() -> Result<(), Box<dyn Error>> {
+    // Create a channel to synchronize states.
+    let (reactor, states) = channel(0);
+
+    // Create a Store to manage the state.
+    let store = Store::new(Arc::new(State::default()), reactor);
+
+    // Spin up a thread-pool to run our application.
+    let mut executor = futures::executor::ThreadPool::new()?;
+
+    // Listen for actions on a separate thread.
+    let (dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
+
+    // Run the rendering loop.
+    run_conrod(dispatcher, states)?;
+
+    // Wait for the background thread to complete.
+    futures::executor::block_on(handle)?;
+
+    Ok(())
+}
+
+#[cfg(not(feature = "async"))]
 // Turn mpsc::Sender into a Dispatcher.
-impl Dispatcher<Action> for Sender<Action> {
-    type Output = Result<(), SendError<Action>>;
+impl Dispatcher<Action> for std::sync::mpsc::Sender<Action> {
+    type Output = Result<(), std::sync::mpsc::SendError<Action>>;
 
     fn dispatch(&mut self, action: Action) -> Self::Output {
         self.send(action)
     }
 }
 
+#[cfg(not(feature = "async"))]
 fn main() -> Result<(), Box<dyn Error>> {
     // Create a channel to synchronize actions.
     let (dispatcher, actions) = channel();
@@ -345,8 +390,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Create a channel to synchronize states.
     let (reactor, states) = channel();
 
-    // Run Reducer on a separate thread
-    thread::spawn(move || {
+    // Listen for actions on a separate thread.
+    std::thread::spawn(move || {
         // Create a Store to manage the state.
         let mut store = Store::new(Arc::new(State::default()), reactor);
 
