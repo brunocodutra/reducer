@@ -4,9 +4,13 @@ use iui::controls::*;
 use iui::prelude::*;
 use reducer::*;
 use std::error::Error;
-use std::sync::mpsc::{channel, Receiver, SendError, Sender};
 use std::sync::Arc;
-use std::thread;
+
+#[cfg(feature = "async")]
+use futures::channel::mpsc::{channel, Receiver};
+
+#[cfg(not(feature = "async"))]
+use std::sync::mpsc::{channel, Receiver};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum View {
@@ -81,7 +85,14 @@ impl State {
     }
 }
 
-fn run_iui(dispatcher: impl Dispatcher<Action> + Clone + 'static, states: Receiver<Arc<State>>) {
+fn run_iui(
+    mut dispatcher: impl Dispatcher<Action> + Clone + 'static,
+    states: Receiver<Arc<State>>,
+) {
+    // Workaround clippy warning.
+    #[cfg(feature = "async")]
+    let mut states = states;
+
     let ui = UI::init().unwrap();
 
     // Layout.
@@ -92,29 +103,20 @@ fn run_iui(dispatcher: impl Dispatcher<Action> + Clone + 'static, states: Receiv
     header.set_padded(&ui, true);
 
     // Text input.
-    let input = Entry::new(&ui);
+    let mut input = Entry::new(&ui);
 
     // "Add Todo" button.
     let mut add = Button::new(&ui, "Add Todo");
-    add.on_clicked(&ui, {
-        let mut input = input.clone();
-        let mut dispatcher = dispatcher.clone();
-        let ui = ui.clone();
-
-        move |_| {
-            dispatcher.dispatch(Action::AddTodo(input.value(&ui)));
-            input.set_value(&ui, "");
-        }
+    add.on_clicked(&ui, |_| {
+        dispatcher.dispatch(Action::AddTodo(input.value(&ui)));
+        input.set_value(&ui, "");
     });
 
     // View control.
     const VIEWS: [View; 3] = [View::All, View::Done, View::Pending];
     let mut filter = Combobox::new(&ui);
-    filter.on_selected(&ui, {
-        let mut dispatcher = dispatcher.clone();
-        move |i| {
-            dispatcher.dispatch(Action::FilterTodos(VIEWS[i as usize]));
-        }
+    filter.on_selected(&ui, |i| {
+        dispatcher.dispatch(Action::FilterTodos(VIEWS[i as usize]));
     });
 
     for view in &VIEWS {
@@ -130,21 +132,31 @@ fn run_iui(dispatcher: impl Dispatcher<Action> + Clone + 'static, states: Receiv
         let mut checklist: Vec<Checkbox> = vec![];
         let mut body = body.clone();
         let mut filter = filter.clone();
-        let dispatcher = dispatcher.clone();
+        let mut dispatcher = dispatcher.clone();
         let ui = ui.clone();
 
         move || {
+            let mut next = None;
+
+            #[cfg(feature = "async")]
+            while let Ok(n) = states.try_next() {
+                next = n;
+            }
+
+            #[cfg(not(feature = "async"))]
+            while let Ok(n) = states.try_recv() {
+                next = Some(n);
+            }
+
             // Update widgets on state change.
-            if let Some(state) = states.try_iter().last() {
+            if let Some(state) = next {
                 // Add new todos
                 let todos = state.get_todos();
                 for (i, (_, todo)) in todos.iter().enumerate().skip(checklist.len()) {
                     let mut checkbox = Checkbox::new(&ui, todo);
-                    checkbox.on_toggled(&ui, {
-                        let mut dispatcher = dispatcher.clone();
-                        move |_| {
-                            dispatcher.dispatch(Action::ToggleTodo(i));
-                        }
+                    let d = &mut dispatcher;
+                    checkbox.on_toggled(&ui, move |_| {
+                        d.dispatch(Action::ToggleTodo(i));
                     });
                     checklist.push(checkbox.clone());
                     body.append(&ui, checkbox, LayoutStrategy::Compact);
@@ -160,7 +172,7 @@ fn run_iui(dispatcher: impl Dispatcher<Action> + Clone + 'static, states: Receiv
                     }
                 }
 
-                // Set selected filter
+                // Set selected filter.
                 let view = VIEWS.iter().position(|&v| v == state.get_filter()).unwrap() as i64;
                 filter.set_selected(&ui, view);
             }
@@ -181,15 +193,40 @@ fn run_iui(dispatcher: impl Dispatcher<Action> + Clone + 'static, states: Receiv
     event_loop.run(&ui);
 }
 
+#[cfg(feature = "async")]
+fn main() -> Result<(), Box<dyn Error>> {
+    // Create a channel to synchronize states.
+    let (reactor, states) = channel(0);
+
+    // Create a Store to manage the state.
+    let store = Store::new(Arc::new(State::default()), reactor);
+
+    // Spin up a thread-pool to run our application.
+    let mut executor = futures::executor::ThreadPool::new()?;
+
+    // Listen for actions on a separate thread.
+    let (dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
+
+    // Run the rendering loop.
+    run_iui(dispatcher, states);
+
+    // Wait for the background thread to complete.
+    futures::executor::block_on(handle)?;
+
+    Ok(())
+}
+
+#[cfg(not(feature = "async"))]
 // Turn mpsc::Sender into a Dispatcher.
-impl Dispatcher<Action> for Sender<Action> {
-    type Output = Result<(), SendError<Action>>;
+impl Dispatcher<Action> for std::sync::mpsc::Sender<Action> {
+    type Output = Result<(), std::sync::mpsc::SendError<Action>>;
 
     fn dispatch(&mut self, action: Action) -> Self::Output {
         self.send(action)
     }
 }
 
+#[cfg(not(feature = "async"))]
 fn main() -> Result<(), Box<dyn Error>> {
     // Create a channel to synchronize actions.
     let (dispatcher, actions) = channel();
@@ -197,8 +234,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Create a channel to synchronize states.
     let (reactor, states) = channel();
 
-    // Run Reducer on a separate thread
-    thread::spawn(move || {
+    // Listen for actions on a separate thread.
+    std::thread::spawn(move || {
         // Create a Store to manage the state.
         let mut store = Store::new(Arc::new(State::default()), reactor);
 
