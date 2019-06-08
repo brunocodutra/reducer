@@ -236,15 +236,20 @@ mod tests {
     use futures::channel::mpsc::channel;
     use futures::executor::*;
     use futures::stream::*;
+    use lazy_static::lazy_static;
     use proptest::*;
     use std::{error::Error, thread};
+
+    lazy_static! {
+        static ref POOL: ThreadPool = ThreadPool::new().unwrap();
+    }
 
     proptest! {
         #[test]
         fn dispatch(actions: Vec<char>) {
             let (tx, rx) = channel(actions.len());
             let store = Store::new(MockReducer::default(), tx);
-            let mut executor = ThreadPool::new()?;
+            let mut executor = POOL.clone();
             let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
 
             for &action in &actions {
@@ -269,7 +274,7 @@ mod tests {
         fn sink(actions: Vec<char>) {
             let (tx, rx) = channel(actions.len());
             let store = Store::new(MockReducer::default(), tx);
-            let mut executor = ThreadPool::new()?;
+            let mut executor = POOL.clone();
             let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
 
             assert_eq!(
@@ -294,7 +299,7 @@ mod tests {
     fn error() -> Result<(), Box<dyn Error>> {
         let (tx, rx) = channel(0);
         let store = Store::new(MockReducer::default(), tx);
-        let mut executor = ThreadPool::new()?;
+        let mut executor = POOL.clone();
         let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
 
         drop(rx);
