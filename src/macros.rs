@@ -16,3 +16,10 @@ macro_rules! dedupe_docs {
         $( $definition )+
     };
 }
+
+#[cfg(test)]
+macro_rules! always {
+    ($any:tt, $val:expr) => {
+        $val
+    };
+}
