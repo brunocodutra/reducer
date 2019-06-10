@@ -38,17 +38,7 @@ mod tests {
         () => {};
 
         ( $head:ident $(, $tail:ident )* $(,)? ) => {
-            #[derive(Debug, Default, Clone, Eq, PartialEq)]
-            struct $head<A: 'static>(MockReducer<A>);
-
-            impl<A, T: 'static + Clone> Reducer<A> for $head<T>
-                where
-                    MockReducer<T>: Reducer<A>,
-            {
-                fn reduce(&mut self, action: A) {
-                    self.0.reduce(action);
-                }
-            }
+            type $head<T> = TaggedMockReducer<T, [(); count!($($tail,)*)]>;
 
             proptest!(|(actions: Vec<char>)| {
                 let mut reducers = ($head::default(), $( $tail::default(), )*);
@@ -57,8 +47,8 @@ mod tests {
                     reducers.reduce(action);
 
                     assert_eq!(reducers, (
-                        $head(MockReducer::new(&actions[0..=i])),
-                        $( $tail(MockReducer::new(&actions[0..=i])), )*
+                        $head::new(&actions[0..=i]),
+                        $( $tail::new(&actions[0..=i]), )*
                     ));
                 }
             });
