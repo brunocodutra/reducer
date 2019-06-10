@@ -34,12 +34,6 @@ mod tests {
     use crate::mock::*;
     use proptest::*;
 
-    macro_rules! always {
-        ($any:tt, $val:expr) => {
-            $val
-        };
-    }
-
     macro_rules! test_reactor_for_tuples {
         () => {};
 
