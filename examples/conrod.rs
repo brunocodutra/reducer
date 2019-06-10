@@ -4,6 +4,7 @@ use conrod_core::*;
 use conrod_gfx::*;
 use conrod_winit::*;
 use gfx::{format::DepthStencil, Device};
+use gfx_window_glutin::*;
 use glutin::dpi::LogicalSize;
 use glutin::Event::WindowEvent;
 use glutin::WindowEvent::{CloseRequested, Resized};
@@ -13,6 +14,7 @@ use std::error::Error;
 use std::mem;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use winit::Window;
 
 #[cfg(feature = "async")]
 use futures::channel::mpsc::{channel, Receiver};
@@ -102,6 +104,24 @@ impl State {
             .collect()
     }
 }
+
+// A wrapper around the winit window that allows us to implement the trait necessary for enabling
+// the winit <-> conrod conversion functions.
+struct WindowRef<'a>(&'a Window);
+
+// Implement the `WinitWindow` trait for `WindowRef` to allow for generating compatible conversion
+// functions.
+impl<'a> WinitWindow for WindowRef<'a> {
+    fn get_inner_size(&self) -> Option<(u32, u32)> {
+        Window::get_inner_size(&self.0).map(Into::into)
+    }
+    fn hidpi_factor(&self) -> f32 {
+        Window::get_hidpi_factor(&self.0) as _
+    }
+}
+
+// Generate the winit <-> conrod_core type conversion fns.
+conversion_fns!();
 
 // Register widgets.
 widget_ids!(struct Ids { control, body, footer, button, input, list, all, done, pending });
@@ -264,7 +284,7 @@ fn run_conrod<E: Error + 'static>(
         .with_title("Reducer <3 Conrod");
 
     let (window, mut device, mut factory, rtv, _) =
-        gfx_window_glutin::init::<ColorFormat, DepthStencil>(builder, context, &events_loop)?;
+        init::<ColorFormat, DepthStencil>(builder, context, &events_loop)?;
 
     let mut encoder = factory.create_command_buffer().into();
     let mut renderer = Renderer::new(&mut factory, &rtv, window.get_hidpi_factor())?;
@@ -315,13 +335,12 @@ fn run_conrod<E: Error + 'static>(
                     let hidpi_factor = window.get_hidpi_factor();
                     let physical_size = logical_size.to_physical(hidpi_factor);
                     window.resize(physical_size);
-                    let (new_color, _) =
-                        gfx_window_glutin::new_views::<ColorFormat, DepthStencil>(&window);
+                    let (new_color, _) = new_views::<ColorFormat, DepthStencil>(&window);
                     renderer.on_resize(new_color);
                 }
             }
 
-            if let Some(event) = convert_event(event.clone(), window.window()) {
+            if let Some(event) = convert_event(event.clone(), &WindowRef(window.window())) {
                 ui.handle_event(event);
             }
         });
