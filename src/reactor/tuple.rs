@@ -44,19 +44,7 @@ mod tests {
         () => {};
 
         ( $head:ident $(, $tail:ident )* $(,)? ) => {
-            #[derive(Debug, Default, Clone, Eq, PartialEq)]
-            struct $head<S>(MockReactor<S>);
-
-            impl<S, T: Clone> Reactor<S> for $head<T>
-                where
-                    MockReactor<T>: Reactor<S>,
-            {
-                type Output = <MockReactor<T> as Reactor<S>>::Output;
-
-                fn react(&self, state: &S) -> Self::Output {
-                    self.0.react(state)
-                }
-            }
+            type $head<T> = TaggedMockReactor<T, [(); count!($($tail,)*)]>;
 
             proptest!(|(states: Vec<char>)| {
                 let reactors = ($head::default(), $( $tail::default(), )*);
@@ -68,8 +56,8 @@ mod tests {
                     ));
 
                     assert_eq!(reactors, (
-                        $head(MockReactor::new(&states[0..=i])),
-                        $( $tail(MockReactor::new(&states[0..=i])), )*
+                        $head::new(&states[0..=i]),
+                        $( $tail::new(&states[0..=i]), )*
                     ));
                 }
             });

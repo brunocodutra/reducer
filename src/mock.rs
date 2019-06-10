@@ -8,31 +8,35 @@ use std::{cell::RefCell, marker::PhantomData};
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Never {}
 
-#[derive(Debug, Default, Clone, Eq, PartialEq)]
-pub struct MockReducer<A: 'static>(Vec<A>);
+pub type MockReducer<A> = TaggedMockReducer<A, ()>;
 
-impl<A: 'static> MockReducer<A> {
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct TaggedMockReducer<A, Tag>(Vec<A>, PhantomData<Tag>);
+
+impl<A, Tag> TaggedMockReducer<A, Tag> {
     pub fn new(actions: impl Into<Vec<A>>) -> Self {
-        MockReducer(actions.into())
+        TaggedMockReducer(actions.into(), PhantomData)
     }
 }
 
-impl<A> Reducer<A> for MockReducer<A> {
+impl<A: 'static, Tag: 'static> Reducer<A> for TaggedMockReducer<A, Tag> {
     fn reduce(&mut self, action: A) {
         self.0.push(action);
     }
 }
 
-#[derive(Debug, Default, Clone, Eq, PartialEq)]
-pub struct MockReactor<S>(RefCell<Vec<S>>);
+pub type MockReactor<S> = TaggedMockReactor<S, ()>;
 
-impl<S> MockReactor<S> {
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct TaggedMockReactor<S, Tag>(RefCell<Vec<S>>, PhantomData<Tag>);
+
+impl<S, Tag> TaggedMockReactor<S, Tag> {
     pub fn new(states: impl Into<Vec<S>>) -> Self {
-        MockReactor(RefCell::new(states.into()))
+        TaggedMockReactor(RefCell::new(states.into()), PhantomData)
     }
 }
 
-impl<S: Clone> Reactor<S> for MockReactor<S> {
+impl<S: Clone, Tag> Reactor<S> for TaggedMockReactor<S, Tag> {
     type Output = Result<(), Never>;
 
     fn react(&self, state: &S) -> Self::Output {
@@ -51,7 +55,7 @@ use futures::task::{Context, Poll};
 use std::pin::Pin;
 
 #[cfg(feature = "async")]
-impl<S: Unpin> Sink<S> for MockReactor<S> {
+impl<S: Unpin, Tag: Unpin> Sink<S> for TaggedMockReactor<S, Tag> {
     type SinkError = Never;
 
     fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
@@ -72,10 +76,12 @@ impl<S: Unpin> Sink<S> for MockReactor<S> {
     }
 }
 
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
-pub struct MockDispatcher<A>(PhantomData<A>);
+pub type MockDispatcher<A> = TaggedMockDispatcher<A, ()>;
 
-impl<A> Dispatcher<A> for MockDispatcher<A> {
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+pub struct TaggedMockDispatcher<A, Tag>(PhantomData<(A, Tag)>);
+
+impl<A, Tag> Dispatcher<A> for TaggedMockDispatcher<A, Tag> {
     type Output = A;
 
     fn dispatch(&mut self, action: A) -> Self::Output {
@@ -91,7 +97,7 @@ mod tests {
     proptest! {
         #[test]
         fn reduce(actions: Vec<char>) {
-            let mut reducer = MockReducer::default();
+            let mut reducer = MockReducer::<_>::default();
 
             for &action in &actions {
                 reducer.reduce(action);
@@ -104,7 +110,7 @@ mod tests {
     proptest! {
         #[test]
         fn react(states: Vec<char>) {
-            let reactor = MockReactor::default();
+            let reactor = MockReactor::<_>::default();
 
             for action in &states {
                 assert_eq!(reactor.react(action), Ok(()));
@@ -117,7 +123,7 @@ mod tests {
     proptest! {
         #[test]
         fn dispatch(actions: Vec<char>) {
-            let mut dispatcher = MockDispatcher::default();
+            let mut dispatcher = MockDispatcher::<_>::default();
 
             for action in actions {
                 assert_eq!(dispatcher.dispatch(action), action);
