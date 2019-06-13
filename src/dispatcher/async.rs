@@ -246,7 +246,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn dispatch(actions: Vec<char>) {
+        fn dispatch(actions: Vec<u8>) {
             let (tx, rx) = channel(actions.len());
             let store = Store::new(MockReducer::default(), tx);
             let mut executor = POOL.clone();
@@ -271,7 +271,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn sink(actions: Vec<char>) {
+        fn sink(actions: Vec<u8>) {
             let (tx, rx) = channel(actions.len());
             let store = Store::new(MockReducer::default(), tx);
             let mut executor = POOL.clone();
@@ -305,18 +305,18 @@ mod tests {
         drop(rx);
 
         // Poll the spawned dispatcher so it sees the dead channel.
-        dispatcher.dispatch('!').ok();
+        dispatcher.dispatch(()).ok();
 
         assert_ne!(block_on(handle), Ok(()));
 
-        while let Ok(()) = dispatcher.dispatch('!') {
+        while let Ok(()) = dispatcher.dispatch(()) {
             // Wait for the information to propagate,
             // that the spawned dispatcher has terminated.
             thread::yield_now();
         }
 
         assert_eq!(
-            dispatcher.dispatch('!'),
+            dispatcher.dispatch(()),
             Err(AsyncDispatcherError::Terminated)
         );
 

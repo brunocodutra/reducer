@@ -62,7 +62,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn std(states: Vec<char>) {
+        fn std(states: Vec<u8>) {
             let (tx, rx) = std::sync::mpsc::channel();
 
             for state in &states {
@@ -74,14 +74,14 @@ mod tests {
             // hang up tx
             drop(rx);
 
-            assert_eq!(tx.react(&'!'), Err(SendError('!')));
+            assert_eq!(tx.react(&0), Err(SendError(0)));
         }
     }
 
     proptest! {
         #[cfg(feature = "async")]
         #[test]
-        fn sink(mut states: Vec<char>) {
+        fn sink(mut states: Vec<u8>) {
             let (tx, mut rx) = futures::channel::mpsc::channel(0);
 
             for state in &states {
@@ -95,14 +95,14 @@ mod tests {
             // hang up tx
             drop(rx);
 
-            assert_ne!(tx.react(&'!'), Ok(()));
+            assert_ne!(tx.react(&0), Ok(()));
         }
     }
 
     proptest! {
         #[cfg(feature = "async")]
         #[test]
-        fn unbounded(mut states: Vec<char>) {
+        fn unbounded(mut states: Vec<u8>) {
             let (tx, mut rx) = futures::channel::mpsc::unbounded();
 
             for state in &states {
@@ -116,7 +116,7 @@ mod tests {
             // hang up tx
             drop(rx);
 
-            assert_ne!(tx.react(&'!'), Ok(()));
+            assert_ne!(tx.react(&0), Ok(()));
         }
     }
 }

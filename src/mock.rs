@@ -96,7 +96,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn reduce(actions: Vec<char>) {
+        fn reduce(actions: Vec<u8>) {
             let mut reducer = MockReducer::<_>::default();
 
             for &action in &actions {
@@ -109,7 +109,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn react(states: Vec<char>) {
+        fn react(states: Vec<u8>) {
             let reactor = MockReactor::<_>::default();
 
             for action in &states {
@@ -122,7 +122,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn dispatch(actions: Vec<char>) {
+        fn dispatch(actions: Vec<u8>) {
             let mut dispatcher = MockDispatcher::<_>::default();
 
             for action in actions {

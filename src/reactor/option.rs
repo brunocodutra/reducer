@@ -23,7 +23,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn some(states: Vec<char>) {
+        fn some(states: Vec<u8>) {
             let reactor = Some(MockReactor::default());
 
             for (i, state) in states.iter().enumerate() {
@@ -35,7 +35,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn none(states: Vec<char>) {
+        fn none(states: Vec<u8>) {
             let reactor: Option<MockReactor<_>> = None;
 
             for state in states {

@@ -21,7 +21,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn reduce(actions: Vec<char>, len in 0..100usize) {
+        fn reduce(actions: Vec<u8>, len in 0..100usize) {
             let reducer: &mut [MockReducer<_>] = &mut vec![MockReducer::default(); len];
 
             for (i, &action) in actions.iter().enumerate() {
