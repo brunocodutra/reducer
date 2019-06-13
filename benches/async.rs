@@ -11,7 +11,7 @@ use std::pin::Pin;
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 struct BlackBox;
 
-impl<T: 'static> Reducer<T> for BlackBox {
+impl<T> Reducer<T> for BlackBox {
     fn reduce(&mut self, val: T) {
         black_box(val);
     }

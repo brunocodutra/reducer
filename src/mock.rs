@@ -22,7 +22,7 @@ impl<T, Tag> TaggedMock<T, Tag> {
     }
 }
 
-impl<A: 'static, Tag: 'static> Reducer<A> for TaggedMock<A, Tag> {
+impl<A, Tag> Reducer<A> for TaggedMock<A, Tag> {
     fn reduce(&mut self, action: A) {
         self.0.borrow_mut().push(action);
     }
