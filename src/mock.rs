@@ -1,8 +1,10 @@
 #![cfg(test)]
+#![allow(clippy::unit_arg)]
 
 use crate::dispatcher::Dispatcher;
 use crate::reactor::Reactor;
 use crate::reducer::Reducer;
+use proptest_derive::Arbitrary;
 use std::{cell::RefCell, marker::PhantomData};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -11,6 +13,7 @@ pub enum Never {}
 pub type Mock<T> = TaggedMock<T, ()>;
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct TaggedMock<T, Tag>(RefCell<Vec<T>>, PhantomData<Tag>);
 
 impl<T, Tag> TaggedMock<T, Tag> {

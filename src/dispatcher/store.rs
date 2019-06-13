@@ -189,50 +189,47 @@ mod tests {
 
     proptest! {
         #[test]
-        fn new(actions: Vec<u8>) {
-            let state = Mock::new(actions);
-            let reactor = Mock::default();
-            let store = Store::new(state.clone(), &reactor);
+        fn new(state: Mock<()>, reactor: Mock<Mock<()>>) {
+            let store = Store::new(state.clone(), reactor.clone());
 
             assert_eq!(store.state, state);
-            assert_eq!(store.reactor, &reactor);
+            assert_eq!(store.reactor, reactor);
         }
     }
 
     proptest! {
         #[test]
-        fn clone(actions: Vec<u8>) {
-            let store = Store::new(Mock::new(actions), Mock::default());
+        fn clone(state: Mock<()>, reactor: Mock<Mock<()>>) {
+            let store = Store::new(state, reactor);
             assert_eq!(store, store.clone());
         }
     }
 
     proptest! {
         #[test]
-        fn deref(actions: Vec<u8>) {
-            let store = Store::new(Mock::new(actions), Mock::default());
+        fn deref(state: Mock<()>, reactor: Mock<Mock<()>>) {
+            let store = Store::new(state, reactor);
             assert_eq!(*store, store.state);
         }
     }
 
     proptest! {
         #[test]
-        fn subscribe(actions: Vec<u8>) {
-            let state = Mock::new(actions);
-            let mut store = Store::new(state.clone(), Some(Mock::default()));
+        fn subscribe(state: Mock<()>, [r1, r2, r3]: [Mock<Mock<()>>; 3]) {
+            let mut store = Store::new(state.clone(), r1.clone());
 
             assert_eq!(store.state, state);
-            assert_eq!(store.reactor, Some(Mock::default()));
+            assert_eq!(store.reactor, r1);
 
-            assert_eq!(store.subscribe(None), Some(Mock::default()));
-
-            assert_eq!(store.state, state);
-            assert_eq!(store.reactor, None);
-
-            assert_eq!(store.subscribe(Mock::default()), None);
+            assert_eq!(store.subscribe(r2.clone()), r1);
 
             assert_eq!(store.state, state);
-            assert_eq!(store.reactor, Some(Mock::default()));
+            assert_eq!(store.reactor, r2);
+
+            assert_eq!(store.subscribe(r3.clone()), r2);
+
+            assert_eq!(store.state, state);
+            assert_eq!(store.reactor, r3);
         }
     }
 
