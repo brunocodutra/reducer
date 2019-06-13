@@ -11,9 +11,6 @@ mod tuple;
 /// _state machine_, where the nodes correspond to the universe of all possible representable
 /// values and the edges correspond to _actions_.
 ///
-/// Types that implement this trait must be self-contained and should not depend on any external
-/// state, hence the required `'static` bound.
-///
 /// # Splitting Up State Logic
 ///
 /// Handling the entire state and its transitions in a single Reducer quickly grows out of hand for
@@ -52,7 +49,7 @@ mod tuple;
 /// shop.reduce(AddToCart( /* ... */ ));
 /// ```
 
-pub trait Reducer<A>: 'static {
+pub trait Reducer<A> {
     /// Implements the transition given the current state and an action.
     ///
     /// This method is expected to have no side effects and must never fail.
