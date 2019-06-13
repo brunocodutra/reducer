@@ -39,7 +39,7 @@ mod tests {
         () => {};
 
         ( $head:ident $(, $tail:ident )* $(,)? ) => {
-            proptest!(|(actions: Vec<char>)| {
+            proptest!(|(actions: Vec<u8>)| {
                 let mut reducers: [MockReducer<_>; count!($( $tail, )*)] = Default::default();
 
                 for (_i, &action) in actions.iter().enumerate() {

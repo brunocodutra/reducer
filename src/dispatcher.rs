@@ -20,7 +20,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn dispatch(actions: Vec<char>) {
+        fn dispatch(actions: Vec<u8>) {
             let mut mock = MockDispatcher::default();
 
             for action in actions {

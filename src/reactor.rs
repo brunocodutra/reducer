@@ -89,7 +89,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn react(states: Vec<char>) {
+        fn react(states: Vec<u8>) {
             let mut mock = MockReactor::default();
 
             for (i, state) in states.iter().enumerate() {

@@ -22,7 +22,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn reduce(actions: Vec<char>) {
+        fn reduce(actions: Vec<u8>) {
             let mut reducer = Arc::new(MockReducer::default());
 
             for (i, &action) in actions.iter().enumerate() {

@@ -40,7 +40,7 @@ mod tests {
         () => {};
 
         ( $head:ident $(, $tail:ident )* $(,)? ) => {
-            proptest!(|(states: Vec<char>)| {
+            proptest!(|(states: Vec<u8>)| {
                 let reactors: [MockReactor<_>; count!($( $tail, )*)] = Default::default();
 
                 for (_i, state) in states.iter().enumerate() {

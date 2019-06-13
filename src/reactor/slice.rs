@@ -23,7 +23,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn react(states: Vec<char>, len in 0..100usize) {
+        fn react(states: Vec<u8>, len in 0..100usize) {
             let reactor: &[MockReactor<_>] = &vec![MockReactor::default(); len];
 
             for (i, state) in states.iter().enumerate() {

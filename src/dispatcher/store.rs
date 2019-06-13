@@ -189,7 +189,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn new(actions: Vec<char>) {
+        fn new(actions: Vec<u8>) {
             let state = MockReducer::new(actions);
             let reactor = MockReactor::default();
             let store = Store::new(state.clone(), &reactor);
@@ -201,7 +201,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn clone(actions: Vec<char>) {
+        fn clone(actions: Vec<u8>) {
             let store = Store::new(MockReducer::new(actions), MockReactor::default());
             assert_eq!(store, store.clone());
         }
@@ -209,7 +209,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn deref(actions: Vec<char>) {
+        fn deref(actions: Vec<u8>) {
             let store = Store::new(MockReducer::new(actions), MockReactor::default());
             assert_eq!(*store, store.state);
         }
@@ -217,7 +217,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn subscribe(actions: Vec<char>) {
+        fn subscribe(actions: Vec<u8>) {
             let state = MockReducer::new(actions);
             let mut store = Store::new(state.clone(), Some(MockReactor::default()));
 
@@ -238,7 +238,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn dispatch(actions: Vec<char>) {
+        fn dispatch(actions: Vec<u8>) {
             let mut store = Store::<MockReducer<_>, MockReactor<_>>::default();
 
             for (i, &action) in actions.iter().enumerate() {
@@ -263,7 +263,7 @@ mod tests {
     proptest! {
         #[cfg(feature = "async")]
         #[test]
-        fn sink(actions: Vec<char>) {
+        fn sink(actions: Vec<u8>) {
             let mut store = Store::<MockReducer<_>, MockReactor<_>>::default();
 
             for (i, &action) in actions.iter().enumerate() {
