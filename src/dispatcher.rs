@@ -21,11 +21,12 @@ mod tests {
     proptest! {
         #[test]
         fn dispatch(actions: Vec<u8>) {
-            let mut mock = MockDispatcher::default();
+            let mut mock = Mock::default();
 
-            for action in actions {
+            for (i, &action) in actions.iter().enumerate() {
                 let dispatcher: &mut dyn Dispatcher<_, Output = _> = &mut mock;
-                assert_eq!(dispatcher.dispatch(action), action);
+                assert_eq!(dispatcher.dispatch(action), Ok(()));
+                assert_eq!(mock, Mock::new(&actions[0..=i]));
             }
         }
     }

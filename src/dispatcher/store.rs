@@ -181,17 +181,17 @@ mod tests {
 
     #[test]
     fn default() {
-        let store = Store::<MockReducer<()>, MockReactor<_>>::default();
+        let store = Store::<Mock<()>, Mock<_>>::default();
 
-        assert_eq!(store.state, MockReducer::default());
-        assert_eq!(store.reactor, MockReactor::default());
+        assert_eq!(store.state, Mock::default());
+        assert_eq!(store.reactor, Mock::default());
     }
 
     proptest! {
         #[test]
         fn new(actions: Vec<u8>) {
-            let state = MockReducer::new(actions);
-            let reactor = MockReactor::default();
+            let state = Mock::new(actions);
+            let reactor = Mock::default();
             let store = Store::new(state.clone(), &reactor);
 
             assert_eq!(store.state, state);
@@ -202,7 +202,7 @@ mod tests {
     proptest! {
         #[test]
         fn clone(actions: Vec<u8>) {
-            let store = Store::new(MockReducer::new(actions), MockReactor::default());
+            let store = Store::new(Mock::new(actions), Mock::default());
             assert_eq!(store, store.clone());
         }
     }
@@ -210,7 +210,7 @@ mod tests {
     proptest! {
         #[test]
         fn deref(actions: Vec<u8>) {
-            let store = Store::new(MockReducer::new(actions), MockReactor::default());
+            let store = Store::new(Mock::new(actions), Mock::default());
             assert_eq!(*store, store.state);
         }
     }
@@ -218,41 +218,41 @@ mod tests {
     proptest! {
         #[test]
         fn subscribe(actions: Vec<u8>) {
-            let state = MockReducer::new(actions);
-            let mut store = Store::new(state.clone(), Some(MockReactor::default()));
+            let state = Mock::new(actions);
+            let mut store = Store::new(state.clone(), Some(Mock::default()));
 
             assert_eq!(store.state, state);
-            assert_eq!(store.reactor, Some(MockReactor::default()));
+            assert_eq!(store.reactor, Some(Mock::default()));
 
-            assert_eq!(store.subscribe(None), Some(MockReactor::default()));
+            assert_eq!(store.subscribe(None), Some(Mock::default()));
 
             assert_eq!(store.state, state);
             assert_eq!(store.reactor, None);
 
-            assert_eq!(store.subscribe(MockReactor::default()), None);
+            assert_eq!(store.subscribe(Mock::default()), None);
 
             assert_eq!(store.state, state);
-            assert_eq!(store.reactor, Some(MockReactor::default()));
+            assert_eq!(store.reactor, Some(Mock::default()));
         }
     }
 
     proptest! {
         #[test]
         fn dispatch(actions: Vec<u8>) {
-            let mut store = Store::<MockReducer<_>, MockReactor<_>>::default();
+            let mut store = Store::<Mock<_>, Mock<_>>::default();
 
             for (i, &action) in actions.iter().enumerate() {
                 assert_eq!(store.dispatch(action), Ok(()));
 
                 // The state is updated.
-                assert_eq!(store.state, MockReducer::new(&actions[0..=i]));
+                assert_eq!(store.state, Mock::new(&actions[0..=i]));
 
                 // The reactor is notified.
                 assert_eq!(
                     store.reactor,
-                    MockReactor::new(
+                    Mock::new(
                         (0..=i)
-                            .map(|j| MockReducer::new(&actions[0..=j]))
+                            .map(|j| Mock::new(&actions[0..=j]))
                             .collect::<Vec<_>>(),
                     )
                 );
@@ -264,21 +264,21 @@ mod tests {
         #[cfg(feature = "async")]
         #[test]
         fn sink(actions: Vec<u8>) {
-            let mut store = Store::<MockReducer<_>, MockReactor<_>>::default();
+            let mut store = Store::<Mock<_>, Mock<_>>::default();
 
             for (i, &action) in actions.iter().enumerate() {
                 // Futures do nothing unless polled, so the action is effectivelly dropped.
                 drop(store.send(action));
 
                 // No change.
-                assert_eq!(store.state, MockReducer::new(&actions[0..i]));
+                assert_eq!(store.state, Mock::new(&actions[0..i]));
 
                 // No change.
                 assert_eq!(
                     store.reactor,
-                    MockReactor::new(
+                    Mock::new(
                         (0..i)
-                            .map(|j| MockReducer::new(&actions[0..=j]))
+                            .map(|j| Mock::new(&actions[0..=j]))
                             .collect::<Vec<_>>(),
                     )
                 );
@@ -287,14 +287,14 @@ mod tests {
                 assert_eq!(block_on(store.send(action)), Ok(()));
 
                 // The state is updated.
-                assert_eq!(store.state, MockReducer::new(&actions[0..=i]));
+                assert_eq!(store.state, Mock::new(&actions[0..=i]));
 
                 // The reactor is notified.
                 assert_eq!(
                     store.reactor,
-                    MockReactor::new(
+                    Mock::new(
                         (0..=i)
-                            .map(|j| MockReducer::new(&actions[0..=j]))
+                            .map(|j| Mock::new(&actions[0..=j]))
                             .collect::<Vec<_>>(),
                     )
                 );
