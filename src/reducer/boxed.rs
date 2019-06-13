@@ -19,11 +19,11 @@ mod tests {
     proptest! {
         #[test]
         fn reduce(actions: Vec<u8>) {
-            let mut reducer = Box::new(MockReducer::default());
+            let mut reducer = Box::new(Mock::default());
 
             for (i, &action) in actions.iter().enumerate() {
                 reducer.reduce(action);
-                assert_eq!(reducer, Box::new(MockReducer::new(&actions[0..=i])));
+                assert_eq!(reducer, Box::new(Mock::new(&actions[0..=i])));
             }
         }
     }

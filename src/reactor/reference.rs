@@ -21,11 +21,11 @@ mod tests {
     proptest! {
         #[test]
         fn react(states: Vec<u8>) {
-            let reactor = &&MockReactor::default();
+            let reactor = &&Mock::default();
 
             for (i, state) in states.iter().enumerate() {
                 assert_eq!(reactor.react(state), Ok(()));
-                assert_eq!(reactor, &&MockReactor::new(&states[0..=i]))
+                assert_eq!(reactor, &&Mock::new(&states[0..=i]))
             }
         }
     }

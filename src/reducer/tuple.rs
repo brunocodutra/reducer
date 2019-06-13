@@ -38,7 +38,7 @@ mod tests {
         () => {};
 
         ( $head:ident $(, $tail:ident )* $(,)? ) => {
-            type $head<T> = TaggedMockReducer<T, [(); count!($($tail,)*)]>;
+            type $head<T> = TaggedMock<T, [(); count!($($tail,)*)]>;
 
             proptest!(|(actions: Vec<u8>)| {
                 let mut reducers = ($head::default(), $( $tail::default(), )*);

@@ -40,15 +40,11 @@ mod tests {
 
         ( $head:ident $(, $tail:ident )* $(,)? ) => {
             proptest!(|(actions: Vec<u8>)| {
-                let mut reducers: [MockReducer<_>; count!($( $tail, )*)] = Default::default();
+                let mut reducers: [Mock<_>; count!($( $tail, )*)] = Default::default();
 
                 for (_i, &action) in actions.iter().enumerate() {
                     reducers.reduce(action);
-
-                    assert_eq!(
-                        reducers,
-                        [$( always!($tail, MockReducer::new(&actions[0..=_i])), )*]
-                    );
+                    assert_eq!(reducers, [$( always!($tail, Mock::new(&actions[0..=_i])), )*]);
                 }
             });
 

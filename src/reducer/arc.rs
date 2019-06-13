@@ -23,11 +23,11 @@ mod tests {
     proptest! {
         #[test]
         fn reduce(actions: Vec<u8>) {
-            let mut reducer = Arc::new(MockReducer::default());
+            let mut reducer = Arc::new(Mock::default());
 
             for (i, &action) in actions.iter().enumerate() {
                 reducer.reduce(action);
-                assert_eq!(reducer, Arc::new(MockReducer::new(&actions[0..=i])));
+                assert_eq!(reducer, Arc::new(Mock::new(&actions[0..=i])));
             }
         }
     }

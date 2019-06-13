@@ -248,7 +248,7 @@ mod tests {
         #[test]
         fn dispatch(actions: Vec<u8>) {
             let (tx, rx) = channel(actions.len());
-            let store = Store::new(MockReducer::default(), tx);
+            let store = Store::new(Mock::default(), tx);
             let mut executor = POOL.clone();
             let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
 
@@ -263,7 +263,7 @@ mod tests {
             assert_eq!(
                 block_on_stream(rx).collect::<Vec<_>>(),
                 (0..actions.len())
-                    .map(|i| MockReducer::new(&actions[0..=i]))
+                    .map(|i| Mock::new(&actions[0..=i]))
                     .collect::<Vec<_>>()
             );
         }
@@ -273,7 +273,7 @@ mod tests {
         #[test]
         fn sink(actions: Vec<u8>) {
             let (tx, rx) = channel(actions.len());
-            let store = Store::new(MockReducer::default(), tx);
+            let store = Store::new(Mock::default(), tx);
             let mut executor = POOL.clone();
             let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
 
@@ -289,7 +289,7 @@ mod tests {
             assert_eq!(
                 block_on_stream(rx).collect::<Vec<_>>(),
                 (0..actions.len())
-                    .map(|i| MockReducer::new(&actions[0..=i]))
+                    .map(|i| Mock::new(&actions[0..=i]))
                     .collect::<Vec<_>>()
             );
         }
@@ -298,7 +298,7 @@ mod tests {
     #[test]
     fn error() -> Result<(), Box<dyn Error>> {
         let (tx, rx) = channel(0);
-        let store = Store::new(MockReducer::default(), tx);
+        let store = Store::new(Mock::default(), tx);
         let mut executor = POOL.clone();
         let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
 

@@ -38,7 +38,7 @@ mod tests {
         () => {};
 
         ( $head:ident $(, $tail:ident )* $(,)? ) => {
-            type $head<T> = TaggedMockReactor<T, [(); count!($($tail,)*)]>;
+            type $head<T> = TaggedMock<T, [(); count!($($tail,)*)]>;
 
             proptest!(|(states: Vec<u8>)| {
                 let reactors = ($head::default(), $( $tail::default(), )*);

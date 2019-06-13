@@ -90,12 +90,12 @@ mod tests {
     proptest! {
         #[test]
         fn react(states: Vec<u8>) {
-            let mut mock = MockReactor::default();
+            let mut mock = Mock::default();
 
             for (i, state) in states.iter().enumerate() {
                 let reactor: &mut dyn Reactor<_, Output = _> = &mut mock;
                 assert_eq!(reactor.react(state), Ok(()));
-                assert_eq!(mock, MockReactor::new(&states[0..=i]));
+                assert_eq!(mock, Mock::new(&states[0..=i]));
             }
         }
     }
