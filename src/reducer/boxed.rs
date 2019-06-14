@@ -12,17 +12,16 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::mock::*;
     use proptest::*;
 
     proptest! {
         #[test]
-        fn reduce(actions: Vec<u8>) {
+        fn boxed(actions: Vec<u8>) {
             let mut reducer = Box::new(Mock::default());
 
             for (i, &action) in actions.iter().enumerate() {
-                reducer.reduce(action);
+                reduce(&mut reducer, action);
                 assert_eq!(reducer, Box::new(Mock::new(&actions[0..=i])));
             }
         }

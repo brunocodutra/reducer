@@ -30,7 +30,6 @@ impl_reducer_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, 
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::mock::*;
     use proptest::*;
 
@@ -44,7 +43,7 @@ mod tests {
                 let mut reducers = ($head::default(), $( $tail::default(), )*);
 
                 for (i, &action) in actions.iter().enumerate() {
-                    reducers.reduce(action);
+                    reduce(&mut reducers, action);
 
                     assert_eq!(reducers, (
                         $head::new(&actions[0..=i]),
@@ -58,7 +57,7 @@ mod tests {
     }
 
     #[test]
-    fn reduce() {
+    fn tuple() {
         test_reducer_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, _01);
     }
 }

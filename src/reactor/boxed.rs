@@ -14,17 +14,16 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::mock::*;
     use proptest::*;
 
     proptest! {
         #[test]
-        fn react(states: Vec<u8>) {
+        fn boxed(states: Vec<u8>) {
             let reactor = Box::new(Mock::default());
 
             for (i, state) in states.iter().enumerate() {
-                assert_eq!(reactor.react(state), Ok(()));
+                assert_eq!(react(&reactor, state), Ok(()));
                 assert_eq!(reactor, Box::new(Mock::new(&states[0..=i])))
             }
         }

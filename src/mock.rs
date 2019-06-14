@@ -8,16 +8,16 @@ use proptest_derive::Arbitrary;
 use std::{cell::RefCell, marker::PhantomData};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum Never {}
+pub(crate) enum Never {}
 
-pub type Mock<T> = TaggedMock<T, ()>;
+pub(crate) type Mock<T> = TaggedMock<T, ()>;
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
-pub struct TaggedMock<T, Tag>(RefCell<Vec<T>>, PhantomData<Tag>);
+pub(crate) struct TaggedMock<T, Tag>(RefCell<Vec<T>>, PhantomData<Tag>);
 
 impl<T, Tag> TaggedMock<T, Tag> {
-    pub fn new(states: impl Into<Vec<T>>) -> Self {
+    pub(crate) fn new(states: impl Into<Vec<T>>) -> Self {
         TaggedMock(RefCell::new(states.into()), PhantomData)
     }
 }
@@ -77,18 +77,29 @@ impl<T: Unpin, Tag: Unpin> Sink<T> for TaggedMock<T, Tag> {
     }
 }
 
-#[cfg(test)]
+pub(crate) fn reduce<R: Reducer<A> + ?Sized, A>(reducer: &mut R, action: A) {
+    reducer.reduce(action);
+}
+
+pub(crate) fn react<R: Reactor<S> + ?Sized, S>(reactor: &R, state: &S) -> R::Output {
+    reactor.react(state)
+}
+
+pub(crate) fn dispatch<D: Dispatcher<A> + ?Sized, A>(dispatcher: &mut D, action: A) -> D::Output {
+    dispatcher.dispatch(action)
+}
+
 mod tests {
     use super::*;
     use proptest::*;
 
     proptest! {
         #[test]
-        fn reduce(actions: Vec<u8>) {
+        fn reducer(actions: Vec<u8>) {
             let mut reducer = Mock::<_>::default();
 
             for &action in &actions {
-                reducer.reduce(action);
+                reduce(&mut reducer, action);
             }
 
             assert_eq!(reducer, Mock::new(actions));
@@ -97,11 +108,11 @@ mod tests {
 
     proptest! {
         #[test]
-        fn react(states: Vec<u8>) {
+        fn reactor(states: Vec<u8>) {
             let reactor = Mock::<_>::default();
 
             for action in &states {
-                assert_eq!(reactor.react(action), Ok(()));
+                assert_eq!(react(&reactor, action), Ok(()));
             }
 
             assert_eq!(reactor, Mock::new(states));
@@ -110,11 +121,11 @@ mod tests {
 
     proptest! {
         #[test]
-        fn dispatch(actions: Vec<u8>) {
+        fn dispatcher(actions: Vec<u8>) {
             let mut dispatcher = Mock::<_>::default();
 
             for &action in &actions {
-                assert_eq!(dispatcher.dispatch(action), Ok(()));
+                assert_eq!(dispatch(&mut dispatcher, action), Ok(()));
             }
 
             assert_eq!(dispatcher, Mock::new(actions));

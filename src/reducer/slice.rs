@@ -15,17 +15,16 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::mock::*;
     use proptest::*;
 
     proptest! {
         #[test]
-        fn reduce(actions: Vec<u8>, len in 0..100usize) {
+        fn slice(actions: Vec<u8>, len in 0..100usize) {
             let reducer: &mut [Mock<_>] = &mut vec![Mock::default(); len];
 
             for (i, &action) in actions.iter().enumerate() {
-                reducer.reduce(action);
+                reduce(reducer, action);
                 assert_eq!(reducer, &*vec![Mock::new(&actions[0..=i]); len]);
             }
         }

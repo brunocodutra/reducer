@@ -31,7 +31,6 @@ impl_reducer_for_array!(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::mock::*;
     use proptest::*;
 
@@ -43,7 +42,7 @@ mod tests {
                 let mut reducers: [Mock<_>; count!($( $tail, )*)] = Default::default();
 
                 for (_i, &action) in actions.iter().enumerate() {
-                    reducers.reduce(action);
+                    reduce(&mut reducers, action);
                     assert_eq!(reducers, [$( always!($tail, Mock::new(&actions[0..=_i])), )*]);
                 }
             });
@@ -54,7 +53,7 @@ mod tests {
 
     #[allow(clippy::cognitive_complexity)]
     #[test]
-    fn reduce() {
+    fn array() {
         test_reducer_for_array!(
             _32, _31, _30, _29, _28, _27, _26, _25, _24, _23, _22, _21, _20, _19, _18, _17, _16,
             _15, _14, _13, _12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, _01, _00
