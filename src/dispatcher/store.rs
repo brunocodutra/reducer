@@ -235,11 +235,11 @@ mod tests {
 
     proptest! {
         #[test]
-        fn dispatch(actions: Vec<u8>) {
+        fn dispatcher(actions: Vec<u8>) {
             let mut store = Store::<Mock<_>, Mock<_>>::default();
 
             for (i, &action) in actions.iter().enumerate() {
-                assert_eq!(store.dispatch(action), Ok(()));
+                assert_eq!(dispatch(&mut store, action), Ok(()));
 
                 // The state is updated.
                 assert_eq!(store.state, Mock::new(&actions[0..=i]));

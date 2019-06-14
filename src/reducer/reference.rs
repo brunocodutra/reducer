@@ -12,18 +12,17 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::mock::*;
     use proptest::*;
 
     proptest! {
         #[test]
-        fn reduce(actions: Vec<u8>) {
-            let reducer = &mut &mut Mock::default();
+        fn reference(actions: Vec<u8>) {
+            let mut reducer = &mut Mock::default();
 
             for (i, &action) in actions.iter().enumerate() {
-                reducer.reduce(action);
-                assert_eq!(reducer, &&Mock::new(&actions[0..=i]));
+                reduce(&mut reducer, action);
+                assert_eq!(reducer, &Mock::new(&actions[0..=i]));
             }
         }
     }

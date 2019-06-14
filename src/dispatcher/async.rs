@@ -246,14 +246,14 @@ mod tests {
 
     proptest! {
         #[test]
-        fn dispatch(actions: Vec<u8>) {
+        fn dispatcher(actions: Vec<u8>) {
             let (tx, rx) = channel(actions.len());
             let store = Store::new(Mock::default(), tx);
             let mut executor = POOL.clone();
             let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
 
             for &action in &actions {
-                assert_eq!(dispatcher.dispatch(action), Ok(()));
+                assert_eq!(dispatch(&mut dispatcher, action), Ok(()));
             }
 
             drop(dispatcher);
@@ -305,18 +305,18 @@ mod tests {
         drop(rx);
 
         // Poll the spawned dispatcher so it sees the dead channel.
-        dispatcher.dispatch(()).ok();
+        dispatch(&mut dispatcher, ()).ok();
 
         assert_ne!(block_on(handle), Ok(()));
 
-        while let Ok(()) = dispatcher.dispatch(()) {
+        while let Ok(()) = dispatch(&mut dispatcher, ()) {
             // Wait for the information to propagate,
             // that the spawned dispatcher has terminated.
             thread::yield_now();
         }
 
         assert_eq!(
-            dispatcher.dispatch(()),
+            dispatch(&mut dispatcher, ()),
             Err(AsyncDispatcherError::Terminated)
         );
 

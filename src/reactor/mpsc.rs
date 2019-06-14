@@ -55,6 +55,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mock::*;
     use proptest::*;
 
     #[cfg(feature = "async")]
@@ -66,7 +67,7 @@ mod tests {
             let (tx, rx) = std::sync::mpsc::channel();
 
             for state in &states {
-                assert_eq!(tx.react(state), Ok(()));
+                assert_eq!(react(&tx, state), Ok(()));
             }
 
             assert_eq!(rx.iter().take(states.len()).collect::<Vec<_>>(), states);
@@ -74,7 +75,7 @@ mod tests {
             // hang up tx
             drop(rx);
 
-            assert_eq!(tx.react(&0), Err(SendError(0)));
+            assert_eq!(react(&tx, &0), Err(SendError(0)));
         }
     }
 
@@ -85,7 +86,7 @@ mod tests {
             let (tx, mut rx) = futures::channel::mpsc::channel(0);
 
             for state in &states {
-                assert_eq!(tx.react(state), Ok(()));
+                assert_eq!(react(&tx, state), Ok(()));
             }
 
             for state in states {
@@ -95,7 +96,7 @@ mod tests {
             // hang up tx
             drop(rx);
 
-            assert_ne!(tx.react(&0), Ok(()));
+            assert_ne!(react(&tx, &0), Ok(()));
         }
     }
 
@@ -106,7 +107,7 @@ mod tests {
             let (tx, mut rx) = futures::channel::mpsc::unbounded();
 
             for state in &states {
-                assert_eq!(tx.react(state), Ok(()));
+                assert_eq!(react(&tx, state), Ok(()));
             }
 
             for state in states {
@@ -116,7 +117,7 @@ mod tests {
             // hang up tx
             drop(rx);
 
-            assert_ne!(tx.react(&0), Ok(()));
+            assert_ne!(react(&tx, &0), Ok(()));
         }
     }
 }

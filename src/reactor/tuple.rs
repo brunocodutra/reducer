@@ -30,7 +30,6 @@ impl_reactor_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, 
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::mock::*;
     use proptest::*;
 
@@ -44,7 +43,7 @@ mod tests {
                 let reactors = ($head::default(), $( $tail::default(), )*);
 
                 for (i, state) in states.iter().enumerate() {
-                    assert_eq!(reactors.react(state), (
+                    assert_eq!(react(&reactors, state), (
                         always!($head, Ok(())),
                         $( always!($tail, Ok(())), )*
                     ));
@@ -61,7 +60,7 @@ mod tests {
     }
 
     #[test]
-    fn react() {
+    fn tuple() {
         test_reactor_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, _01);
     }
 }

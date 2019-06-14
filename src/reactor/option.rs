@@ -17,7 +17,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::mock::*;
     use proptest::*;
 
@@ -27,7 +26,7 @@ mod tests {
             let reactor = Some(Mock::default());
 
             for (i, state) in states.iter().enumerate() {
-                assert_eq!(reactor.react(state), Some(Ok(())));
+                assert_eq!(react(&reactor, state), Some(Ok(())));
                 assert_eq!(reactor, Some(Mock::new(&states[0..=i])))
             }
         }
@@ -39,7 +38,7 @@ mod tests {
             let reactor: Option<Mock<_>> = None;
 
             for state in states {
-                assert_eq!(reactor.react(&state), None);
+                assert_eq!(react(&reactor, &state), None);
                 assert_eq!(reactor, None);
             }
         }

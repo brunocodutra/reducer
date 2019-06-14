@@ -22,11 +22,11 @@ mod tests {
 
     proptest! {
         #[test]
-        fn reduce(actions: Vec<u8>) {
+        fn rc(actions: Vec<u8>) {
             let mut reducer = Rc::new(Mock::default());
 
             for (i, &action) in actions.iter().enumerate() {
-                reducer.reduce(action);
+                reduce(&mut reducer, action);
                 assert_eq!(reducer, Rc::new(Mock::new(&actions[0..=i])));
             }
         }
