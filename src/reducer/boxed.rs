@@ -3,7 +3,7 @@ use crate::reducer::*;
 /// Updates the potentially _unsized_ nested [`Reducer`].
 impl<A, R> Reducer<A> for Box<R>
 where
-    R: Reducer<A> + Clone + ?Sized,
+    R: Reducer<A> + ?Sized,
 {
     fn reduce(&mut self, action: A) {
         (**self).reduce(action);
