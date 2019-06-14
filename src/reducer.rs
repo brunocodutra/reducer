@@ -2,6 +2,7 @@ mod arc;
 mod array;
 mod boxed;
 mod rc;
+mod reference;
 mod slice;
 mod tuple;
 
