@@ -12,11 +12,10 @@ macro_rules! impl_reactor_for_array {
             where
                 T: Reactor<S>,
             {
-                type Output = [T::Output; count!($( $tail, )*)];
+                type Error = T::Error;
 
-                fn react(&mut self, _state: &S) -> Self::Output {
-                    let [$( $tail, )*] = self;
-                    [$( $tail.react(_state), )*]
+                fn react(&mut self, state: &S) -> Result<(), Self::Error> {
+                    self[..].react(state)
                 }
             }
         );
@@ -43,7 +42,7 @@ mod tests {
                 let mut reactors: [Mock<_>; count!($( $tail, )*)] = Default::default();
 
                 for (_i, state) in states.iter().enumerate() {
-                    assert_eq!(react(&mut reactors, state), [Ok(()); count!($( $tail, )*)]);
+                    assert_eq!(react(&mut reactors, state), Ok(()));
                     assert_eq!(reactors, [$( always!($tail, Mock::new(&states[0..=_i])), )*]);
                 }
             });

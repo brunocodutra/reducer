@@ -56,10 +56,10 @@ mod tuple;
 /// }
 /// ```
 pub trait Reactor<S> {
-    /// The result of reacting to `S`.
-    type Output;
+    /// The type returned if the Reactor fails.
+    type Error;
 
-    /// Reacts to `S` and produces `Self::Output`.
+    /// Reacts to an update to `S`.
     ///
     /// # Example
     ///
@@ -71,13 +71,13 @@ pub trait Reactor<S> {
     /// struct Console;
     ///
     /// impl<T: Debug> Reactor<T> for Console {
-    ///     type Output = io::Result<()>;
-    ///     fn react(&mut self, state: &T) -> Self::Output {
+    ///     type Error = io::Error;
+    ///     fn react(&mut self, state: &T) -> io::Result<()> {
     ///         io::stdout().write_fmt(format_args!("{:?}\n", state))
     ///     }
     /// }
     /// ```
-    fn react(&mut self, state: &S) -> Self::Output;
+    fn react(&mut self, state: &S) -> Result<(), Self::Error>;
 }
 
 #[cfg(test)]
@@ -92,7 +92,7 @@ mod tests {
             let mut mock = Mock::default();
 
             for (i, state) in states.iter().enumerate() {
-                let reactor: &mut dyn Reactor<_, Output = _> = &mut mock;
+                let reactor: &mut dyn Reactor<_, Error = _> = &mut mock;
                 assert_eq!(reactor.react(state), Ok(()));
                 assert_eq!(mock, Mock::new(&states[0..=i]));
             }

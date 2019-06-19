@@ -55,8 +55,8 @@ use std::{mem, ops::Deref};
 /// struct Console;
 ///
 /// impl Reactor<Calculator> for Console {
-///     type Output = io::Result<()>;
-///     fn react(&mut self, state: &Calculator) -> Self::Output {
+///     type Error = io::Error;
+///     fn react(&mut self, state: &Calculator) -> io::Result<()> {
 ///         io::stdout().write_fmt(format_args!("{}\n", state.0))
 ///     }
 /// }
@@ -105,12 +105,12 @@ where
     S: Reducer<A>,
     R: Reactor<S>,
 {
-    type Output = R::Output;
+    type Output = Result<(), R::Error>;
 
     /// Updates the state via [`Reducer::reduce`] and notifies the [`Reactor`],
     /// returning the result of calling [`Reactor::react`] with a reference
     /// to the new state.
-    fn dispatch(&mut self, action: A) -> R::Output {
+    fn dispatch(&mut self, action: A) -> Self::Output {
         self.state.reduce(action);
         self.reactor.react(&self.state)
     }
@@ -143,7 +143,7 @@ impl<S: Unpin, R: Reactor<S> + Unpin> Unpin for Store<S, R> {}
 impl<A, S, R, E> Sink<A> for Store<S, R>
 where
     S: Reducer<A> + Unpin + Clone,
-    R: Reactor<S, Output = Result<(), E>> + Sink<S, SinkError = E>,
+    R: Reactor<S, Error = E> + Sink<S, SinkError = E>,
 {
     type SinkError = E;
 

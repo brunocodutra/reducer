@@ -6,9 +6,9 @@ impl<S> Reactor<S> for Sender<S>
 where
     S: Clone,
 {
-    type Output = Result<(), SendError<S>>;
+    type Error = SendError<S>;
 
-    fn react(&mut self, state: &S) -> Self::Output {
+    fn react(&mut self, state: &S) -> Result<(), Self::Error> {
         self.send(state.clone())
     }
 }
@@ -27,9 +27,9 @@ impl<S> Reactor<S> for AsyncSender<S>
 where
     S: Clone,
 {
-    type Output = Result<(), AsyncSendError>;
+    type Error = AsyncSendError;
 
-    fn react(&mut self, state: &S) -> Self::Output {
+    fn react(&mut self, state: &S) -> Result<(), Self::Error> {
         block_on(self.send(state.clone()))
     }
 }
@@ -45,9 +45,9 @@ impl<S> Reactor<S> for UnboundedSender<S>
 where
     S: Clone,
 {
-    type Output = Result<(), TrySendError<S>>;
+    type Error = TrySendError<S>;
 
-    fn react(&mut self, state: &S) -> Self::Output {
+    fn react(&mut self, state: &S) -> Result<(), Self::Error> {
         self.unbounded_send(state.clone())
     }
 }
