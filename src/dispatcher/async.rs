@@ -100,7 +100,7 @@ where
 ///
 /// impl Reactor<Calculator> for Console {
 ///     type Output = io::Result<()>;
-///     fn react(&self, state: &Calculator) -> Self::Output {
+///     fn react(&mut self, state: &Calculator) -> Self::Output {
 ///         io::stdout().write_fmt(format_args!("{}\n", state.0))
 ///     }
 /// }
@@ -113,7 +113,7 @@ where
 ///         Poll::Ready(Ok(()))
 ///     }
 ///
-///     fn start_send(self: Pin<&mut Self>, state: Calculator) -> io::Result<()> {
+///     fn start_send(mut self: Pin<&mut Self>, state: Calculator) -> io::Result<()> {
 ///         self.react(&state)
 ///     }
 ///

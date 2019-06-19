@@ -7,11 +7,10 @@ where
 {
     type Output = Box<[T::Output]>;
 
-    fn react(&self, state: &S) -> Self::Output {
-        self.iter()
+    fn react(&mut self, state: &S) -> Self::Output {
+        self.iter_mut()
             .map(|r| r.react(state))
-            .collect::<Vec<T::Output>>()
-            .into_boxed_slice()
+            .collect()
     }
 }
 
@@ -23,7 +22,7 @@ mod tests {
     proptest! {
         #[test]
         fn slice(states: Vec<u8>, len in 0..100usize) {
-            let reactor: &[Mock<_>] = &vec![Mock::default(); len];
+            let reactor: &mut [Mock<_>] = &mut vec![Mock::default(); len];
 
             for (i, state) in states.iter().enumerate() {
                 assert_eq!(react(reactor, state), vec![Ok(()); len].into());

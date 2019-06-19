@@ -8,7 +8,7 @@ where
 {
     type Output = Result<(), SendError<S>>;
 
-    fn react(&self, state: &S) -> Self::Output {
+    fn react(&mut self, state: &S) -> Self::Output {
         self.send(state.clone())
     }
 }
@@ -29,8 +29,8 @@ where
 {
     type Output = Result<(), AsyncSendError>;
 
-    fn react(&self, state: &S) -> Self::Output {
-        block_on(self.clone().send(state.clone()))
+    fn react(&mut self, state: &S) -> Self::Output {
+        block_on(self.send(state.clone()))
     }
 }
 
@@ -47,7 +47,7 @@ where
 {
     type Output = Result<(), TrySendError<S>>;
 
-    fn react(&self, state: &S) -> Self::Output {
+    fn react(&mut self, state: &S) -> Self::Output {
         self.unbounded_send(state.clone())
     }
 }
@@ -64,10 +64,10 @@ mod tests {
     proptest! {
         #[test]
         fn std(states: Vec<u8>) {
-            let (tx, rx) = std::sync::mpsc::channel();
+            let (mut tx, rx) = std::sync::mpsc::channel();
 
             for state in &states {
-                assert_eq!(react(&tx, state), Ok(()));
+                assert_eq!(react(&mut tx, state), Ok(()));
             }
 
             assert_eq!(rx.iter().take(states.len()).collect::<Vec<_>>(), states);
@@ -75,7 +75,7 @@ mod tests {
             // hang up tx
             drop(rx);
 
-            assert_eq!(react(&tx, &0), Err(SendError(0)));
+            assert_eq!(react(&mut tx, &0), Err(SendError(0)));
         }
     }
 
@@ -83,10 +83,10 @@ mod tests {
         #[cfg(feature = "async")]
         #[test]
         fn sink(mut states: Vec<u8>) {
-            let (tx, mut rx) = futures::channel::mpsc::channel(0);
+            let (mut tx, mut rx) = futures::channel::mpsc::channel(states.len());
 
             for state in &states {
-                assert_eq!(react(&tx, state), Ok(()));
+                assert_eq!(react(&mut tx, state), Ok(()));
             }
 
             for state in states {
@@ -96,7 +96,7 @@ mod tests {
             // hang up tx
             drop(rx);
 
-            assert_ne!(react(&tx, &0), Ok(()));
+            assert_ne!(react(&mut tx, &0), Ok(()));
         }
     }
 
@@ -104,10 +104,10 @@ mod tests {
         #[cfg(feature = "async")]
         #[test]
         fn unbounded(mut states: Vec<u8>) {
-            let (tx, mut rx) = futures::channel::mpsc::unbounded();
+            let (mut tx, mut rx) = futures::channel::mpsc::unbounded();
 
             for state in &states {
-                assert_eq!(react(&tx, state), Ok(()));
+                assert_eq!(react(&mut tx, state), Ok(()));
             }
 
             for state in states {
@@ -117,7 +117,7 @@ mod tests {
             // hang up tx
             drop(rx);
 
-            assert_ne!(react(&tx, &0), Ok(()));
+            assert_ne!(react(&mut tx, &0), Ok(()));
         }
     }
 }

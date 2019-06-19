@@ -23,7 +23,7 @@ pub enum Never {}
 impl<T: Copy> Reactor<T> for BlackBox {
     type Output = Result<(), Never>;
 
-    fn react(&self, &val: &T) -> Self::Output {
+    fn react(&mut self, &val: &T) -> Self::Output {
         black_box(val);
         Ok(())
     }

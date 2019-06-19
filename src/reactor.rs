@@ -72,12 +72,12 @@ pub trait Reactor<S> {
     ///
     /// impl<T: Debug> Reactor<T> for Console {
     ///     type Output = io::Result<()>;
-    ///     fn react(&self, state: &T) -> Self::Output {
+    ///     fn react(&mut self, state: &T) -> Self::Output {
     ///         io::stdout().write_fmt(format_args!("{:?}\n", state))
     ///     }
     /// }
     /// ```
-    fn react(&self, state: &S) -> Self::Output;
+    fn react(&mut self, state: &S) -> Self::Output;
 }
 
 #[cfg(test)]

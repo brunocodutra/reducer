@@ -5,7 +5,7 @@ use crate::dispatcher::Dispatcher;
 use crate::reactor::Reactor;
 use crate::reducer::Reducer;
 use proptest_derive::Arbitrary;
-use std::{cell::RefCell, marker::PhantomData};
+use std::marker::PhantomData;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum Never {}
@@ -14,25 +14,25 @@ pub(crate) type Mock<T> = TaggedMock<T, ()>;
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
-pub(crate) struct TaggedMock<T, Tag>(RefCell<Vec<T>>, PhantomData<Tag>);
+pub(crate) struct TaggedMock<T, Tag>(Vec<T>, PhantomData<Tag>);
 
 impl<T, Tag> TaggedMock<T, Tag> {
     pub(crate) fn new(states: impl Into<Vec<T>>) -> Self {
-        TaggedMock(RefCell::new(states.into()), PhantomData)
+        TaggedMock(states.into(), PhantomData)
     }
 }
 
 impl<A, Tag> Reducer<A> for TaggedMock<A, Tag> {
     fn reduce(&mut self, action: A) {
-        self.0.borrow_mut().push(action);
+        self.0.push(action);
     }
 }
 
 impl<S: Clone, Tag> Reactor<S> for TaggedMock<S, Tag> {
     type Output = Result<(), Never>;
 
-    fn react(&self, state: &S) -> Self::Output {
-        self.0.borrow_mut().push(state.clone());
+    fn react(&mut self, state: &S) -> Self::Output {
+        self.0.push(state.clone());
         Ok(())
     }
 }
@@ -41,7 +41,7 @@ impl<A, Tag> Dispatcher<A> for TaggedMock<A, Tag> {
     type Output = Result<(), Never>;
 
     fn dispatch(&mut self, action: A) -> Self::Output {
-        self.0.borrow_mut().push(action);
+        self.0.push(action);
         Ok(())
     }
 }
@@ -64,7 +64,7 @@ impl<T: Unpin, Tag: Unpin> Sink<T> for TaggedMock<T, Tag> {
     }
 
     fn start_send(self: Pin<&mut Self>, value: T) -> Result<(), Self::SinkError> {
-        self.get_mut().0.borrow_mut().push(value);
+        self.get_mut().0.push(value);
         Ok(())
     }
 
@@ -81,7 +81,7 @@ pub(crate) fn reduce<R: Reducer<A> + ?Sized, A>(reducer: &mut R, action: A) {
     reducer.reduce(action);
 }
 
-pub(crate) fn react<R: Reactor<S> + ?Sized, S>(reactor: &R, state: &S) -> R::Output {
+pub(crate) fn react<R: Reactor<S> + ?Sized, S>(reactor: &mut R, state: &S) -> R::Output {
     reactor.react(state)
 }
 
@@ -109,10 +109,10 @@ mod tests {
     proptest! {
         #[test]
         fn reactor(states: Vec<u8>) {
-            let reactor = Mock::<_>::default();
+            let mut reactor = Mock::<_>::default();
 
             for action in &states {
-                assert_eq!(react(&reactor, action), Ok(()));
+                assert_eq!(react(&mut reactor, action), Ok(()));
             }
 
             assert_eq!(reactor, Mock::new(states));

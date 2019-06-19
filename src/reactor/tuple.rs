@@ -15,7 +15,7 @@ macro_rules! impl_reactor_for_tuples {
             {
                 type Output = ($head::Output, $( $tail::Output, )*);
 
-                fn react(&self, state: &S) -> Self::Output {
+                fn react(&mut self, state: &S) -> Self::Output {
                     let ($head, $( $tail, )*) = self;
                     ($head.react(state), $( $tail.react(state), )*)
                 }
@@ -40,10 +40,10 @@ mod tests {
             type $head<T> = TaggedMock<T, [(); count!($($tail,)*)]>;
 
             proptest!(|(states: Vec<u8>)| {
-                let reactors = ($head::default(), $( $tail::default(), )*);
+                let mut reactors = ($head::default(), $( $tail::default(), )*);
 
                 for (i, state) in states.iter().enumerate() {
-                    assert_eq!(react(&reactors, state), (
+                    assert_eq!(react(&mut reactors, state), (
                         always!($head, Ok(())),
                         $( always!($tail, Ok(())), )*
                     ));
