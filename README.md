@@ -10,7 +10,7 @@ Reducer is available on [crates.io][crate.home], simply add it as a dependency i
 
 ```
 [dependencies]
-reducer = "1.2"
+reducer = "2.0"
 ```
 
 and import it in your `lib.rs`:
