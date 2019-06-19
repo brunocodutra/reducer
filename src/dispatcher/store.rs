@@ -56,7 +56,7 @@ use std::{mem, ops::Deref};
 ///
 /// impl Reactor<Calculator> for Console {
 ///     type Output = io::Result<()>;
-///     fn react(&self, state: &Calculator) -> Self::Output {
+///     fn react(&mut self, state: &Calculator) -> Self::Output {
 ///         io::stdout().write_fmt(format_args!("{}\n", state.0))
 ///     }
 /// }
