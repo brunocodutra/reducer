@@ -8,16 +8,18 @@ macro_rules! impl_reactor_for_tuples {
             /// Notifies all [`Reactor`]s in the tuple in order.
             ///
             /// Currently implemented for tuples of up to 12 elements.
-            impl<S, $head, $( $tail, )*> Reactor<S> for ($head, $( $tail, )*)
+            impl<S, E, $head, $( $tail, )*> Reactor<S> for ($head, $( $tail, )*)
             where
-                $head: Reactor<S>,
-                $( $tail: Reactor<S>, )*
+                $head: Reactor<S, Error = E>,
+                $( $tail: Reactor<S, Error = E>, )*
             {
-                type Output = ($head::Output, $( $tail::Output, )*);
+                type Error = E;
 
-                fn react(&mut self, state: &S) -> Self::Output {
+                fn react(&mut self, state: &S) -> Result<(), Self::Error> {
                     let ($head, $( $tail, )*) = self;
-                    ($head.react(state), $( $tail.react(state), )*)
+                    $head.react(state)?;
+                    $( $tail.react(state)?; )*
+                    Ok(())
                 }
             }
         );
@@ -43,10 +45,7 @@ mod tests {
                 let mut reactors = ($head::default(), $( $tail::default(), )*);
 
                 for (i, state) in states.iter().enumerate() {
-                    assert_eq!(react(&mut reactors, state), (
-                        always!($head, Ok(())),
-                        $( always!($tail, Ok(())), )*
-                    ));
+                    assert_eq!(react(&mut reactors, state), Ok(()));
 
                     assert_eq!(reactors, (
                         $head::new(&states[0..=i]),

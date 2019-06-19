@@ -5,9 +5,9 @@ impl<'a, S, T> Reactor<S> for &'a mut T
 where
     T: Reactor<S> + ?Sized,
 {
-    type Output = T::Output;
+    type Error = T::Error;
 
-    fn react(&mut self, state: &S) -> Self::Output {
+    fn react(&mut self, state: &S) -> Result<(), Self::Error> {
         (**self).react(state)
     }
 }

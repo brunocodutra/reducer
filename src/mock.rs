@@ -29,9 +29,9 @@ impl<A, Tag> Reducer<A> for TaggedMock<A, Tag> {
 }
 
 impl<S: Clone, Tag> Reactor<S> for TaggedMock<S, Tag> {
-    type Output = Result<(), Never>;
+    type Error = Never;
 
-    fn react(&mut self, state: &S) -> Self::Output {
+    fn react(&mut self, state: &S) -> Result<(), Self::Error> {
         self.0.push(state.clone());
         Ok(())
     }
@@ -81,7 +81,7 @@ pub(crate) fn reduce<R: Reducer<A> + ?Sized, A>(reducer: &mut R, action: A) {
     reducer.reduce(action);
 }
 
-pub(crate) fn react<R: Reactor<S> + ?Sized, S>(reactor: &mut R, state: &S) -> R::Output {
+pub(crate) fn react<R: Reactor<S> + ?Sized, S>(reactor: &mut R, state: &S) -> Result<(), R::Error> {
     reactor.react(state)
 }
 

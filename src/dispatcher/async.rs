@@ -99,8 +99,8 @@ where
 /// struct Console;
 ///
 /// impl Reactor<Calculator> for Console {
-///     type Output = io::Result<()>;
-///     fn react(&mut self, state: &Calculator) -> Self::Output {
+///     type Error = io::Error;
+///     fn react(&mut self, state: &Calculator) -> io::Result<()> {
 ///         io::stdout().write_fmt(format_args!("{}\n", state.0))
 ///     }
 /// }

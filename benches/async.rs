@@ -21,9 +21,9 @@ impl<T> Reducer<T> for BlackBox {
 pub enum Never {}
 
 impl<T: Copy> Reactor<T> for BlackBox {
-    type Output = Result<(), Never>;
+    type Error = Never;
 
-    fn react(&mut self, &val: &T) -> Self::Output {
+    fn react(&mut self, &val: &T) -> Result<(), Self::Error> {
         black_box(val);
         Ok(())
     }
