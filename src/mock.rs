@@ -4,44 +4,81 @@
 use crate::dispatcher::Dispatcher;
 use crate::reactor::Reactor;
 use crate::reducer::Reducer;
+use derivative::Derivative;
 use proptest_derive::Arbitrary;
-use std::marker::PhantomData;
+use std::{collections::HashMap, hash::Hash, marker::PhantomData};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum Never {}
 
-pub(crate) type Mock<T> = TaggedMock<T, ()>;
+pub(crate) type Mock<T, E = Never> = TaggedMock<(), T, E>;
 
-#[derive(Debug, Default, Clone, Eq, PartialEq, Arbitrary)]
-pub(crate) struct TaggedMock<T, Tag>(Vec<T>, PhantomData<Tag>);
+#[derive(Arbitrary, Derivative)]
+#[derivative(Debug, Default(bound = ""), Clone, Eq, PartialEq, Hash)]
+pub(crate) struct TaggedMock<Tag, T, E = Never>
+where
+    T: Eq + PartialEq + Hash,
+{
+    calls: Vec<T>,
+    #[proptest(value = "HashMap::new()")]
+    #[derivative(Debug = "ignore", PartialEq = "ignore", Hash = "ignore")]
+    results: HashMap<T, E>,
+    #[derivative(Debug = "ignore")]
+    phantom: PhantomData<Tag>,
+}
 
-impl<T, Tag> TaggedMock<T, Tag> {
-    pub(crate) fn call(&mut self, arg: T) -> Result<(), Never> {
-        self.0.push(arg);
-        Ok(())
+impl<Tag, T, E> TaggedMock<Tag, T, E>
+where
+    T: Eq + PartialEq + Hash,
+{
+    pub(crate) fn calls(&self) -> &[T] {
+        &self.calls
     }
 
-    pub(crate) fn calls(&self) -> &[T] {
-        &self.0
+    pub(crate) fn fail_if(&mut self, arg: T, error: E) {
+        self.results.insert(arg, error);
     }
 }
 
-impl<A, Tag> Reducer<A> for TaggedMock<A, Tag> {
+impl<Tag, T, E> TaggedMock<Tag, T, E>
+where
+    T: Eq + PartialEq + Hash,
+    E: Clone,
+{
+    pub(crate) fn call(&mut self, arg: T) -> Result<(), E> {
+        let result = self.results.get(&arg).cloned().map(Err).unwrap_or(Ok(()));
+        self.calls.push(arg);
+        result
+    }
+}
+
+impl<Tag, A> Reducer<A> for TaggedMock<Tag, A, Never>
+where
+    A: Eq + PartialEq + Hash,
+{
     fn reduce(&mut self, action: A) {
         self.call(action).ok();
     }
 }
 
-impl<S: Clone, Tag> Reactor<S> for TaggedMock<S, Tag> {
-    type Error = Never;
+impl<Tag, S, E> Reactor<S> for TaggedMock<Tag, S, E>
+where
+    S: Clone + Eq + PartialEq + Hash,
+    E: Clone,
+{
+    type Error = E;
 
     fn react(&mut self, state: &S) -> Result<(), Self::Error> {
         self.call(state.clone())
     }
 }
 
-impl<A, Tag> Dispatcher<A> for TaggedMock<A, Tag> {
-    type Output = Result<(), Never>;
+impl<Tag, A, E> Dispatcher<A> for TaggedMock<Tag, A, E>
+where
+    A: Eq + PartialEq + Hash,
+    E: Clone,
+{
+    type Output = Result<(), E>;
 
     fn dispatch(&mut self, action: A) -> Self::Output {
         self.call(action)
@@ -58,8 +95,13 @@ use futures::task::{Context, Poll};
 use std::pin::Pin;
 
 #[cfg(feature = "async")]
-impl<T: Unpin, Tag: Unpin> Sink<T> for TaggedMock<T, Tag> {
-    type SinkError = Never;
+impl<Tag, T, E> Sink<T> for TaggedMock<Tag, T, E>
+where
+    T: Unpin + Eq + PartialEq + Hash,
+    E: Unpin + Clone,
+    Tag: Unpin,
+{
+    type SinkError = E;
 
     fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
         Poll::Ready(Ok(()))
@@ -92,7 +134,7 @@ pub(crate) fn dispatch<D: Dispatcher<A> + ?Sized, A>(dispatcher: &mut D, action:
 
 mod tests {
     use super::*;
-    use proptest::*;
+    use proptest::prelude::*;
 
     proptest! {
         #[test]
@@ -109,27 +151,35 @@ mod tests {
 
     proptest! {
         #[test]
-        fn reactor(states: Vec<u8>) {
-            let mut reactor = Mock::<_>::default();
+        fn reactor(states: Vec<u8>, error: String) {
+            let mut reactor = Mock::default();
 
             for action in &states {
                 assert_eq!(react(&mut reactor, action), Ok(()));
             }
 
             assert_eq!(reactor.calls(), &states[..]);
+
+            reactor.fail_if(0, &error[..]);
+            assert_eq!(react(&mut reactor, &0), Err(&error[..]));
+            assert_eq!(react(&mut reactor, &1), Ok(()));
         }
     }
 
     proptest! {
         #[test]
-        fn dispatcher(actions: Vec<u8>) {
-            let mut dispatcher = Mock::<_>::default();
+        fn dispatcher(actions: Vec<u8>, error: String) {
+            let mut dispatcher = Mock::default();
 
             for &action in &actions {
                 assert_eq!(dispatch(&mut dispatcher, action), Ok(()));
             }
 
             assert_eq!(dispatcher.calls(), &actions[..]);
+
+            dispatcher.fail_if(0, &error[..]);
+            assert_eq!(dispatch(&mut dispatcher, 0), Err(&error[..]));
+            assert_eq!(dispatch(&mut dispatcher, 1), Ok(()));
         }
     }
 }

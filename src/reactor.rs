@@ -84,12 +84,12 @@ pub trait Reactor<S> {
 mod tests {
     use super::*;
     use crate::mock::*;
-    use proptest::*;
+    use proptest::prelude::*;
 
     proptest! {
         #[test]
         fn react(states: Vec<u8>) {
-            let mut mock = Mock::default();
+            let mut mock = Mock::<_>::default();
 
             for (i, state) in states.iter().enumerate() {
                 let reactor: &mut dyn Reactor<_, Error = _> = &mut mock;

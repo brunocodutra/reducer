@@ -108,12 +108,12 @@ pub trait Reducer<A> {
 mod tests {
     use super::*;
     use crate::mock::*;
-    use proptest::*;
+    use proptest::prelude::*;
 
     proptest! {
         #[test]
         fn reduce(actions: Vec<u8>) {
-            let mut mock = Mock::default();
+            let mut mock = Mock::<_>::default();
 
             for (i, &action) in actions.iter().enumerate() {
                 let reducer: &mut dyn Reducer<_> = &mut mock;

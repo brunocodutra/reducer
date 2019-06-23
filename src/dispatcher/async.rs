@@ -237,8 +237,8 @@ mod tests {
     use futures::executor::*;
     use futures::stream::*;
     use lazy_static::lazy_static;
-    use proptest::*;
-    use std::{error::Error, thread};
+    use proptest::prelude::*;
+    use std::thread;
 
     lazy_static! {
         static ref POOL: ThreadPool = ThreadPool::new().unwrap();
@@ -248,7 +248,7 @@ mod tests {
         #[test]
         fn dispatcher(actions: Vec<u8>) {
             let (tx, rx) = channel(actions.len());
-            let store = Store::new(Mock::default(), tx);
+            let store = Store::new(Mock::<_>::default(), tx);
             let mut executor = POOL.clone();
             let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
 
@@ -273,7 +273,7 @@ mod tests {
         #[test]
         fn sink(actions: Vec<u8>) {
             let (tx, rx) = channel(actions.len());
-            let store = Store::new(Mock::default(), tx);
+            let store = Store::new(Mock::<_>::default(), tx);
             let mut executor = POOL.clone();
             let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
 
@@ -295,31 +295,30 @@ mod tests {
         }
     }
 
-    #[test]
-    fn error() -> Result<(), Box<dyn Error>> {
-        let (tx, rx) = channel(0);
-        let store = Store::new(Mock::default(), tx);
-        let mut executor = POOL.clone();
-        let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
+    proptest! {
+        #[test]
+        fn error(state: Mock<_>, mut reactor: Mock<_, _>, error: String) {
+            let mut next = state.clone();
+            reduce(&mut next, ());
+            reactor.fail_if(next, error.clone());
 
-        drop(rx);
+            let store = Store::new(state, reactor);
+            let mut executor = POOL.clone();
+            let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
 
-        // Poll the spawned dispatcher so it sees the dead channel.
-        dispatch(&mut dispatcher, ()).ok();
+            assert_eq!(dispatch(&mut dispatcher, ()), Ok(()));
+            assert_eq!(block_on(handle), Err(error));
 
-        assert_ne!(block_on(handle), Ok(()));
+            while let Ok(()) = dispatch(&mut dispatcher, ()) {
+                // Wait for the information to propagate,
+                // that the spawned dispatcher has terminated.
+                thread::yield_now();
+            }
 
-        while let Ok(()) = dispatch(&mut dispatcher, ()) {
-            // Wait for the information to propagate,
-            // that the spawned dispatcher has terminated.
-            thread::yield_now();
+            assert_eq!(
+                dispatch(&mut dispatcher, ()),
+                Err(AsyncDispatcherError::Terminated)
+            );
         }
-
-        assert_eq!(
-            dispatch(&mut dispatcher, ()),
-            Err(AsyncDispatcherError::Terminated)
-        );
-
-        Ok(())
     }
 }

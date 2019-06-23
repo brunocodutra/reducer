@@ -31,33 +31,37 @@ impl_reducer_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, 
 #[cfg(test)]
 mod tests {
     use crate::mock::*;
-    use proptest::*;
+    use proptest::prelude::*;
 
-    macro_rules! test_reducer_for_tuples {
-        () => {};
+    mod ok {
+        use super::*;
 
-        ( $head:ident $(, $tail:ident )* $(,)? ) => {
-            type $head<T> = TaggedMock<T, [(); count!($($tail,)*)]>;
+        macro_rules! test_reducer_for_tuples {
+            () => {};
 
-            proptest!(|(actions: Vec<u8>)| {
-                let mut reducers = ($head::default(), $( $tail::default(), )*);
+            ( $head:ident $(, $tail:ident )* $(,)? ) => {
+                type $head<T> = TaggedMock<[(); count!($($tail,)*)], T>;
 
-                for (i, &action) in actions.iter().enumerate() {
-                    reduce(&mut reducers, action);
+                proptest! {
+                    #[test]
+                    fn $head(actions: Vec<u8>) {
+                        let mut reducers = ($head::default(), $( $tail::default(), )*);
 
-                    let ($head, $( $tail, )*) = &reducers;
+                        for (i, &action) in actions.iter().enumerate() {
+                            reduce(&mut reducers, action);
 
-                    assert_eq!($head.calls(), &actions[0..=i]);
-                    $( assert_eq!($tail.calls(), &actions[0..=i]); )*
+                            let ($head, $( $tail, )*) = &reducers;
+
+                            assert_eq!($head.calls(), &actions[0..=i]);
+                            $( assert_eq!($tail.calls(), &actions[0..=i]); )*
+                        }
+                    }
                 }
-            });
 
-            test_reducer_for_tuples!($( $tail, )*);
-        };
-    }
+                test_reducer_for_tuples!($( $tail, )*);
+            };
+        }
 
-    #[test]
-    fn tuple() {
         test_reducer_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, _01);
     }
 }

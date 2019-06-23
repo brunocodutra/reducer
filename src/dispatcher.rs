@@ -16,12 +16,12 @@ pub trait Dispatcher<A> {
 mod tests {
     use super::*;
     use crate::mock::*;
-    use proptest::*;
+    use proptest::prelude::*;
 
     proptest! {
         #[test]
         fn dispatch(actions: Vec<u8>) {
-            let mut mock = Mock::default();
+            let mut mock = Mock::<_>::default();
 
             for (i, &action) in actions.iter().enumerate() {
                 let dispatcher: &mut dyn Dispatcher<_, Output = _> = &mut mock;
