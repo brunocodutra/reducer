@@ -56,7 +56,7 @@ where
 mod tests {
     use super::*;
     use crate::mock::*;
-    use proptest::*;
+    use proptest::prelude::*;
 
     #[cfg(feature = "async")]
     use futures::stream::StreamExt;

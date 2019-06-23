@@ -174,7 +174,7 @@ where
 mod tests {
     use super::*;
     use crate::mock::*;
-    use proptest::*;
+    use proptest::prelude::*;
 
     #[cfg(feature = "async")]
     use futures::{executor::block_on, sink::SinkExt};
@@ -189,7 +189,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn new(state: Mock<()>, reactor: Mock<Mock<()>>) {
+        fn new(state: Mock<()>, reactor: Mock<_>) {
             let store = Store::new(state.clone(), reactor.clone());
 
             assert_eq!(store.state, state);
@@ -199,7 +199,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn clone(state: Mock<()>, reactor: Mock<Mock<()>>) {
+        fn clone(state: Mock<()>, reactor: Mock<_>) {
             let store = Store::new(state, reactor);
             assert_eq!(store, store.clone());
         }
@@ -207,7 +207,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn deref(state: Mock<()>, reactor: Mock<Mock<()>>) {
+        fn deref(state: Mock<()>, reactor: Mock<_>) {
             let store = Store::new(state, reactor);
             assert_eq!(*store, store.state);
         }
@@ -275,6 +275,18 @@ mod tests {
                 // The reactor is notified.
                 assert_eq!(store.reactor.calls().last(), Some(&store.state));
             }
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn error(state: Mock<_>, mut reactor: Mock<_, _>, error: String) {
+            let mut next = state.clone();
+            reduce(&mut next, ());
+            reactor.fail_if(next, &error[..]);
+
+            let mut store = Store::new(state, reactor);
+            assert_eq!(dispatch(&mut store, ()), Err(&error[..]));
         }
     }
 }

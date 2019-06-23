@@ -16,11 +16,11 @@ where
 #[cfg(test)]
 mod tests {
     use crate::mock::*;
-    use proptest::*;
+    use proptest::prelude::*;
 
     proptest! {
         #[test]
-        fn slice(actions: Vec<u8>, len in 0..100usize) {
+        fn ok(actions: Vec<u8>, len in 0..=100usize) {
             let reducers: &mut [Mock<_>] = &mut vec![Mock::default(); len];
 
             for (i, &action) in actions.iter().enumerate() {

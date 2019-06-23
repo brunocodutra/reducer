@@ -18,12 +18,12 @@ where
 mod tests {
     use super::*;
     use crate::mock::*;
-    use proptest::*;
+    use proptest::prelude::*;
 
     proptest! {
         #[test]
-        fn arc(actions: Vec<u8>) {
-            let mut reducer = Arc::new(Mock::default());
+        fn ok(actions: Vec<u8>) {
+            let mut reducer = Arc::new(Mock::<_>::default());
 
             for (i, &action) in actions.iter().enumerate() {
                 reduce(&mut reducer, action);
