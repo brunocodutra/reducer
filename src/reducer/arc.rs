@@ -27,7 +27,7 @@ mod tests {
 
             for (i, &action) in actions.iter().enumerate() {
                 reduce(&mut reducer, action);
-                assert_eq!(reducer, Arc::new(Mock::new(&actions[0..=i])));
+                assert_eq!(reducer.calls(), &actions[0..=i]);
             }
         }
     }

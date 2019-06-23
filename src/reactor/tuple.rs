@@ -47,10 +47,10 @@ mod tests {
                 for (i, state) in states.iter().enumerate() {
                     assert_eq!(react(&mut reactors, state), Ok(()));
 
-                    assert_eq!(reactors, (
-                        $head::new(&states[0..=i]),
-                        $( $tail::new(&states[0..=i]), )*
-                    ));
+                    let ($head, $( $tail, )*) = &reactors;
+
+                    assert_eq!($head.calls(), &states[0..=i]);
+                    $( assert_eq!($tail.calls(), &states[0..=i]); )*
                 }
             });
 

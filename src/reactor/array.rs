@@ -41,9 +41,12 @@ mod tests {
             proptest!(|(states: Vec<u8>)| {
                 let mut reactors: [Mock<_>; count!($( $tail, )*)] = Default::default();
 
-                for (_i, state) in states.iter().enumerate() {
+                for (i, state) in states.iter().enumerate() {
                     assert_eq!(react(&mut reactors, state), Ok(()));
-                    assert_eq!(reactors, [$( always!($tail, Mock::new(&states[0..=_i])), )*]);
+
+                    for reactor in &reactors {
+                        assert_eq!(reactor.calls(), &states[0..=i])
+                    }
                 }
             });
 

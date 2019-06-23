@@ -118,7 +118,7 @@ mod tests {
             for (i, &action) in actions.iter().enumerate() {
                 let reducer: &mut dyn Reducer<_> = &mut mock;
                 reducer.reduce(action);
-                assert_eq!(mock, Mock::new(&actions[0..=i]));
+                assert_eq!(mock.calls(), &actions[0..=i]);
             }
         }
     }

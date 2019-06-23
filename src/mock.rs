@@ -12,19 +12,23 @@ pub(crate) enum Never {}
 
 pub(crate) type Mock<T> = TaggedMock<T, ()>;
 
-#[derive(Debug, Default, Clone, Eq, PartialEq)]
-#[cfg_attr(test, derive(Arbitrary))]
+#[derive(Debug, Default, Clone, Eq, PartialEq, Arbitrary)]
 pub(crate) struct TaggedMock<T, Tag>(Vec<T>, PhantomData<Tag>);
 
 impl<T, Tag> TaggedMock<T, Tag> {
-    pub(crate) fn new(states: impl Into<Vec<T>>) -> Self {
-        TaggedMock(states.into(), PhantomData)
+    pub(crate) fn call(&mut self, arg: T) -> Result<(), Never> {
+        self.0.push(arg);
+        Ok(())
+    }
+
+    pub(crate) fn calls(&self) -> &[T] {
+        &self.0
     }
 }
 
 impl<A, Tag> Reducer<A> for TaggedMock<A, Tag> {
     fn reduce(&mut self, action: A) {
-        self.0.push(action);
+        self.call(action).ok();
     }
 }
 
@@ -32,8 +36,7 @@ impl<S: Clone, Tag> Reactor<S> for TaggedMock<S, Tag> {
     type Error = Never;
 
     fn react(&mut self, state: &S) -> Result<(), Self::Error> {
-        self.0.push(state.clone());
-        Ok(())
+        self.call(state.clone())
     }
 }
 
@@ -41,8 +44,7 @@ impl<A, Tag> Dispatcher<A> for TaggedMock<A, Tag> {
     type Output = Result<(), Never>;
 
     fn dispatch(&mut self, action: A) -> Self::Output {
-        self.0.push(action);
-        Ok(())
+        self.call(action)
     }
 }
 
@@ -64,8 +66,7 @@ impl<T: Unpin, Tag: Unpin> Sink<T> for TaggedMock<T, Tag> {
     }
 
     fn start_send(self: Pin<&mut Self>, value: T) -> Result<(), Self::SinkError> {
-        self.get_mut().0.push(value);
-        Ok(())
+        self.get_mut().call(value)
     }
 
     fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
@@ -102,7 +103,7 @@ mod tests {
                 reduce(&mut reducer, action);
             }
 
-            assert_eq!(reducer, Mock::new(actions));
+            assert_eq!(reducer.calls(), &actions[..]);
         }
     }
 
@@ -115,7 +116,7 @@ mod tests {
                 assert_eq!(react(&mut reactor, action), Ok(()));
             }
 
-            assert_eq!(reactor, Mock::new(states));
+            assert_eq!(reactor.calls(), &states[..]);
         }
     }
 
@@ -128,7 +129,7 @@ mod tests {
                 assert_eq!(dispatch(&mut dispatcher, action), Ok(()));
             }
 
-            assert_eq!(dispatcher, Mock::new(actions));
+            assert_eq!(dispatcher.calls(), &actions[..]);
         }
     }
 }

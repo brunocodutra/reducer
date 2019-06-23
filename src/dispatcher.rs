@@ -26,7 +26,7 @@ mod tests {
             for (i, &action) in actions.iter().enumerate() {
                 let dispatcher: &mut dyn Dispatcher<_, Output = _> = &mut mock;
                 assert_eq!(dispatcher.dispatch(action), Ok(()));
-                assert_eq!(mock, Mock::new(&actions[0..=i]));
+                assert_eq!(mock.calls(), &actions[0..=i]);
             }
         }
     }
