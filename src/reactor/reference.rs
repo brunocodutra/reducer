@@ -24,7 +24,7 @@ mod tests {
 
             for (i, state) in states.iter().enumerate() {
                 assert_eq!(react(&mut reactor, state), Ok(()));
-                assert_eq!(reactor, &Mock::new(&states[0..=i]))
+                assert_eq!(reactor.calls(), &states[0..=i])
             }
         }
     }

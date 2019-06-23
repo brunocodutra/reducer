@@ -260,12 +260,12 @@ mod tests {
 
             assert_eq!(block_on(handle), Ok(()));
 
-            assert_eq!(
-                block_on_stream(rx).collect::<Vec<_>>(),
-                (0..actions.len())
-                    .map(|i| Mock::new(&actions[0..=i]))
-                    .collect::<Vec<_>>()
-            );
+            let mut states = block_on_stream(rx).collect::<Vec<_>>();
+            assert_eq!(states.len(), actions.len());
+
+            for (i, state) in states.drain(..).enumerate() {
+                assert_eq!(state.calls(), &actions[0..=i]);
+            }
         }
     }
 
@@ -286,12 +286,12 @@ mod tests {
 
             assert_eq!(block_on(handle), Ok(()));
 
-            assert_eq!(
-                block_on_stream(rx).collect::<Vec<_>>(),
-                (0..actions.len())
-                    .map(|i| Mock::new(&actions[0..=i]))
-                    .collect::<Vec<_>>()
-            );
+            let mut states = block_on_stream(rx).collect::<Vec<_>>();
+            assert_eq!(states.len(), actions.len());
+
+            for (i, state) in states.drain(..).enumerate() {
+                assert_eq!(state.calls(), &actions[0..=i]);
+            }
         }
     }
 

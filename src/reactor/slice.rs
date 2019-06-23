@@ -24,11 +24,14 @@ mod tests {
     proptest! {
         #[test]
         fn slice(states: Vec<u8>, len in 0..100usize) {
-            let reactor: &mut [Mock<_>] = &mut vec![Mock::default(); len];
+            let reactors: &mut [Mock<_>] = &mut vec![Mock::default(); len];
 
             for (i, state) in states.iter().enumerate() {
-                assert_eq!(react(reactor, state), Ok(()));
-                assert_eq!(reactor, &*vec![Mock::new(&states[0..=i]); len])
+                assert_eq!(react(reactors, state), Ok(()));
+
+                for reactor in reactors.iter() {
+                    assert_eq!(reactor.calls(), &states[0..=i])
+                }
             }
         }
     }

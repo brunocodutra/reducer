@@ -215,7 +215,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn subscribe(state: Mock<()>, [r1, r2, r3]: [Mock<Mock<()>>; 3]) {
+        fn subscribe(state: Mock<()>, [r1, r2, r3]: [Mock<_>; 3]) {
             let mut store = Store::new(state.clone(), r1.clone());
 
             assert_eq!(store.state, state);
@@ -242,17 +242,10 @@ mod tests {
                 assert_eq!(dispatch(&mut store, action), Ok(()));
 
                 // The state is updated.
-                assert_eq!(store.state, Mock::new(&actions[0..=i]));
+                assert_eq!(store.state.calls(), &actions[0..=i]);
 
                 // The reactor is notified.
-                assert_eq!(
-                    store.reactor,
-                    Mock::new(
-                        (0..=i)
-                            .map(|j| Mock::new(&actions[0..=j]))
-                            .collect::<Vec<_>>(),
-                    )
-                );
+                assert_eq!(store.reactor.calls().last(), Some(&store.state));
             }
         }
     }
@@ -268,33 +261,19 @@ mod tests {
                 drop(store.send(action));
 
                 // No change.
-                assert_eq!(store.state, Mock::new(&actions[0..i]));
+                assert_eq!(store.state.calls(), &actions[0..i]);
 
                 // No change.
-                assert_eq!(
-                    store.reactor,
-                    Mock::new(
-                        (0..i)
-                            .map(|j| Mock::new(&actions[0..=j]))
-                            .collect::<Vec<_>>(),
-                    )
-                );
+                assert_eq!(store.reactor.calls().len(), i);
 
                 // Polling the future to completion guarantees the action is delivered.
                 assert_eq!(block_on(store.send(action)), Ok(()));
 
                 // The state is updated.
-                assert_eq!(store.state, Mock::new(&actions[0..=i]));
+                assert_eq!(store.state.calls(), &actions[0..=i]);
 
                 // The reactor is notified.
-                assert_eq!(
-                    store.reactor,
-                    Mock::new(
-                        (0..=i)
-                            .map(|j| Mock::new(&actions[0..=j]))
-                            .collect::<Vec<_>>(),
-                    )
-                );
+                assert_eq!(store.reactor.calls().last(), Some(&store.state));
             }
         }
     }

@@ -45,10 +45,10 @@ mod tests {
                 for (i, &action) in actions.iter().enumerate() {
                     reduce(&mut reducers, action);
 
-                    assert_eq!(reducers, (
-                        $head::new(&actions[0..=i]),
-                        $( $tail::new(&actions[0..=i]), )*
-                    ));
+                    let ($head, $( $tail, )*) = &reducers;
+
+                    assert_eq!($head.calls(), &actions[0..=i]);
+                    $( assert_eq!($tail.calls(), &actions[0..=i]); )*
                 }
             });
 

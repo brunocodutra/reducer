@@ -21,11 +21,14 @@ mod tests {
     proptest! {
         #[test]
         fn slice(actions: Vec<u8>, len in 0..100usize) {
-            let reducer: &mut [Mock<_>] = &mut vec![Mock::default(); len];
+            let reducers: &mut [Mock<_>] = &mut vec![Mock::default(); len];
 
             for (i, &action) in actions.iter().enumerate() {
-                reduce(reducer, action);
-                assert_eq!(reducer, &*vec![Mock::new(&actions[0..=i]); len]);
+                reduce(reducers, action);
+
+                for reducer in reducers.iter() {
+                    assert_eq!(reducer.calls(), &actions[0..=i])
+                }
             }
         }
     }
