@@ -3,16 +3,21 @@
 macro_rules! count {
     () => { 0 };
 
-    ( $head:ident $(, $tail:ident )* $(,)? ) => { (1 + count!($($tail, )*)) };
+    ( $head:ident $(, $tail:ident)* $(,)? ) => {
+        (1 + count!($($tail,)*))
+    };
 }
 
-macro_rules! dedupe_docs {
-    ( (), $( $definition:tt )+ ) => {
-        $( $definition )+
+macro_rules! reverse {
+    ( PRIVATE $macro:ident () ($($args:tt)*) ) => {
+        $macro!($($args)*);
     };
 
-    ( ($head:ident $(, $tail:ident )* $(,)?), $( $definition:tt )+ ) => {
-        #[doc(hidden)]
-        $( $definition )+
+    ( PRIVATE $macro:ident ($head:tt $(, $tail:tt)* $(,)?) ($($args:tt)*) ) => {
+        reverse!(PRIVATE $macro ($($tail,)*) ($head, $($args)*));
+    };
+
+    ( $macro:ident!($($args:tt)*) ) => {
+        reverse!(PRIVATE $macro ($($args)*) ());
     };
 }

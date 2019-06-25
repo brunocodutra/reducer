@@ -1,9 +1,9 @@
 use crate::reducer::*;
 
 /// Forwards the event to a potentially stack allocated [`Reducer`].
-impl<'a, A, R> Reducer<A> for &'a mut R
+impl<'a, A, T> Reducer<A> for &'a mut T
 where
-    R: Reducer<A> + ?Sized,
+    T: Reducer<A> + ?Sized,
 {
     fn reduce(&mut self, action: A) {
         (**self).reduce(action);
