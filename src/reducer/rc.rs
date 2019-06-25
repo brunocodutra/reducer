@@ -5,9 +5,9 @@ use std::rc::Rc;
 ///
 /// Helps avoiding cloning the entire state when it needs to be sent to other parts of the
 /// application.
-impl<A, R> Reducer<A> for Rc<R>
+impl<A, T> Reducer<A> for Rc<T>
 where
-    R: Reducer<A> + Clone + ?Sized,
+    T: Reducer<A> + Clone + ?Sized,
 {
     fn reduce(&mut self, action: A) {
         Rc::make_mut(self).reduce(action);

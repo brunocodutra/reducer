@@ -1,10 +1,10 @@
 use crate::reducer::*;
 
 /// Updates all [`Reducer`]s in the slice in order.
-impl<A, R> Reducer<A> for [R]
+impl<A, T> Reducer<A> for [T]
 where
     A: Clone,
-    R: Reducer<A>,
+    T: Reducer<A>,
 {
     fn reduce(&mut self, action: A) {
         for reducer in self {
