@@ -3,6 +3,7 @@
 use conrod_core::*;
 use conrod_gfx::*;
 use conrod_winit::*;
+use futures::channel::mpsc::{channel, Receiver};
 use gfx::{format::DepthStencil, Device};
 use gfx_window_glutin::*;
 use glutin::dpi::LogicalSize;
@@ -15,12 +16,6 @@ use std::mem;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use winit::Window;
-
-#[cfg(feature = "async")]
-use futures::channel::mpsc::{channel, Receiver};
-
-#[cfg(not(feature = "async"))]
-use std::sync::mpsc::{channel, Receiver};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum View {
@@ -267,14 +262,10 @@ fn render<E: Error + 'static>(
 
 fn run_conrod<E: Error + 'static>(
     mut dispatcher: impl Dispatcher<Action, Output = Result<(), E>>,
-    states: Receiver<Arc<State>>,
+    mut states: Receiver<Arc<State>>,
 ) -> Result<(), Box<dyn Error>> {
     const WIDTH: f64 = 400.;
     const HEIGHT: f64 = 500.;
-
-    // Workaround clippy warning.
-    #[cfg(feature = "async")]
-    let mut states = states;
 
     let mut events_loop = EventsLoop::new();
     let context = ContextBuilder::new();
@@ -351,13 +342,7 @@ fn run_conrod<E: Error + 'static>(
 
         // Render at 60fps.
         if Instant::now().duration_since(rerendered_at) > Duration::from_millis(16) {
-            #[cfg(feature = "async")]
             while let Ok(Some(next)) = states.try_next() {
-                state = next;
-            }
-
-            #[cfg(not(feature = "async"))]
-            while let Ok(next) = states.try_recv() {
                 state = next;
             }
 
@@ -368,7 +353,6 @@ fn run_conrod<E: Error + 'static>(
     }
 }
 
-#[cfg(feature = "async")]
 fn main() -> Result<(), Box<dyn Error>> {
     // Create a channel to synchronize states.
     let (tx, rx) = channel(0);
@@ -392,36 +376,4 @@ fn main() -> Result<(), Box<dyn Error>> {
     futures::executor::block_on(handle)?;
 
     Ok(())
-}
-
-#[cfg(not(feature = "async"))]
-// Turn mpsc::Sender into a Dispatcher.
-impl Dispatcher<Action> for std::sync::mpsc::Sender<Action> {
-    type Output = Result<(), std::sync::mpsc::SendError<Action>>;
-
-    fn dispatch(&mut self, action: Action) -> Self::Output {
-        self.send(action)
-    }
-}
-
-#[cfg(not(feature = "async"))]
-fn main() -> Result<(), Box<dyn Error>> {
-    // Create a channel to synchronize actions.
-    let (dispatcher, actions) = channel();
-
-    // Create a channel to synchronize states.
-    let (reactor, states) = channel();
-
-    // Listen for actions on a separate thread.
-    std::thread::spawn(move || {
-        // Create a Store to manage the state.
-        let mut store = Store::new(Arc::new(State::default()), reactor);
-
-        // Listen for actions.
-        while let Ok(action) = actions.recv() {
-            store.dispatch(action).unwrap();
-        }
-    });
-
-    run_conrod(dispatcher, states)
 }

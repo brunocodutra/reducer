@@ -60,7 +60,7 @@ where
 {
     /// Adaots any type that implements [`Sink`] as a [`Reactor`] (requires [`async`]).
     ///
-    /// [`async`]: index.html#experimental-features
+    /// [`async`]: index.html#optional-features
     ///
     /// # Example
     /// ```rust

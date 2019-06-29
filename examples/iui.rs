@@ -1,16 +1,11 @@
 //! A simple example demonstrating how to implement a Todo List app using Reducer & iui.
 
+use futures::channel::mpsc::{channel, Receiver};
 use iui::controls::*;
 use iui::prelude::*;
 use reducer::*;
 use std::error::Error;
 use std::sync::Arc;
-
-#[cfg(feature = "async")]
-use futures::channel::mpsc::{channel, Receiver};
-
-#[cfg(not(feature = "async"))]
-use std::sync::mpsc::{channel, Receiver};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum View {
@@ -87,12 +82,8 @@ impl State {
 
 fn run_iui(
     mut dispatcher: impl Dispatcher<Action> + Clone + 'static,
-    states: Receiver<Arc<State>>,
+    mut states: Receiver<Arc<State>>,
 ) {
-    // Workaround clippy warning.
-    #[cfg(feature = "async")]
-    let mut states = states;
-
     let ui = UI::init().unwrap();
 
     // Layout.
@@ -138,14 +129,8 @@ fn run_iui(
         move || {
             let mut next = None;
 
-            #[cfg(feature = "async")]
             while let Ok(n) = states.try_next() {
                 next = n;
-            }
-
-            #[cfg(not(feature = "async"))]
-            while let Ok(n) = states.try_recv() {
-                next = Some(n);
             }
 
             // Update widgets on state change.
@@ -193,7 +178,6 @@ fn run_iui(
     event_loop.run(&ui);
 }
 
-#[cfg(feature = "async")]
 fn main() -> Result<(), Box<dyn Error>> {
     // Create a channel to synchronize states.
     let (tx, rx) = channel(0);
@@ -215,40 +199,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Wait for the background thread to complete.
     futures::executor::block_on(handle)?;
-
-    Ok(())
-}
-
-#[cfg(not(feature = "async"))]
-// Turn mpsc::Sender into a Dispatcher.
-impl Dispatcher<Action> for std::sync::mpsc::Sender<Action> {
-    type Output = Result<(), std::sync::mpsc::SendError<Action>>;
-
-    fn dispatch(&mut self, action: Action) -> Self::Output {
-        self.send(action)
-    }
-}
-
-#[cfg(not(feature = "async"))]
-fn main() -> Result<(), Box<dyn Error>> {
-    // Create a channel to synchronize actions.
-    let (dispatcher, actions) = channel();
-
-    // Create a channel to synchronize states.
-    let (reactor, states) = channel();
-
-    // Listen for actions on a separate thread.
-    std::thread::spawn(move || {
-        // Create a Store to manage the state.
-        let mut store = Store::new(Arc::new(State::default()), reactor);
-
-        // Listen for actions.
-        while let Ok(action) = actions.recv() {
-            store.dispatch(action).unwrap();
-        }
-    });
-
-    run_iui(dispatcher, states);
 
     Ok(())
 }

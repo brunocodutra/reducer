@@ -1,13 +1,5 @@
 language: rust
 
-rust:
-- stable
-
-os:
-- linux
-- osx
-- windows
-
 stages:
 - check
 - test
@@ -33,12 +25,12 @@ jobs:
 
   - name: clippy
     stage: check
-    rust: stable
+    rust: beta
     os: linux
     install:
-    - rustup component add clippy
+    - rustup component add clippy --toolchain beta
     script:
-    - cargo clippy --all-targets -- -D warnings
+    - cargo +beta clippy --lib --examples -- -D warnings
 
   - name: coverage
     stage: check
@@ -58,23 +50,68 @@ jobs:
     script:
     - cargo +nightly doc --all-features
 
-  - stage: test
+  - name: no-default-features
+    stage: test
+    rust: stable
+    os: linux
+    script:
+    - cargo +stable test --no-default-features
+
+  - name: no-default-features
+    stage: test
+    rust: stable
+    os: osx
+    script:
+    - cargo +stable test --no-default-features
+
+  - name: no-default-features
+    stage: test
+    rust: stable
+    os: windows
+    script:
+    - cargo +stable test --no-default-features
+
+  - name: default-features
+    stage: test
+    rust: beta
+    os: linux
+    script:
+    - cargo +beta test
+
+  - name: default-features
+    stage: test
+    rust: beta
+    os: osx
+    script:
+    - cargo +beta test
+
+  - name: default-features
+    stage: test
+    rust: beta
+    os: windows
+    script:
+    - cargo +beta test
+
+  - name: all-features
+    stage: test
     rust: nightly
     os: linux
     script:
-    - cargo +nightly test -v --all-features
+    - cargo +nightly test --all-features
 
-  - stage: test
+  - name: all-features
+    stage: test
     rust: nightly
     os: osx
     script:
-    - cargo +nightly test -v --all-features
+    - cargo +nightly test --all-features
 
-  - stage: test
+  - name: all-features
+    stage: test
     rust: nightly
     os: windows
     script:
-    - cargo +nightly test -v --all-features
+    - cargo +nightly test --all-features
 
   - name: address
     stage: sanitize
