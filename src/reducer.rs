@@ -1,6 +1,9 @@
+#[cfg(feature = "std")]
 mod arc;
 mod array;
+#[cfg(feature = "std")]
 mod boxed;
+#[cfg(feature = "std")]
 mod rc;
 mod reference;
 mod slice;

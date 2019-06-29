@@ -58,7 +58,7 @@ impl<S, E> dyn Reactor<S, Error = E>
 where
     S: Clone,
 {
-    /// Adaots any type that implements [`Sink`] as a [`Reactor`] (requires [`async`]).
+    /// Adapts any type that implements [`Sink`] as a [`Reactor`] (requires [`async`]).
     ///
     /// [`async`]: index.html#optional-features
     ///

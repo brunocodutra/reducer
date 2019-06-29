@@ -14,8 +14,9 @@ categories = ["asynchronous", "gui"]
 all-features = true
 
 [features]
-default = ["async"]
-async = ["derive_deref", "futures-preview", "pin-utils"]
+default = ["std", "async"]
+std = []
+async = ["std", "derive_deref", "futures-preview", "pin-utils"]
 
 [badges]
 travis-ci = { repository = "brunocodutra/reducer" }

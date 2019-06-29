@@ -1,6 +1,8 @@
 use crate::reducer::*;
 
-/// Updates the potentially _unsized_ nested [`Reducer`].
+/// Updates the potentially _unsized_ nested [`Reducer`] (requires [`std`]).
+///
+/// [`std`]: index.html#optional-features
 impl<A, T> Reducer<A> for Box<T>
 where
     T: Reducer<A> + ?Sized,
