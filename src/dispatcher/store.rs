@@ -1,7 +1,7 @@
 use crate::dispatcher::Dispatcher;
 use crate::reactor::Reactor;
 use crate::reducer::Reducer;
-use std::{mem, ops::Deref};
+use core::{mem, ops::Deref};
 
 /// A reactive state container.
 ///
@@ -117,58 +117,65 @@ where
 }
 
 #[cfg(feature = "async")]
-use futures::sink::Sink;
+mod sink {
+    use super::*;
+    use futures::sink::Sink;
+    use futures::task::{Context, Poll};
+    use pin_utils::unsafe_pinned;
+    use std::pin::Pin;
 
-#[cfg(feature = "async")]
-use futures::task::{Context, Poll};
+    impl<S, R: Reactor<S>> Store<S, R> {
+        unsafe_pinned!(state: S);
+        unsafe_pinned!(reactor: R);
+    }
 
-#[cfg(feature = "async")]
-use std::pin::Pin;
+    impl<S: Unpin, R: Reactor<S> + Unpin> Unpin for Store<S, R> {}
 
-#[cfg(feature = "async")]
-use pin_utils::unsafe_pinned;
+    /// View Store as a Sink of actions (requires [`async`]).
+    ///
+    /// [`async`]: index.html#optional-features
+    impl<A, S, R, E> Sink<A> for Store<S, R>
+    where
+        S: Reducer<A> + Unpin + Clone,
+        R: Reactor<S, Error = E> + Sink<S, SinkError = E>,
+    {
+        type SinkError = E;
 
-#[cfg(feature = "async")]
-impl<S, R: Reactor<S>> Store<S, R> {
-    unsafe_pinned!(state: S);
-    unsafe_pinned!(reactor: R);
+        fn poll_ready(
+            self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+        ) -> Poll<Result<(), Self::SinkError>> {
+            self.reactor().poll_ready(cx)
+        }
+
+        fn start_send(mut self: Pin<&mut Self>, action: A) -> Result<(), Self::SinkError> {
+            let state = {
+                let state: &mut S = self.as_mut().state().get_mut();
+                state.reduce(action);
+                state.clone()
+            };
+
+            self.reactor().start_send(state)
+        }
+
+        fn poll_flush(
+            self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+        ) -> Poll<Result<(), Self::SinkError>> {
+            self.reactor().poll_flush(cx)
+        }
+
+        fn poll_close(
+            self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+        ) -> Poll<Result<(), Self::SinkError>> {
+            self.reactor().poll_close(cx)
+        }
+    }
 }
 
-impl<S: Unpin, R: Reactor<S> + Unpin> Unpin for Store<S, R> {}
-
-/// View Store as a Sink of actions (requires [`async`]).
-///
-/// [`async`]: index.html#optional-features
 #[cfg(feature = "async")]
-impl<A, S, R, E> Sink<A> for Store<S, R>
-where
-    S: Reducer<A> + Unpin + Clone,
-    R: Reactor<S, Error = E> + Sink<S, SinkError = E>,
-{
-    type SinkError = E;
-
-    fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
-        self.reactor().poll_ready(cx)
-    }
-
-    fn start_send(mut self: Pin<&mut Self>, action: A) -> Result<(), Self::SinkError> {
-        let state = {
-            let state: &mut S = self.as_mut().state().get_mut();
-            state.reduce(action);
-            state.clone()
-        };
-
-        self.reactor().start_send(state)
-    }
-
-    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
-        self.reactor().poll_flush(cx)
-    }
-
-    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
-        self.reactor().poll_close(cx)
-    }
-}
+pub use sink::*;
 
 #[cfg(test)]
 mod tests {

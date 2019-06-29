@@ -1,10 +1,12 @@
 use crate::reducer::*;
 use std::sync::Arc;
 
-/// Enhances a potentially _unsized_ [`Reducer`] with copy-on-write semantics.
+/// Enhances a potentially _unsized_ [`Reducer`] with copy-on-write semantics (requires [`std`]).
 ///
 /// Helps avoiding cloning the entire state when it needs to be sent to other threads,
 /// e.g to the rendering thread of a GUI.
+///
+/// [`std`]: index.html#optional-features
 impl<A, T> Reducer<A> for Arc<T>
 where
     T: Reducer<A> + Clone + ?Sized,

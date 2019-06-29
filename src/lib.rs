@@ -28,11 +28,22 @@
 //!
 //! # Optional Features
 //!
-//! * `async` (enabled by default)
+//! * `std` (enabled by default)
+//!
+//!     You can disable this feature to use Reducer in a `#[no_std]` environment.
+//!
+//! * `async` (enabled by default, requires `std`)
 //!
 //!     Enables integration with [futures-rs](https://crates.io/crates/futures-preview).
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(test)]
+#[macro_use]
+extern crate std;
+
 mod macros;
+#[cfg(test)]
 mod mock;
 
 mod dispatcher;

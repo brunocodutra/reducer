@@ -1,4 +1,3 @@
-#![cfg(test)]
 #![allow(clippy::unit_arg)]
 
 use crate::dispatcher::Dispatcher;
@@ -7,6 +6,8 @@ use crate::reducer::Reducer;
 use derivative::Derivative;
 use proptest_derive::Arbitrary;
 use std::{collections::HashMap, hash::Hash, marker::PhantomData};
+
+pub use std::{string::String, vec::Vec};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum Never {}
@@ -86,37 +87,44 @@ where
 }
 
 #[cfg(feature = "async")]
-use futures::sink::Sink;
+mod sink {
+    use super::*;
+    use futures::sink::Sink;
+    use futures::task::{Context, Poll};
+    use std::pin::Pin;
 
-#[cfg(feature = "async")]
-use futures::task::{Context, Poll};
+    impl<Tag, T, E> Sink<T> for TaggedMock<Tag, T, E>
+    where
+        T: Unpin + Eq + PartialEq + Hash,
+        E: Unpin + Clone,
+        Tag: Unpin,
+    {
+        type SinkError = E;
 
-#[cfg(feature = "async")]
-use std::pin::Pin;
+        fn poll_ready(
+            self: Pin<&mut Self>,
+            _: &mut Context<'_>,
+        ) -> Poll<Result<(), Self::SinkError>> {
+            Poll::Ready(Ok(()))
+        }
 
-#[cfg(feature = "async")]
-impl<Tag, T, E> Sink<T> for TaggedMock<Tag, T, E>
-where
-    T: Unpin + Eq + PartialEq + Hash,
-    E: Unpin + Clone,
-    Tag: Unpin,
-{
-    type SinkError = E;
+        fn start_send(self: Pin<&mut Self>, value: T) -> Result<(), Self::SinkError> {
+            self.get_mut().call(value)
+        }
 
-    fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
-        Poll::Ready(Ok(()))
-    }
+        fn poll_flush(
+            self: Pin<&mut Self>,
+            _: &mut Context<'_>,
+        ) -> Poll<Result<(), Self::SinkError>> {
+            Poll::Ready(Ok(()))
+        }
 
-    fn start_send(self: Pin<&mut Self>, value: T) -> Result<(), Self::SinkError> {
-        self.get_mut().call(value)
-    }
-
-    fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
-        Poll::Ready(Ok(()))
-    }
-
-    fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
-        Poll::Ready(Ok(()))
+        fn poll_close(
+            self: Pin<&mut Self>,
+            _: &mut Context<'_>,
+        ) -> Poll<Result<(), Self::SinkError>> {
+            Poll::Ready(Ok(()))
+        }
     }
 }
 
