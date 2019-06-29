@@ -2,6 +2,9 @@ use crate::reactor::*;
 use std::sync::mpsc::{SendError, Sender};
 
 /// Turns [`std::sync::mpsc::Sender`] into a [`Reactor`].
+///
+/// **Warning: this implementation is deprecated.**
+#[deprecated]
 impl<S> Reactor<S> for Sender<S>
 where
     S: Clone,
