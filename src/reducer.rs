@@ -19,8 +19,6 @@ mod tuple;
 /// break up the state into smaller independent pieces. To help assembling the pieces back
 /// together, Reducer is implicitly implemented for tuples.
 ///
-/// ## Example
-///
 /// ```rust
 /// use reducer::Reducer;
 ///
