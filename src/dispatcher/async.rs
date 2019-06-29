@@ -61,7 +61,7 @@ where
 /// [spawned]: trait.SpawnDispatcher.html
 /// [`async`]: index.html#optional-features
 ///
-/// ## Example
+/// # Example
 ///
 /// ```rust
 /// use futures::executor::*;

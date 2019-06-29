@@ -11,7 +11,7 @@ use std::{mem, ops::Deref};
 ///
 /// [dispatching]: trait.Dispatcher.html#tymethod.dispatch
 ///
-/// ## Example
+/// # Example
 ///
 /// ```rust
 /// use reducer::*;
