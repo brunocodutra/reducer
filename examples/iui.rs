@@ -196,10 +196,13 @@ fn run_iui(
 #[cfg(feature = "async")]
 fn main() -> Result<(), Box<dyn Error>> {
     // Create a channel to synchronize states.
-    let (reactor, states) = channel(0);
+    let (tx, rx) = channel(0);
 
     // Create a Store to manage the state.
-    let store = Store::new(Arc::new(State::default()), reactor);
+    let store = Store::new(
+        Arc::new(State::default()),
+        Reactor::<Error = _>::from_sink(tx),
+    );
 
     // Spin up a thread-pool to run our application.
     let mut executor = futures::executor::ThreadPool::new()?;
@@ -208,7 +211,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let (dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
 
     // Run the rendering loop.
-    run_iui(dispatcher, states);
+    run_iui(dispatcher, rx);
 
     // Wait for the background thread to complete.
     futures::executor::block_on(handle)?;
