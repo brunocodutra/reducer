@@ -9,7 +9,7 @@ use std::{error::Error, fmt, pin::Pin};
 
 /// Trait for types that can spawn [`Dispatcher`]s as an asynchronous task (requires [`async`]).
 ///
-/// [`async`]: index.html#experimental-features
+/// [`async`]: index.html#optional-features
 pub trait SpawnDispatcher {
     /// Spawns a [`Dispatcher`] as a task that will listen to actions dispatched through the
     /// [`AsyncDispatcher`] returned.
@@ -59,7 +59,7 @@ where
 /// This type is a just lightweight handle that may be cloned and sent to other threads.
 ///
 /// [spawned]: trait.SpawnDispatcher.html
-/// [`async`]: index.html#experimental-features
+/// [`async`]: index.html#optional-features
 ///
 /// ## Example
 ///
@@ -155,7 +155,7 @@ pub struct AsyncDispatcher<A, E>(mpsc::Sender<Result<A, E>>);
 
 /// The error returned when [`AsyncDispatcher`] is unable to dispatch an action (requires [`async`]).
 ///
-/// [`async`]: index.html#experimental-features
+/// [`async`]: index.html#optional-features
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum AsyncDispatcherError {
     /// The [spawned] [`Dispatcher`] has terminated and cannot receive further actions.

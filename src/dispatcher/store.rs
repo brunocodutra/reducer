@@ -138,7 +138,7 @@ impl<S: Unpin, R: Reactor<S> + Unpin> Unpin for Store<S, R> {}
 
 /// View Store as a Sink of actions (requires [`async`]).
 ///
-/// [`async`]: index.html#experimental-features
+/// [`async`]: index.html#optional-features
 #[cfg(feature = "async")]
 impl<A, S, R, E> Sink<A> for Store<S, R>
 where

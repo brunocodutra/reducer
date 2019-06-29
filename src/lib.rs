@@ -26,10 +26,9 @@
 //! [updates]: trait.Reducer.html#tymethod.reduce
 //! [notifies]: trait.Reactor.html#tymethod.react
 //!
-//! # Experimental Features
+//! # Optional Features
 //!
-//! The following cargo feature flags are available:
-//! * `async` (depends on nightly Rust)
+//! * `async` (enabled by default)
 //!
 //!     Enables integration with [futures-rs](https://crates.io/crates/futures-preview).
 
