@@ -2,6 +2,8 @@ mod array;
 mod boxed;
 mod mpsc;
 mod reference;
+#[cfg(feature = "async")]
+mod sink;
 mod slice;
 mod tuple;
 
@@ -12,6 +14,7 @@ mod tuple;
 /// transmit the current state to other parts of your application.
 ///
 /// # Reactor as a Data Channel
+///
 /// For GUI applications, it is a good practice to have a separate thread dedicated to rendering.
 /// To help wiring up the Flux pattern in such multi-threaded scenarios, Reactor is implemented
 /// for [`mpsc::Sender`] out of the box.

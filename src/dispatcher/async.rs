@@ -232,6 +232,7 @@ impl<A, E> Sink<A> for AsyncDispatcher<A, E> {
 mod tests {
     use super::*;
     use crate::mock::*;
+    use crate::Reactor;
     use crate::Store;
     use futures::channel::mpsc::channel;
     use futures::executor::*;
@@ -248,7 +249,7 @@ mod tests {
         #[test]
         fn dispatcher(actions: Vec<u8>) {
             let (tx, rx) = channel(actions.len());
-            let store = Store::new(Mock::<_>::default(), tx);
+            let store = Store::new(Mock::<_>::default(), Reactor::<Error = _>::from_sink(tx));
             let mut executor = POOL.clone();
             let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
 
@@ -273,7 +274,7 @@ mod tests {
         #[test]
         fn sink(actions: Vec<u8>) {
             let (tx, rx) = channel(actions.len());
-            let store = Store::new(Mock::<_>::default(), tx);
+            let store = Store::new(Mock::<_>::default(), Reactor::<Error = _>::from_sink(tx));
             let mut executor = POOL.clone();
             let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
 
