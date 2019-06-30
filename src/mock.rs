@@ -15,12 +15,14 @@ pub(crate) enum Never {}
 pub(crate) type Mock<T, E = Never> = TaggedMock<(), T, E>;
 
 #[derive(Arbitrary, Derivative)]
-#[derivative(Debug, Default(bound = ""), Clone, Eq, PartialEq, Hash)]
+#[derivative(Debug, Default(bound = ""), Eq, PartialEq, Hash)]
 pub(crate) struct TaggedMock<Tag, T, E = Never>
 where
     T: Eq + PartialEq + Hash,
 {
     calls: Vec<T>,
+    #[derivative(PartialEq = "ignore", Hash = "ignore")]
+    generation: usize,
     #[proptest(value = "HashMap::new()")]
     #[derivative(Debug = "ignore", PartialEq = "ignore", Hash = "ignore")]
     results: HashMap<T, E>,
@@ -34,6 +36,10 @@ where
 {
     pub(crate) fn calls(&self) -> &[T] {
         &self.calls
+    }
+
+    pub(crate) fn generation(&self) -> usize {
+        self.generation
     }
 
     pub(crate) fn fail_if(&mut self, arg: T, error: E) {
@@ -50,6 +56,21 @@ where
         let result = self.results.get(&arg).cloned().map(Err).unwrap_or(Ok(()));
         self.calls.push(arg);
         result
+    }
+}
+
+impl<Tag, T, E> Clone for TaggedMock<Tag, T, E>
+where
+    T: Clone + Eq + PartialEq + Hash,
+    E: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            calls: self.calls.clone(),
+            generation: self.generation + 1,
+            results: self.results.clone(),
+            phantom: PhantomData,
+        }
     }
 }
 
