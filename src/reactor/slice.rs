@@ -1,6 +1,46 @@
 use crate::reactor::*;
 
 /// Notifies all [`Reactor`]s in the slice in order.
+///
+/// # Example
+///
+/// ```rust
+/// use reducer::*;
+///
+/// struct State { /* ... */ }
+/// struct Action { /* ... */ }
+///
+/// impl Reducer<Action> for State {
+///     fn reduce(&mut self, action: Action) {
+///         // ...
+///     }
+/// }
+///
+/// struct Actor { /* ... */ }
+/// struct ActorError(/*...*/);
+///
+/// impl Reactor<State> for Actor {
+///     type Error = ActorError;
+///     fn react(&mut self, state: &State) -> Result<(), Self::Error> {
+///         // ...
+///         Ok(())
+///     }
+/// }
+///
+/// # #[cfg(feature = "std")] {
+/// let mut actors = vec![];
+///
+/// actors.push(Actor { /* ... */ });
+/// actors.push(Actor { /* ... */ });
+/// // ...
+/// actors.push(Actor { /* ... */ });
+///
+/// let mut store = Store::new(State { /* ... */ }, actors.into_boxed_slice());
+///
+/// // All actors get notified of state changes.
+/// store.dispatch(Action { /* ... */ });
+/// # }
+/// ```
 impl<S, T> Reactor<S> for [T]
 where
     T: Reactor<S>,

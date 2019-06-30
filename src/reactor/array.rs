@@ -8,7 +8,43 @@ macro_rules! impl_reactor_for_arrays {
 
         /// Notifies all [`Reactor`]s in the array in order.
         ///
-        /// Currently implemented for arrays of up to 32 elements.
+        /// <small>Currently implemented for arrays of up to 32 elements.</small>
+        ///
+        /// # Example
+        ///
+        /// ```rust
+        /// use reducer::*;
+        ///
+        /// struct State { /* ... */ }
+        /// struct Action { /* ... */ }
+        ///
+        /// impl Reducer<Action> for State {
+        ///     fn reduce(&mut self, action: Action) {
+        ///         // ...
+        ///     }
+        /// }
+        ///
+        /// struct Actor { /* ... */ }
+        /// struct ActorError(/*...*/);
+        ///
+        /// impl Reactor<State> for Actor {
+        ///     type Error = ActorError;
+        ///     fn react(&mut self, state: &State) -> Result<(), Self::Error> {
+        ///         // ...
+        ///         Ok(())
+        ///     }
+        /// }
+        ///
+        /// let a = Actor { /* ... */ };
+        /// let b = Actor { /* ... */ };
+        /// // ...
+        /// let z = Actor { /* ... */ };
+        ///
+        /// let mut store = Store::new(State { /* ... */ }, [a, b, /* ..., */ z]);
+        ///
+        /// // All actors get notified of state changes.
+        /// store.dispatch(Action { /* ... */ });
+        /// ```
         impl<S, T> Reactor<S> for [T; count!($($tail,)*)]
         where
             T: Reactor<S>,

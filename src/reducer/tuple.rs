@@ -4,7 +4,52 @@ macro_rules! impl_reducer_for_tuple {
     ( $($args:ident,)+ ) => {
         /// Updates all [`Reducer`]s in the tuple in order.
         ///
-        /// Currently implemented for tuples of up to 12 elements.
+        /// <small>Currently implemented for tuples of up to 12 elements.</small>
+        ///
+        /// # Example
+        ///
+        /// ```rust
+        /// use reducer::Reducer;
+        ///
+        /// struct ProductDetails { /* ... */ }
+        /// struct ShoppingCart { /* ... */ }
+        /// struct UserProfile { /* ... */ }
+        ///
+        /// #[derive(Clone)]
+        /// enum Action {
+        ///     ViewProduct(/* ... */),
+        ///     AddToShoppingCart(/* ... */),
+        ///     UpdatePaymentPreferences(/* ... */),
+        ///     // ...
+        /// };
+        ///
+        /// impl Reducer<Action> for ProductDetails {
+        ///     fn reduce(&mut self, action: Action) {
+        ///         // ...
+        ///     }
+        /// }
+        ///
+        /// impl Reducer<Action> for ShoppingCart {
+        ///     fn reduce(&mut self, action: Action) {
+        ///         // ...
+        ///     }
+        /// }
+        ///
+        /// impl Reducer<Action> for UserProfile {
+        ///     fn reduce(&mut self, action: Action) {
+        ///         // ...
+        ///     }
+        /// }
+        ///
+        /// let product = ProductDetails { /* ... */ };
+        /// let cart = ShoppingCart { /* ... */ };
+        /// let user = UserProfile { /* ... */ };
+        ///
+        /// let mut shop = (product, cart, user);
+        ///
+        /// // `shop` itself implements Reducer<Action>
+        /// shop.reduce(Action::AddToShoppingCart( /* ... */ ));
+        /// ```
         impl<A, $($args,)+> Reducer<A> for ($($args,)+)
         where
             A: Clone,

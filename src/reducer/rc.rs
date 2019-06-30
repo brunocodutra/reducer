@@ -7,6 +7,44 @@ use std::rc::Rc;
 /// application.
 ///
 /// [`std`]: index.html#optional-features
+///
+/// # Example
+///
+/// ```rust
+/// use reducer::*;
+/// use std::rc::Rc;
+///
+/// #[derive(Clone)]
+/// struct State { /* ... */ }
+/// struct Action { /* ... */ }
+///
+/// impl Reducer<Action> for State {
+///     fn reduce(&mut self, action: Action) {
+///         // ...
+///     }
+/// }
+///
+/// let state = Rc::new(State { /* ... */ });
+/// let reactor = Reactor::<Error = _>::from_sink(vec![]);
+///
+/// let mut store = Store::new(state, reactor);
+///
+/// store.dispatch(Action { /* ... */ }); // State is not cloned.
+///
+/// // The reactor now holds a reference to the current state.
+///
+/// store.dispatch(Action { /* ... */ }); // State is cloned.
+///
+/// // Replace the reactor by an empty one.
+/// let mut reactor = store.subscribe(Reactor::<Error = _>::from_sink(vec![]));
+///
+/// // Consume all references to the state.
+/// while let Some(s) = reactor.pop() {
+///     // Consume `s`.
+/// }
+///
+/// store.dispatch(Action { /* ... */ }); // State is not cloned.
+/// ```
 impl<A, T> Reducer<A> for Rc<T>
 where
     T: Reducer<A> + Clone + ?Sized,

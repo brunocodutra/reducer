@@ -1,10 +1,13 @@
 #![macro_use]
 
 macro_rules! count {
-    () => { 0 };
-
-    ( $head:ident $(, $tail:ident)* $(,)? ) => {
-        (1 + count!($($tail,)*))
+    ( $(,)? ) => { 0 };
+    ( $a:ident $(,)? ) => { 1 };
+    ( $a:ident, $b:ident $(,)? ) => { 2 };
+    ( $a:ident, $b:ident, $c:ident $(,)? ) => { 3 };
+    ( $a:ident, $b:ident, $c:ident, $d:ident $(,)? ) => { 4 };
+    ( $a:ident, $b:ident, $c:ident, $d:ident, $e:ident $(, $rest:ident)* $(,)? ) => {
+        (5 + count!($($rest,)*))
     };
 }
 
