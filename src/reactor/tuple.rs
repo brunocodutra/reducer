@@ -4,7 +4,51 @@ macro_rules! impl_reactor_for_tuple {
     ( $($args:ident,)+ ) => {
         /// Notifies all [`Reactor`]s in the tuple in order.
         ///
-        /// Currently implemented for tuples of up to 12 elements.
+        /// <small>Currently implemented for tuples of up to 12 elements.</small>
+        ///
+        /// # Example
+        ///
+        /// ```rust
+        /// use reducer::*;
+        /// use std::error::Error;
+        ///
+        /// #[derive(Debug)]
+        /// struct State { /* ... */ }
+        /// struct Action { /* ... */ }
+        ///
+        /// impl Reducer<Action> for State {
+        ///     fn reduce(&mut self, action: Action) {
+        ///         // ...
+        ///     }
+        /// }
+        ///
+        /// struct GUI { /* ... */ }
+        /// struct DebugLogger { /* ... */ }
+        ///
+        /// impl Reactor<State> for GUI {
+        ///     type Error = Box<dyn Error>;
+        ///     fn react(&mut self, state: &State) -> Result<(), Self::Error> {
+        ///         // ...
+        ///         Ok(())
+        ///     }
+        /// }
+        ///
+        /// impl Reactor<State> for DebugLogger {
+        ///     type Error = Box<dyn Error>;
+        ///     fn react(&mut self, state: &State) -> Result<(), Self::Error> {
+        ///         println!("[DEBUG] {:#?}", state);
+        ///         Ok(())
+        ///     }
+        /// }
+        ///
+        /// let gui = GUI { /* ... */ };
+        /// let logger = DebugLogger { /* ... */ };
+        ///
+        /// let mut store = Store::new(State { /* ... */ }, (gui, logger));
+        ///
+        /// // Both `gui` and `logger` get notified of state changes.
+        /// store.dispatch(Action { /* ... */ });
+        /// ```
         impl<S, X, $($args,)+> Reactor<S> for ($($args,)+)
         where
             $($args: Reactor<S, Error = X>,)+

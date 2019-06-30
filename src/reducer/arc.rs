@@ -7,6 +7,43 @@ use std::sync::Arc;
 /// e.g to the rendering thread of a GUI.
 ///
 /// [`std`]: index.html#optional-features
+///
+/// # Example
+///
+/// ```rust
+/// use reducer::*;
+/// use std::sync::Arc;
+///
+/// #[derive(Clone)]
+/// struct State { /* ... */ }
+/// struct Action { /* ... */ }
+///
+/// impl Reducer<Action> for State {
+///     fn reduce(&mut self, action: Action) {
+///         // ...
+///     }
+/// }
+///
+/// let (tx, mut rx) = futures::channel::mpsc::channel(10);
+///
+/// let state = Arc::new(State { /* ... */ });
+/// let reactor = Reactor::<Error = _>::from_sink(tx);
+///
+/// let mut store = Store::new(state, reactor);
+///
+/// store.dispatch(Action { /* ... */ }); // State is not cloned.
+///
+/// // The channel now holds a reference to the current state.
+///
+/// store.dispatch(Action { /* ... */ }); // State is cloned.
+///
+/// // Drain the channel so that it doesn't hold any references to the current state.
+/// while let Ok(Some(s)) = rx.try_next() {
+///     // Consume `s`.
+/// }
+///
+/// store.dispatch(Action { /* ... */ }); // State is not cloned.
+/// ```
 impl<A, T> Reducer<A> for Arc<T>
 where
     T: Reducer<A> + Clone + ?Sized,
