@@ -55,3 +55,6 @@ required-features = ["async"]
 [[example]]
 name = "iui"
 required-features = ["async"]
+
+[lib]
+bench = false
