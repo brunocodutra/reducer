@@ -50,7 +50,7 @@ impl<T: Copy> Sink<T> for BlackBox {
     }
 }
 
-const ACTIONS: usize = 1000;
+const ACTIONS: usize = 100;
 
 fn dispatch(c: &mut Criterion) {
     c.bench(
@@ -63,11 +63,12 @@ fn dispatch(c: &mut Criterion) {
                     let store = Store::new(BlackBox, BlackBox);
                     executor.spawn_dispatcher(store).unwrap()
                 },
-                |(dispatcher, handle)| {
-                    for (a, mut d) in repeat(dispatcher).enumerate().take(ACTIONS) {
-                        d.dispatch(a).unwrap();
+                |(mut dispatcher, handle)| {
+                    for a in 0..ACTIONS {
+                        dispatcher.dispatch(a).unwrap();
                     }
 
+                    drop(dispatcher);
                     block_on(handle).unwrap();
                 },
                 BatchSize::SmallInput,
