@@ -192,7 +192,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut executor = futures::executor::ThreadPool::new()?;
 
     // Listen for actions on a separate thread.
-    let (dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
+    let (dispatcher, handle) = executor.spawn_dispatcher(store)?;
 
     // Run the rendering loop.
     run_iui(dispatcher, rx);

@@ -137,18 +137,15 @@ mod sink {
     impl<A, S, R, E> Sink<A> for Store<S, R>
     where
         S: Reducer<A> + Unpin + Clone,
-        R: Reactor<S, Error = E> + Sink<S, SinkError = E>,
+        R: Reactor<S, Error = E> + Sink<S, Error = E>,
     {
-        type SinkError = E;
+        type Error = E;
 
-        fn poll_ready(
-            self: Pin<&mut Self>,
-            cx: &mut Context<'_>,
-        ) -> Poll<Result<(), Self::SinkError>> {
+        fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
             self.reactor().poll_ready(cx)
         }
 
-        fn start_send(mut self: Pin<&mut Self>, action: A) -> Result<(), Self::SinkError> {
+        fn start_send(mut self: Pin<&mut Self>, action: A) -> Result<(), Self::Error> {
             let state = {
                 let state: &mut S = self.as_mut().state().get_mut();
                 state.reduce(action);
@@ -158,17 +155,11 @@ mod sink {
             self.reactor().start_send(state)
         }
 
-        fn poll_flush(
-            self: Pin<&mut Self>,
-            cx: &mut Context<'_>,
-        ) -> Poll<Result<(), Self::SinkError>> {
+        fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
             self.reactor().poll_flush(cx)
         }
 
-        fn poll_close(
-            self: Pin<&mut Self>,
-            cx: &mut Context<'_>,
-        ) -> Poll<Result<(), Self::SinkError>> {
+        fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
             self.reactor().poll_close(cx)
         }
     }

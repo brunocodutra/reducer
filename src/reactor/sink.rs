@@ -15,7 +15,7 @@ where
     S: Clone,
     T: Sink<S> + Unpin,
 {
-    type Error = T::SinkError;
+    type Error = T::Error;
 
     fn react(&mut self, state: &S) -> Result<(), Self::Error> {
         block_on(self.send(state.clone()))
@@ -26,30 +26,21 @@ impl<S, T> Sink<S> for SinkAsReactor<T>
 where
     T: Sink<S> + Unpin,
 {
-    type SinkError = T::SinkError;
+    type Error = T::Error;
 
-    fn poll_ready(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
+    fn poll_ready(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         Pin::new(&mut self.sink).poll_ready(cx)
     }
 
-    fn start_send(mut self: Pin<&mut Self>, state: S) -> Result<(), Self::SinkError> {
+    fn start_send(mut self: Pin<&mut Self>, state: S) -> Result<(), Self::Error> {
         Pin::new(&mut self.sink).start_send(state)
     }
 
-    fn poll_flush(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         Pin::new(&mut self.sink).poll_flush(cx)
     }
 
-    fn poll_close(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
+    fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         Pin::new(&mut self.sink).poll_close(cx)
     }
 }
@@ -85,9 +76,9 @@ where
     #[cfg(feature = "async")]
     pub fn from_sink<T>(
         sink: T,
-    ) -> impl Reactor<S, Error = E> + Sink<S, SinkError = E> + DerefMut<Target = T>
+    ) -> impl Reactor<S, Error = E> + Sink<S, Error = E> + DerefMut<Target = T>
     where
-        T: Sink<S, SinkError = E> + Unpin,
+        T: Sink<S, Error = E> + Unpin,
     {
         SinkAsReactor { sink }
     }
