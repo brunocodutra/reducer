@@ -1,10 +1,10 @@
 use crate::dispatcher::Dispatcher;
 use futures::channel::mpsc;
 use futures::executor::block_on;
-use futures::future::{FutureExt, FutureObj, RemoteHandle};
+use futures::future::{FutureExt, RemoteHandle};
 use futures::sink::{Sink, SinkExt};
 use futures::stream::StreamExt;
-use futures::task::{Context, Poll, Spawn, SpawnError};
+use futures::task::{Context, Poll, Spawn, SpawnError, SpawnExt};
 use std::{error::Error, fmt, pin::Pin};
 
 /// Trait for types that can spawn [`Dispatcher`]s as an asynchronous task (requires [`async`]).
@@ -25,7 +25,7 @@ pub trait SpawnDispatcher {
         dispatcher: D,
     ) -> Result<(AsyncDispatcher<A, E>, RemoteHandle<D::Output>), SpawnError>
     where
-        D: Dispatcher<A, Output = Result<(), E>> + Sink<A, SinkError = E> + Send + 'static,
+        D: Dispatcher<A, Output = Result<(), E>> + Sink<A, Error = E> + Send + 'static,
         A: Send + 'static,
         E: Send + 'static;
 }
@@ -40,13 +40,13 @@ where
         dispatcher: D,
     ) -> Result<(AsyncDispatcher<A, E>, RemoteHandle<D::Output>), SpawnError>
     where
-        D: Dispatcher<A, Output = Result<(), E>> + Sink<A, SinkError = E> + Send + 'static,
+        D: Dispatcher<A, Output = Result<(), E>> + Sink<A, Error = E> + Send + 'static,
         A: Send + 'static,
         E: Send + 'static,
     {
         let (tx, rx) = mpsc::channel(0);
         let (future, handle) = rx.forward(dispatcher).remote_handle();
-        self.spawn_obj(FutureObj::new(Box::new(future)))?;
+        self.spawn(future)?;
         Ok((AsyncDispatcher(tx), handle))
     }
 }
@@ -107,7 +107,7 @@ where
 ///
 /// // Implementing Sink for Console, means it can asynchronously react to state changes.
 /// impl Sink<Calculator> for Console {
-///     type SinkError = io::Error;
+///     type Error = io::Error;
 ///
 ///     fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
 ///         Poll::Ready(Ok(()))
@@ -133,7 +133,7 @@ where
 ///     let mut executor = ThreadPool::new()?;
 ///
 ///     // Process incoming actions on a background task.
-///     let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
+///     let (mut dispatcher, handle) = executor.spawn_dispatcher(store)?;
 ///
 ///     dispatcher.dispatch(Action::Add(5))?; // eventually displays "5"
 ///     dispatcher.dispatch(Action::Mul(3))?; // eventually displays "15"
@@ -192,39 +192,28 @@ impl<A, E> Dispatcher<A> for AsyncDispatcher<A, E> {
 }
 
 impl<A, E> Sink<A> for AsyncDispatcher<A, E> {
-    type SinkError = AsyncDispatcherError;
+    type Error = AsyncDispatcherError;
 
-    fn poll_ready(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
-        Pin::new(&mut self.0)
-            .poll_ready(cx)
-            .map_err(|_| AsyncDispatcherError::Terminated)
+    fn poll_ready(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        use AsyncDispatcherError::Terminated;
+        Pin::new(&mut self.0).poll_ready(cx).map_err(|_| Terminated)
     }
 
-    fn start_send(mut self: Pin<&mut Self>, action: A) -> Result<(), Self::SinkError> {
+    fn start_send(mut self: Pin<&mut Self>, action: A) -> Result<(), Self::Error> {
+        use AsyncDispatcherError::Terminated;
         Pin::new(&mut self.0)
             .start_send(Ok(action))
-            .map_err(|_| AsyncDispatcherError::Terminated)
+            .map_err(|_| Terminated)
     }
 
-    fn poll_flush(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
-        Pin::new(&mut self.0)
-            .poll_flush(cx)
-            .map_err(|_| AsyncDispatcherError::Terminated)
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        use AsyncDispatcherError::Terminated;
+        Pin::new(&mut self.0).poll_flush(cx).map_err(|_| Terminated)
     }
 
-    fn poll_close(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::SinkError>> {
-        Pin::new(&mut self.0)
-            .poll_close(cx)
-            .map_err(|_| AsyncDispatcherError::Terminated)
+    fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        use AsyncDispatcherError::Terminated;
+        Pin::new(&mut self.0).poll_close(cx).map_err(|_| Terminated)
     }
 }
 
@@ -251,7 +240,7 @@ mod tests {
             let (tx, rx) = channel(actions.len());
             let store = Store::new(Mock::<_>::default(), Reactor::<Error = _>::from_sink(tx));
             let mut executor = POOL.clone();
-            let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
+            let (mut dispatcher, handle) = executor.spawn_dispatcher(store)?;
 
             for &action in &actions {
                 assert_eq!(dispatch(&mut dispatcher, action), Ok(()));
@@ -276,7 +265,7 @@ mod tests {
             let (tx, rx) = channel(actions.len());
             let store = Store::new(Mock::<_>::default(), Reactor::<Error = _>::from_sink(tx));
             let mut executor = POOL.clone();
-            let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
+            let (mut dispatcher, handle) = executor.spawn_dispatcher(store)?;
 
             assert_eq!(
                 block_on(dispatcher.send_all(&mut iter(actions.clone()))),
@@ -305,7 +294,7 @@ mod tests {
 
             let store = Store::new(state, reactor);
             let mut executor = POOL.clone();
-            let (mut dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
+            let (mut dispatcher, handle) = executor.spawn_dispatcher(store)?;
 
             assert_eq!(dispatch(&mut dispatcher, ()), Ok(()));
             assert_eq!(block_on(handle), Err(error));

@@ -30,22 +30,22 @@ impl<T: Copy> Reactor<T> for BlackBox {
 }
 
 impl<T: Copy> Sink<T> for BlackBox {
-    type SinkError = Never;
+    type Error = Never;
 
-    fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
+    fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         Poll::Ready(Ok(()))
     }
 
-    fn start_send(self: Pin<&mut Self>, val: T) -> Result<(), Self::SinkError> {
+    fn start_send(self: Pin<&mut Self>, val: T) -> Result<(), Self::Error> {
         black_box(val);
         Ok(())
     }
 
-    fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
+    fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         Poll::Ready(Ok(()))
     }
 
-    fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::SinkError>> {
+    fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         Poll::Ready(Ok(()))
     }
 }
@@ -98,7 +98,7 @@ fn sink(c: &mut Criterion) {
                             .unwrap();
                     }
 
-                    block_on(handle).unwrap();
+                    executor.run(handle).unwrap();
                 },
                 BatchSize::SmallInput,
             );
