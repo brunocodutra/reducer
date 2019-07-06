@@ -264,7 +264,7 @@ mod tests {
             let mut store = Store::<Mock<_>, Mock<_>>::default();
 
             for (i, &action) in actions.iter().enumerate() {
-                // Futures do nothing unless polled, so the action is effectivelly dropped.
+                // Futures do nothing unless polled, so the action is effectively dropped.
                 drop(store.send(action));
 
                 // No change.

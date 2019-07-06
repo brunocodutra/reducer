@@ -15,8 +15,8 @@ pub trait SpawnDispatcher {
     /// [`AsyncDispatcher`] returned.
     ///
     /// The task completes
-    /// * successfuly if [`AsyncDispatcher`] (or the last of its clones) is dropped.
-    /// * successfuly if [`RemoteHandle`] is is dropped, unless [`RemoteHandle::forget`] is called.
+    /// * successfully if [`AsyncDispatcher`] (or the last of its clones) is dropped.
+    /// * successfully if [`RemoteHandle`] is is dropped, unless [`RemoteHandle::forget`] is called.
     /// * with an error if [`Dispatcher::dispatch`] fails.
     ///     * The error can be retrieved by polling [`RemoteHandle`] to completion.
     #[allow(clippy::type_complexity)]
