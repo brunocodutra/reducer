@@ -25,12 +25,12 @@ jobs:
 
   - name: clippy
     stage: check
-    rust: beta
+    rust: stable
     os: linux
     install:
-    - rustup component add clippy --toolchain beta
+    - rustup component add clippy --toolchain stable
     script:
-    - cargo +beta clippy --lib --examples -- -D warnings
+    - cargo +stable clippy --lib --examples -- -D warnings
 
   - name: coverage
     stage: check
@@ -73,24 +73,24 @@ jobs:
 
   - name: default-features
     stage: test
-    rust: beta
+    rust: stable
     os: linux
     script:
-    - cargo +beta test
+    - cargo +stable test
 
   - name: default-features
     stage: test
-    rust: beta
+    rust: stable
     os: osx
     script:
-    - cargo +beta test
+    - cargo +stable test
 
   - name: default-features
     stage: test
-    rust: beta
+    rust: stable
     os: windows
     script:
-    - cargo +beta test
+    - cargo +stable test
 
   - name: all-features
     stage: test
