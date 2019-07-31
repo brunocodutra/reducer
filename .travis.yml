@@ -37,9 +37,9 @@ jobs:
     rust: nightly
     os: linux
     install:
-    - RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo +nightly install cargo-tarpaulin
+    - cargo +nightly install cargo-tarpaulin
     script:
-    - cargo +nightly tarpaulin -v --all-features --out Xml
+    - travis_retry cargo +nightly tarpaulin -v --all-features --out Xml
     after_success:
     - bash <(curl -s https://codecov.io/bash)
 
