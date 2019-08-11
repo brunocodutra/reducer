@@ -1,5 +1,6 @@
 /target
+/proptest-regressions
 **/*.rs.bk
 Cargo.lock
+cobertura.xml
 .vscode
-/proptest-regressions
