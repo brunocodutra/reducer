@@ -1,0 +1,95 @@
+name: CI
+
+on: [push]
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: hecrj/setup-rust-action@master
+      with:
+        rust-version: stable
+        components: rustfmt
+    - run: cargo +stable fmt --all -- --check
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: hecrj/setup-rust-action@master
+      with:
+        rust-version: stable
+        components: clippy
+    - run: sudo -E apt-get -yq --no-install-suggests --no-install-recommends install libgtk-3-dev
+    - run: cargo +stable clippy --lib --examples -- -D warnings
+
+  doc:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: hecrj/setup-rust-action@master
+      with:
+        rust-version: nightly
+    - run: cargo +nightly doc --all-features
+
+  sanitize:
+    needs: [fmt, clippy, doc]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address, leak]
+    steps:
+    - uses: actions/checkout@master
+    - uses: hecrj/setup-rust-action@master
+      with:
+        rust-version: nightly
+    - run: sudo -E apt-get -yq --no-install-suggests --no-install-recommends install libgtk-3-dev
+    - run: RUSTFLAGS="-Z sanitizer=${{ matrix.sanitizer }}" cargo +nightly test --tests --lib --all-features --target x86_64-unknown-linux-gnu
+
+  coverage:
+    needs: sanitize
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: hecrj/setup-rust-action@master
+      with:
+        rust-version: nightly
+    - run: sudo -E apt-get -yq --no-install-suggests --no-install-recommends install libgtk-3-dev
+    - run: cargo +nightly install cargo-tarpaulin
+    - run: for i in 0 1 2; do cargo +nightly tarpaulin --all-features --out Xml && break; done
+    - run: bash <(curl -s https://codecov.io/bash) -C $GITHUB_SHA -B ${GITHUB_REF#refs/heads/} -Z
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  test:
+    needs: sanitize
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        rust: [stable, nightly]
+    steps:
+    - uses: actions/checkout@master
+    - uses: hecrj/setup-rust-action@master
+      with:
+        rust-version: ${{ matrix.rust }}
+    - run: sudo -E apt-get -yq --no-install-suggests --no-install-recommends install libgtk-3-dev
+      if: matrix.os == 'ubuntu-latest'
+    - run: cargo +${{ matrix.rust }} test
+    - run: cargo +${{ matrix.rust }} test --no-default-features
+    - run: cargo +${{ matrix.rust }} test --all-features
+      if: matrix.rust == 'nightly'
+
+  benchmark:
+    needs: sanitize
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: hecrj/setup-rust-action@master
+      with:
+        rust-version: nightly
+    - run: sudo -E apt-get -yq --no-install-suggests --no-install-recommends install libgtk-3-dev
+    - run: cargo +nightly bench --all-features
