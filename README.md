@@ -24,20 +24,6 @@ The full API documentation is available on [docs.rs][docs.home]
 ## Examples
 
 To see Reducer in action, check out the [examples] directory.
-There you'll find multiple implementations of a simple Todo List app using Reducer to drive popular
-GUI frameworks.
-
-To run an example, execute
-
-```
-> cargo run --release --example <NAME>
-```
-
-where `<NAME>` can be one of [conrod] or [iui].
-
-> **Note to macOS users:** due to an issue with `ui-sys` you might need to prepend
-> `CXXFLAGS+=-stdlib=libc++` to the command above, see
-> [brunocodutra/reducer#1](https://github.com/brunocodutra/reducer/issues/1).
 
 ## Contribution
 
@@ -61,9 +47,6 @@ Reducer is distributed under the terms of the MIT license, see [LICENSE] for det
 [issues]:           https://github.com/brunocodutra/reducer/issues
 [pulls]:            https://github.com/brunocodutra/reducer/pulls
 [examples]:         https://github.com/brunocodutra/reducer/tree/master/examples
-
-[conrod]:           https://crates.io/crates/Conrod
-[iui]:              https://crates.io/crates/iui
 
 [LICENSE]:          https://github.com/brunocodutra/reducer/blob/master/LICENSE
 [CONTRIBUTING]:     https://github.com/brunocodutra/reducer/blob/master/CONTRIBUTING.md
