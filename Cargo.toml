@@ -19,7 +19,6 @@ std = []
 async = ["std", "derive_deref", "futures-preview", "pin-utils"]
 
 [badges]
-travis-ci = { repository = "brunocodutra/reducer" }
 codecov = { repository = "brunocodutra/reducer" }
 
 [dependencies]

@@ -1,4 +1,4 @@
-# Reducer [![crate.badge]][crate.home] [![docs.badge]][docs.home] [![travis.badge]][travis.home] [![codecov.badge]][codecov.home]
+# Reducer [![crate.badge]][crate.home] [![docs.badge]][docs.home] [![codecov.badge]][codecov.home]
 
 A platform for reactive programming in Rust that can be used to manage the state of
 any kind of application. It shines when used to drive graphical user interfaces and
@@ -54,9 +54,6 @@ Reducer is distributed under the terms of the MIT license, see [LICENSE] for det
 
 [docs.home]:        https://docs.rs/reducer
 [docs.badge]:       https://docs.rs/reducer/badge.svg
-
-[travis.home]:      https://travis-ci.org/brunocodutra/reducer
-[travis.badge]:     https://travis-ci.org/brunocodutra/reducer.svg?branch=master
 
 [codecov.home]:     https://codecov.io/gh/brunocodutra/reducer
 [codecov.badge]:    https://codecov.io/gh/brunocodutra/reducer/branch/master/graph/badge.svg
