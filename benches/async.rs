@@ -74,7 +74,7 @@ fn dispatch(c: &mut Criterion) {
                 BatchSize::SmallInput,
             );
         })
-        .throughput(Throughput::Elements(ACTIONS as u32)),
+        .throughput(Throughput::Elements(ACTIONS as u64)),
     );
 }
 
@@ -104,7 +104,7 @@ fn sink(c: &mut Criterion) {
                 BatchSize::SmallInput,
             );
         })
-        .throughput(Throughput::Elements(ACTIONS as u32)),
+        .throughput(Throughput::Elements(ACTIONS as u64)),
     );
 }
 criterion_group!(benches, dispatch, sink);
