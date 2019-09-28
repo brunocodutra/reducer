@@ -110,6 +110,7 @@ impl<'a> WinitWindow for WindowRef<'a> {
     fn get_inner_size(&self) -> Option<(u32, u32)> {
         Window::get_inner_size(&self.0).map(Into::into)
     }
+
     fn hidpi_factor(&self) -> f32 {
         Window::get_hidpi_factor(&self.0) as _
     }
@@ -274,11 +275,11 @@ fn run_conrod<E: Error + 'static>(
         .with_min_dimensions((WIDTH, HEIGHT).into())
         .with_title("Reducer <3 Conrod");
 
-    let (window, mut device, mut factory, rtv, _) =
+    let (context, mut device, mut factory, rtv, _) =
         init::<ColorFormat, DepthStencil>(builder, context, &events_loop)?;
 
     let mut encoder = factory.create_command_buffer().into();
-    let mut renderer = Renderer::new(&mut factory, &rtv, window.get_hidpi_factor())?;
+    let mut renderer = Renderer::new(&mut factory, &rtv, context.window().get_hidpi_factor())?;
 
     let font = text::FontCollection::from_bytes(ttf_noto_sans::REGULAR)?.into_font()?;
     let mut ui = UiBuilder::new([WIDTH, HEIGHT]).build();
@@ -296,21 +297,21 @@ fn run_conrod<E: Error + 'static>(
     loop {
         // If the window is closed, this will be None for one tick, so to avoid panicking with
         // unwrap, instead break the loop
-        let LogicalSize { width, height } = match window.get_inner_size() {
+        let LogicalSize { width, height } = match context.window().get_inner_size() {
             Some(s) => s,
             None => break Ok(()),
         };
 
         // Draw the `Ui` if it has changed.
         if let Some(primitives) = ui.draw_if_changed() {
-            let dpi_factor = window.get_hidpi_factor();
+            let dpi_factor = context.window().get_hidpi_factor();
             let dims = ((width * dpi_factor) as f32, (height * dpi_factor) as f32);
 
             renderer.clear(&mut encoder, color::DARK_CHARCOAL.to_fsa());
             renderer.fill(&mut encoder, dims, dpi_factor, primitives, &image_map);
             renderer.draw(&mut factory, &mut encoder, &image_map);
             encoder.flush(&mut device);
-            window.swap_buffers()?;
+            context.swap_buffers()?;
             device.cleanup();
         }
 
@@ -323,15 +324,15 @@ fn run_conrod<E: Error + 'static>(
                 }
 
                 if let Resized(logical_size) = event {
-                    let hidpi_factor = window.get_hidpi_factor();
+                    let hidpi_factor = context.window().get_hidpi_factor();
                     let physical_size = logical_size.to_physical(hidpi_factor);
-                    window.resize(physical_size);
-                    let (new_color, _) = new_views::<ColorFormat, DepthStencil>(&window);
+                    context.resize(physical_size);
+                    let (new_color, _) = new_views::<ColorFormat, DepthStencil>(&context);
                     renderer.on_resize(new_color);
                 }
             }
 
-            if let Some(event) = convert_event(event.clone(), &WindowRef(window.window())) {
+            if let Some(event) = convert_event(event.clone(), &WindowRef(context.window())) {
                 ui.handle_event(event);
             }
         });
