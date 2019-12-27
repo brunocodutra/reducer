@@ -84,7 +84,6 @@ jobs:
     - run: cargo +${{ matrix.rust }} test
     - run: cargo +${{ matrix.rust }} test --no-default-features
     - run: cargo +${{ matrix.rust }} test --all-features
-      if: matrix.rust == 'nightly'
 
   benchmark:
     needs: sanitize
