@@ -3,6 +3,9 @@ use crate::reactor::Reactor;
 use crate::reducer::Reducer;
 use core::{mem, ops::Deref};
 
+#[cfg(feature = "async")]
+use pin_project::*;
+
 /// A reactive state container.
 ///
 /// The only way to mutate the internal state managed by [`Store`] is by
@@ -72,9 +75,11 @@ use core::{mem, ops::Deref};
 ///     Ok(())
 /// }
 /// ```
+#[cfg_attr(feature = "async", pin_project)]
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Store<S, R: Reactor<S>> {
     state: S,
+    #[cfg_attr(feature = "async", pin)]
     reactor: R,
 }
 
@@ -121,46 +126,36 @@ mod sink {
     use super::*;
     use futures::sink::Sink;
     use futures::task::{Context, Poll};
-    use pin_utils::unsafe_pinned;
     use std::pin::Pin;
-
-    impl<S, R: Reactor<S>> Store<S, R> {
-        unsafe_pinned!(state: S);
-        unsafe_pinned!(reactor: R);
-    }
-
-    impl<S: Unpin, R: Reactor<S> + Unpin> Unpin for Store<S, R> {}
 
     /// View Store as a Sink of actions (requires [`async`]).
     ///
     /// [`async`]: index.html#optional-features
     impl<A, S, R, E> Sink<A> for Store<S, R>
     where
-        S: Reducer<A> + Unpin + Clone,
+        S: Reducer<A> + Clone,
         R: Reactor<S, Error = E> + Sink<S, Error = E>,
     {
         type Error = E;
 
         fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-            self.reactor().poll_ready(cx)
+            self.project().reactor.poll_ready(cx)
         }
 
-        fn start_send(mut self: Pin<&mut Self>, action: A) -> Result<(), Self::Error> {
-            let state = {
-                let state: &mut S = self.as_mut().state().get_mut();
-                state.reduce(action);
-                state.clone()
-            };
-
-            self.reactor().start_send(state)
+        #[project]
+        fn start_send(self: Pin<&mut Self>, action: A) -> Result<(), Self::Error> {
+            #[project]
+            let Store { state, reactor } = self.project();
+            state.reduce(action);
+            reactor.start_send(state.clone())
         }
 
         fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-            self.reactor().poll_flush(cx)
+            self.project().reactor.poll_flush(cx)
         }
 
         fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-            self.reactor().poll_close(cx)
+            self.project().reactor.poll_close(cx)
         }
     }
 }
