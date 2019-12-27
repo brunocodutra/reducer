@@ -20,7 +20,7 @@ members = ["examples/"]
 [features]
 default = ["std", "async"]
 std = []
-async = ["std", "derive_deref", "futures", "pin-utils"]
+async = ["std", "derive_deref", "futures", "pin-project"]
 
 [badges]
 codecov = { repository = "brunocodutra/reducer" }
@@ -28,7 +28,7 @@ codecov = { repository = "brunocodutra/reducer" }
 [dependencies]
 derive_deref = { version = "1.1.0", optional = true }
 futures = { version = "0.3.1", optional = true }
-pin-utils = { version = "0.1.0-alpha.4", optional = true }
+pin-project = { version = "0.4.6", optional = true }
 
 [dev-dependencies]
 criterion = "0.3.0"

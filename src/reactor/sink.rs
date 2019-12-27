@@ -3,10 +3,13 @@ use derive_deref::{Deref, DerefMut};
 use futures::executor::block_on;
 use futures::sink::{Sink, SinkExt};
 use futures::task::{Context, Poll};
+use pin_project::*;
 use std::{ops::DerefMut, pin::Pin};
 
+#[pin_project]
 #[derive(Deref, DerefMut)]
 struct SinkAsReactor<T> {
+    #[pin]
     sink: T,
 }
 
@@ -24,24 +27,24 @@ where
 
 impl<S, T> Sink<S> for SinkAsReactor<T>
 where
-    T: Sink<S> + Unpin,
+    T: Sink<S>,
 {
     type Error = T::Error;
 
-    fn poll_ready(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        Pin::new(&mut self.sink).poll_ready(cx)
+    fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.project().sink.poll_ready(cx)
     }
 
-    fn start_send(mut self: Pin<&mut Self>, state: S) -> Result<(), Self::Error> {
-        Pin::new(&mut self.sink).start_send(state)
+    fn start_send(self: Pin<&mut Self>, state: S) -> Result<(), Self::Error> {
+        self.project().sink.start_send(state)
     }
 
-    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        Pin::new(&mut self.sink).poll_flush(cx)
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.project().sink.poll_flush(cx)
     }
 
-    fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        Pin::new(&mut self.sink).poll_close(cx)
+    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.project().sink.poll_close(cx)
     }
 }
 
