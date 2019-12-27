@@ -268,7 +268,7 @@ mod tests {
             let (mut dispatcher, handle) = executor.spawn_dispatcher(store)?;
 
             assert_eq!(
-                block_on(dispatcher.send_all(&mut iter(actions.clone()))),
+                block_on(dispatcher.send_all(&mut iter(actions.clone()).map(Ok))),
                 Ok(())
             );
 
