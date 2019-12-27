@@ -20,14 +20,14 @@ members = ["examples/"]
 [features]
 default = ["std", "async"]
 std = []
-async = ["std", "derive_deref", "futures-preview", "pin-utils"]
+async = ["std", "derive_deref", "futures", "pin-utils"]
 
 [badges]
 codecov = { repository = "brunocodutra/reducer" }
 
 [dependencies]
 derive_deref = { version = "1.1.0", optional = true }
-futures-preview = { version = "0.3.0-alpha.19", optional = true }
+futures = { version = "0.3.1", optional = true }
 pin-utils = { version = "0.1.0-alpha.4", optional = true }
 
 [dev-dependencies]
@@ -36,6 +36,10 @@ derivative = "1.0.3"
 lazy_static = "1.4.0"
 proptest = "0.9.4"
 proptest-derive = "0.1.2"
+
+[dev-dependencies.futures]
+version = "*"
+features = ["thread-pool"]
 
 [[bench]]
 name = "async"

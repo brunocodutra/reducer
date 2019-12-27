@@ -50,9 +50,9 @@ impl<T: Copy> Sink<T> for BlackBox {
     }
 }
 
-const ACTIONS: usize = 100;
-
 fn dispatch(c: &mut Criterion) {
+    const ACTIONS: usize = 50;
+
     c.bench(
         "async/dispatch",
         Benchmark::new(ACTIONS.to_string(), |b| {
@@ -79,6 +79,8 @@ fn dispatch(c: &mut Criterion) {
 }
 
 fn sink(c: &mut Criterion) {
+    const ACTIONS: usize = 500;
+
     c.bench(
         "async/sink",
         Benchmark::new(ACTIONS.to_string(), |b| {
@@ -90,7 +92,7 @@ fn sink(c: &mut Criterion) {
                     let (dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
                     (dispatcher, handle, executor.clone())
                 },
-                |(dispatcher, handle, mut executor)| {
+                |(dispatcher, handle, executor)| {
                     for (a, mut d) in repeat(dispatcher).enumerate().take(ACTIONS) {
                         executor
                             .spawn(async move {
@@ -99,7 +101,7 @@ fn sink(c: &mut Criterion) {
                             .unwrap();
                     }
 
-                    executor.run(handle).unwrap();
+                    block_on(handle).unwrap();
                 },
                 BatchSize::SmallInput,
             );

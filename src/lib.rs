@@ -34,7 +34,7 @@
 //!
 //! * `async` (enabled by default, requires `std`)
 //!
-//!     Enables integration with [futures-rs](https://crates.io/crates/futures-preview).
+//!     Enables integration with [futures-rs](https://crates.io/crates/futures).
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
