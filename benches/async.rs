@@ -1,5 +1,3 @@
-#![feature(async_await)]
-
 use criterion::*;
 use futures::executor::*;
 use futures::sink::*;

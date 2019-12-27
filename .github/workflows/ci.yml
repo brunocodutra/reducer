@@ -93,8 +93,8 @@ jobs:
     - uses: actions/checkout@master
     - uses: hecrj/setup-rust-action@master
       with:
-        rust-version: nightly
-    - run: cargo +nightly bench --all-features
+        rust-version: stable
+    - run: cargo +stable bench --all-features
 
   examples:
     needs: sanitize
