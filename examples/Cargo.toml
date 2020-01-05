@@ -15,13 +15,13 @@ path = "iui.rs"
 
 [dependencies]
 reducer = { path = ".." }
-conrod_core = "0.67.0"
-conrod_gfx = "0.67.0"
-conrod_winit = "0.67.0"
+conrod_core = "0.68.0"
+conrod_gfx = "0.68.0"
+conrod_winit = "0.68.0"
 futures = { version = "0.3.1", features = ["thread-pool"] }
-gfx = "0.18.1"
+gfx = "0.18.2"
 gfx_window_glutin = "0.31.0"
-glutin = "0.21.1"
+glutin = "0.21.2"
 iui = "0.3.0"
 ttf-noto-sans = "0.1.1"
-winit = "0.19.3"
+winit = "0.19.5"
