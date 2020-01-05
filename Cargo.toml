@@ -38,7 +38,7 @@ proptest = "0.9.4"
 proptest-derive = "0.1.2"
 
 [dev-dependencies.futures]
-version = "*"
+version = "0.3.1"
 features = ["thread-pool"]
 
 [[bench]]
