@@ -5,6 +5,7 @@ use futures::future::{FutureExt, RemoteHandle};
 use futures::sink::{Sink, SinkExt};
 use futures::stream::StreamExt;
 use futures::task::{Context, Poll, Spawn, SpawnError, SpawnExt};
+use pin_project::*;
 use std::{error::Error, fmt, pin::Pin};
 
 /// Trait for types that can spawn [`Dispatcher`]s as an asynchronous task (requires [`async`]).
@@ -150,8 +151,9 @@ where
 ///     Ok(())
 /// }
 /// ```
+#[pin_project]
 #[derive(Debug, Clone)]
-pub struct AsyncDispatcher<A, E>(mpsc::Sender<Result<A, E>>);
+pub struct AsyncDispatcher<A, E>(#[pin] mpsc::Sender<Result<A, E>>);
 
 /// The error returned when [`AsyncDispatcher`] is unable to dispatch an action (requires [`async`]).
 ///
@@ -194,26 +196,36 @@ impl<A, E> Dispatcher<A> for AsyncDispatcher<A, E> {
 impl<A, E> Sink<A> for AsyncDispatcher<A, E> {
     type Error = AsyncDispatcherError;
 
-    fn poll_ready(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        use AsyncDispatcherError::Terminated;
-        Pin::new(&mut self.0).poll_ready(cx).map_err(|_| Terminated)
+    #[project]
+    fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        #[project]
+        let AsyncDispatcher(tx) = self.project();
+        tx.poll_ready(cx)
+            .map_err(|_| AsyncDispatcherError::Terminated)
     }
 
-    fn start_send(mut self: Pin<&mut Self>, action: A) -> Result<(), Self::Error> {
-        use AsyncDispatcherError::Terminated;
-        Pin::new(&mut self.0)
-            .start_send(Ok(action))
-            .map_err(|_| Terminated)
+    #[project]
+    fn start_send(self: Pin<&mut Self>, action: A) -> Result<(), Self::Error> {
+        #[project]
+        let AsyncDispatcher(tx) = self.project();
+        tx.start_send(Ok(action))
+            .map_err(|_| AsyncDispatcherError::Terminated)
     }
 
-    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        use AsyncDispatcherError::Terminated;
-        Pin::new(&mut self.0).poll_flush(cx).map_err(|_| Terminated)
+    #[project]
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        #[project]
+        let AsyncDispatcher(tx) = self.project();
+        tx.poll_flush(cx)
+            .map_err(|_| AsyncDispatcherError::Terminated)
     }
 
-    fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        use AsyncDispatcherError::Terminated;
-        Pin::new(&mut self.0).poll_close(cx).map_err(|_| Terminated)
+    #[project]
+    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        #[project]
+        let AsyncDispatcher(tx) = self.project();
+        tx.poll_close(cx)
+            .map_err(|_| AsyncDispatcherError::Terminated)
     }
 }
 
