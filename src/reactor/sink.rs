@@ -90,29 +90,56 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mock::*;
-    use proptest::*;
+    use mockall::predicate::*;
+    use proptest::prelude::*;
 
-    proptest! {
-        #[test]
-        fn ok(states: Vec<u8>) {
-            let mut reactor = Reactor::<Error = _>::from_sink(Mock::<_>::default());
+    #[cfg_attr(tarpaulin, skip)]
+    impl<T: Unpin, E: Unpin> Sink<T> for MockReactor<T, E> {
+        type Error = E;
 
-            for (i, state) in states.iter().enumerate() {
-                assert_eq!(react(&mut reactor, state), Ok(()));
-                assert_eq!(reactor.calls(), &states[0..=i])
-            }
+        fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn start_send(self: Pin<&mut Self>, state: T) -> Result<(), Self::Error> {
+            self.get_mut().react(&state)
+        }
+
+        fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
         }
     }
 
     proptest! {
         #[test]
-        fn err(state: u8, error: String) {
-            let mut reactor = Reactor::<Error = _>::from_sink(Mock::default());
-            reactor.fail_if(state, &error[..]);
+        fn react(state: u8, result: Result<(), u8>) {
+            let mut mock = MockReactor::new();
 
-            assert_eq!(react(&mut reactor, &state), Err(&error[..]));
-            assert_eq!(reactor.calls(), &[state]);
+            mock.expect_react()
+                .with(eq(state))
+                .times(1)
+                .return_const(result);
+
+            let mut reactor = Reactor::<Error = _>::from_sink(mock);
+            assert_eq!(Reactor::react(&mut reactor, &state), result);
+        }
+
+        #[test]
+        fn sink(state: u8, result: Result<(), u8>) {
+            let mut mock = MockReactor::new();
+
+            mock.expect_react()
+                .with(eq(state))
+                .times(1)
+                .return_const(result);
+
+            let mut reactor = Reactor::<Error = _>::from_sink(mock);
+            assert_eq!(block_on(reactor.send(state)), result);
+            assert_eq!(block_on(reactor.close()), Ok(()));
         }
     }
 }

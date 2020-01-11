@@ -66,7 +66,7 @@ fn dispatch(c: &mut Criterion) {
                         dispatcher.dispatch(a).unwrap();
                     }
 
-                    drop(dispatcher);
+                    block_on(dispatcher.close()).unwrap();
                     block_on(handle).unwrap();
                 },
                 BatchSize::SmallInput,

@@ -58,48 +58,37 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::mock::*;
+    use super::*;
+    use mockall::predicate::*;
     use proptest::prelude::*;
-
-    prop_compose! {
-        pub(crate) fn length_and_index(max: usize)
-            (length in 1..=max)
-            (index in 0..length, length in Just(length))
-        -> (usize, usize) {
-            (length, index)
-        }
-    }
+    use std::vec::Vec;
 
     proptest! {
         #[test]
-        fn ok(states: Vec<u8>, len in 0..=100usize) {
-            let reactors: &mut [Mock<_>] = &mut vec![Mock::default(); len];
+        fn react(state: u8, mut results: Vec<Result<(), u8>>) {
+            let (idx, result) = results
+                .iter()
+                .enumerate()
+                .find(|(_, r)| r.is_err())
+                .map_or((results.len(), Ok(())), |(i, &r)| (i, r));
 
-            for (i, state) in states.iter().enumerate() {
-                assert_eq!(react(reactors, state), Ok(()));
+            let mut mocks: Vec<_> = results
+                .drain(..)
+                .enumerate()
+                .map(move |(i, r)| {
+                    let mut mock = MockReactor::new();
 
-                for reactor in reactors.iter() {
-                    assert_eq!(reactor.calls(), &states[0..=i])
-                }
-            }
-        }
-    }
+                    mock.expect_react()
+                        .with(eq(state))
+                        .times(if i > idx { 0 } else { 1 })
+                        .return_const(r);
 
-    proptest! {
-        #[test]
-        fn err(state: u8, error: String, (len, at) in length_and_index(100)) {
-            let reactors: &mut [Mock<_, _>] = &mut vec![Mock::default(); len];
-            reactors[at].fail_if(state, &error[..]);
+                    mock
+                })
+                .collect();
 
-            assert_eq!(react(reactors, &state), Err(&error[..]));
-
-            for reactor in reactors.iter().take(at + 1) {
-                assert_eq!(reactor.calls(), &[state])
-            }
-
-            for reactor in reactors.iter().skip(at + 1) {
-                assert_eq!(reactor.calls(), &[])
-            }
+            let reactor = mocks.as_mut_slice();
+            assert_eq!(Reactor::react(reactor, &state), result);
         }
     }
 }

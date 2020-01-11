@@ -16,29 +16,22 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::mock::*;
+    use super::*;
+    use mockall::predicate::*;
     use proptest::prelude::*;
 
     proptest! {
         #[test]
-        fn ok(states: Vec<u8>) {
-            let mut reactor = Box::new(Mock::<_>::default());
+        fn react(state: u8, result: Result<(), u8>) {
+            let mut mock = MockReactor::new();
 
-            for (i, state) in states.iter().enumerate() {
-                assert_eq!(react(&mut reactor, state), Ok(()));
-                assert_eq!(reactor.calls(), &states[0..=i])
-            }
-        }
-    }
+            mock.expect_react()
+                .with(eq(state))
+                .times(1)
+                .return_const(result);
 
-    proptest! {
-        #[test]
-        fn err(state: u8, error: String) {
-            let mut reactor = Box::new(Mock::default());
-            reactor.fail_if(state, &error[..]);
-
-            assert_eq!(react(&mut reactor, &state), Err(&error[..]));
-            assert_eq!(reactor.calls(), &[state]);
+            let mut reactor = Box::new(mock);
+            assert_eq!(Reactor::react(&mut reactor, &state), result);
         }
     }
 }

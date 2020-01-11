@@ -15,21 +15,30 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::mock::*;
+    use super::*;
+    use mockall::predicate::*;
     use proptest::prelude::*;
+    use std::vec::Vec;
 
     proptest! {
         #[test]
-        fn ok(actions: Vec<u8>, len in 0..=100usize) {
-            let reducers: &mut [Mock<_>] = &mut vec![Mock::default(); len];
+        fn reduce(action: u8, mut results: Vec<()>) {
+            let mut mocks: Vec<_> = results
+                .drain(..)
+                .map(|r| {
+                    let mut mock = MockReducer::new();
 
-            for (i, &action) in actions.iter().enumerate() {
-                reduce(reducers, action);
+                    mock.expect_reduce()
+                        .with(eq(action))
+                        .times(1)
+                        .return_const(r);
 
-                for reducer in reducers.iter() {
-                    assert_eq!(reducer.calls(), &actions[0..=i])
-                }
-            }
+                    mock
+                })
+                .collect();
+
+            let reducer = mocks.as_mut_slice();
+            Reducer::reduce(reducer, action);
         }
     }
 }

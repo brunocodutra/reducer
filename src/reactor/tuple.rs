@@ -78,75 +78,41 @@ impl_reactor_for_tuples!(L, K, J, I, H, G, F, E, D, C, B, A);
 
 #[cfg(test)]
 mod tests {
-    use crate::mock::*;
+    use super::*;
+    use mockall::predicate::*;
     use proptest::prelude::*;
 
-    mod ok {
-        use super::*;
+    macro_rules! test_reactor_for_tuples {
+        () => {};
 
-        macro_rules! test_reactor_for_tuples {
-            () => {};
+        ( $head:ident $(, $tail:ident)* $(,)? ) => {
+            proptest! {
+                #[test]
+                fn $head(state: u8, results: [Result<(), u8>; count!($($tail,)*) + 1]) {
+                    let (idx, result) = results
+                        .iter()
+                        .enumerate()
+                        .find(|(_, r)| r.is_err())
+                        .map_or((results.len(), Ok(())), |(i, &r)| (i, r));
 
-            ( $head:ident $(, $tail:ident)* $(,)? ) => {
-                type $head<T> = TaggedMock<[(); count!($($tail,)*)], T>;
+                    let mut mocks: [MockReactor<_, _>; count!($($tail,)*) + 1] = Default::default();
 
-                proptest! {
-                    #[test]
-                    fn $head(states: Vec<u8>) {
-                        let mut reactors = ($head::default(), $($tail::default(),)*);
-
-                        for (i, state) in states.iter().enumerate() {
-                            assert_eq!(react(&mut reactors, state), Ok(()));
-
-                            let ($head, $($tail,)*) = &reactors;
-
-                            assert_eq!($head.calls(), &states[0..=i]);
-                            $(assert_eq!($tail.calls(), &states[0..=i]);)*
-                        }
+                    for (i, (mock, &result)) in mocks.iter_mut().zip(&results).enumerate() {
+                        mock.expect_react()
+                            .with(eq(state))
+                            .times(if i > idx { 0 } else { 1 })
+                            .return_const(result);
                     }
+
+                    let [$head, $($tail,)*] = mocks;
+                    let mut reactor = ($head, $($tail,)*);
+                    assert_eq!(Reactor::react(&mut reactor, &state), result);
                 }
+            }
 
-                test_reactor_for_tuples!($($tail,)*);
-            };
-        }
-
-        test_reactor_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, _01);
+            test_reactor_for_tuples!($($tail,)*);
+        };
     }
 
-    mod err {
-        use super::*;
-
-        macro_rules! test_reactor_for_tuples {
-            () => {};
-
-            ( $head:ident $(, $tail:ident)* $(,)? ) => {
-                proptest! {
-                    #[test]
-                    fn $head(state: u8, error: String, at in 0usize..=count!($($tail,)*)) {
-                        let mut mocks: [Mock<_, _>; count!($($tail,)*) + 1] = Default::default();
-                        mocks[at].fail_if(state, &error[..]);
-
-                        {
-                            let [$head, $($tail,)*] = &mut mocks;
-                            let mut reactors = ($head, $($tail,)*);
-
-                            assert_eq!(react(&mut reactors, &state), Err(&error[..]));
-                        }
-
-                        for mock in mocks.iter().take(at + 1) {
-                            assert_eq!(mock.calls(), &[state])
-                        }
-
-                        for mock in mocks.iter().skip(at + 1) {
-                            assert_eq!(mock.calls(), &[])
-                        }
-                    }
-                }
-
-                test_reactor_for_tuples!($($tail,)*);
-            };
-        }
-
-        test_reactor_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, _01);
-    }
+    test_reactor_for_tuples!(_12, _11, _10, _09, _08, _07, _06, _05, _04, _03, _02, _01);
 }

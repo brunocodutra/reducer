@@ -43,8 +43,6 @@
 extern crate std;
 
 mod macros;
-#[cfg(test)]
-mod mock;
 
 mod dispatcher;
 mod reactor;

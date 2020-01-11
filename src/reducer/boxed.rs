@@ -14,18 +14,22 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::mock::*;
+    use super::*;
+    use mockall::predicate::*;
     use proptest::prelude::*;
 
     proptest! {
         #[test]
-        fn ok(actions: Vec<u8>) {
-            let mut reducer = Box::new(Mock::<_>::default());
+        fn reduce(action: u8) {
+            let mut mock = MockReducer::new();
 
-            for (i, &action) in actions.iter().enumerate() {
-                reduce(&mut reducer, action);
-                assert_eq!(reducer.calls(), &actions[0..=i]);
-            }
+            mock.expect_reduce()
+                .with(eq(action))
+                .times(1)
+                .return_const(());
+
+            let mut reducer = Box::new(mock);
+            Reducer::reduce(&mut reducer, action);
         }
     }
 }

@@ -69,19 +69,37 @@ pub trait Reducer<A> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mock::*;
+    use mockall::{predicate::*, *};
     use proptest::prelude::*;
+    use std::{boxed::Box, vec::Vec};
+
+    mock! {
+        pub(crate) Reducer<A: 'static> {
+            fn id(&self) -> usize;
+        }
+        trait Reducer<A> {
+            fn reduce(&mut self, action: A);
+        }
+        trait Clone {
+            fn clone(&self) -> Self;
+        }
+    }
 
     proptest! {
         #[test]
-        fn reduce(actions: Vec<u8>) {
-            let mut mock = Mock::<_>::default();
+        fn reduce(action: u8) {
+            let mut mock = MockReducer::new();
 
-            for (i, &action) in actions.iter().enumerate() {
-                let reducer: &mut dyn Reducer<_> = &mut mock;
-                reducer.reduce(action);
-                assert_eq!(mock.calls(), &actions[0..=i]);
-            }
+            mock.expect_reduce()
+                .with(eq(action))
+                .times(1)
+                .return_const(());
+
+            let reducer: &mut dyn Reducer<_> = &mut mock;
+            reducer.reduce(action);
         }
     }
 }
+
+#[cfg(test)]
+pub(crate) use self::tests::MockReducer;

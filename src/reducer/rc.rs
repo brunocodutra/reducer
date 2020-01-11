@@ -57,48 +57,38 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mock::*;
+    use mockall::predicate::*;
     use proptest::prelude::*;
 
     proptest! {
         #[test]
-        fn ok(actions: Vec<u8>) {
-            let mut reducer = Rc::new(Mock::<_>::default());
+        fn reduce(action: u8) {
+            let mut mock = MockReducer::new();
 
-            for (i, &action) in actions.iter().enumerate() {
-                reduce(&mut reducer, action);
-                assert_eq!(reducer.calls(), &actions[0..=i]);
-            }
+            mock.expect_reduce()
+                .with(eq(action))
+                .times(1)
+                .return_const(());
+
+            let mut reducer = Rc::new(mock);
+            Reducer::reduce(&mut reducer, action);
         }
-    }
 
-    proptest! {
         #[test]
-        fn cow([a, b, c]: [u8; 3]) {
-            let mut reducer = Rc::new(Mock::<_>::default());
+        fn cow(action: u8) {
+            let mut mock = MockReducer::new();
+            mock.expect_reduce().never();
+            mock.expect_clone().times(1).returning(move || {
+                let mut mock = MockReducer::new();
+                mock.expect_reduce().with(eq(action)).times(1).return_const(());
+                mock.expect_clone().never();
+                mock
+            });
 
-            reduce(&mut reducer, a);
-            assert_eq!(reducer.calls(), &[a]);
-            assert_eq!(reducer.generation(), 0);
-
+            let mut reducer = Rc::new(mock);
             let other = reducer.clone();
-
-            assert_eq!(other.generation(), 0);
-            assert_eq!(reducer.generation(), 0);
-
-            reduce(&mut reducer, b);
-            assert_eq!(reducer.calls(), &[a, b]);
-            assert_eq!(reducer.generation(), 1);
-
-            assert_eq!(other.calls(), &[a]);
-            assert_eq!(other.generation(), 0);
-
-            reduce(&mut reducer, c);
-            assert_eq!(reducer.calls(), &[a, b, c]);
-            assert_eq!(reducer.generation(), 1);
-
-            assert_eq!(other.calls(), &[a]);
-            assert_eq!(other.generation(), 0);
+            Reducer::reduce(&mut reducer, action);
+            drop(other);
         }
     }
 }
