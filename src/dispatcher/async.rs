@@ -1,4 +1,4 @@
-use crate::dispatcher::Dispatcher;
+use crate::dispatcher::*;
 use futures::channel::mpsc;
 use futures::executor::block_on;
 use futures::future::{FutureExt, RemoteHandle};
@@ -16,7 +16,7 @@ pub trait SpawnDispatcher {
     /// [`AsyncDispatcher`] returned.
     ///
     /// The task completes
-    /// * successfully if [`AsyncDispatcher`] (or the last of its clones) is dropped.
+    /// * successfully if [`AsyncDispatcher`] (or the last of its clones) is dropped or closed.
     /// * successfully if [`RemoteHandle`] is is dropped, unless [`RemoteHandle::forget`] is called.
     /// * with an error if [`Dispatcher::dispatch`] fails.
     ///     * The error can be retrieved by polling [`RemoteHandle`] to completion.
@@ -141,9 +141,9 @@ where
 ///     dispatcher.dispatch(Action::Sub(1))?; // eventually displays "14"
 ///     dispatcher.dispatch(Action::Div(7))?; // eventually displays "2"
 ///
-///     // Dropping the AsyncDispatcher signals to the background task that
+///     // Closing the AsyncDispatcher signals to the background task that
 ///     // it can terminate once all pending actions have been processed.
-///     drop(dispatcher);
+///     block_on(dispatcher.close())?;
 ///
 ///     // Wait for the background task to terminate.
 ///     block_on(handle)?;
@@ -232,15 +232,32 @@ impl<A, E> Sink<A> for AsyncDispatcher<A, E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mock::*;
-    use crate::Reactor;
-    use crate::Store;
-    use futures::channel::mpsc::channel;
     use futures::executor::*;
-    use futures::stream::*;
     use lazy_static::lazy_static;
+    use mockall::predicate::*;
     use proptest::prelude::*;
-    use std::thread;
+    use std::thread::yield_now;
+
+    #[cfg_attr(tarpaulin, skip)]
+    impl<A: Unpin, E: Unpin> Sink<A> for MockDispatcher<A, Result<(), E>> {
+        type Error = E;
+
+        fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn start_send(self: Pin<&mut Self>, action: A) -> Result<(), Self::Error> {
+            self.get_mut().dispatch(action)
+        }
+
+        fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+    }
 
     lazy_static! {
         static ref POOL: ThreadPool = ThreadPool::new().unwrap();
@@ -248,79 +265,68 @@ mod tests {
 
     proptest! {
         #[test]
-        fn dispatcher(actions: Vec<u8>) {
-            let (tx, rx) = channel(actions.len());
-            let store = Store::new(Mock::<_>::default(), Reactor::<Error = _>::from_sink(tx));
+        fn dispatch(action: u8, result: Result<(), u8>) {
+            let mut store = MockDispatcher::new();
+
+            store
+                .expect_dispatch()
+                .with(eq(action))
+                .times(1)
+                .return_const(result);
+
             let mut executor = POOL.clone();
             let (mut dispatcher, handle) = executor.spawn_dispatcher(store)?;
 
-            for &action in &actions {
-                assert_eq!(dispatch(&mut dispatcher, action), Ok(()));
-            }
-
-            drop(dispatcher);
-
-            assert_eq!(block_on(handle), Ok(()));
-
-            let mut states = block_on_stream(rx).collect::<Vec<_>>();
-            assert_eq!(states.len(), actions.len());
-
-            for (i, state) in states.drain(..).enumerate() {
-                assert_eq!(state.calls(), &actions[0..=i]);
-            }
+            assert_eq!(dispatcher.dispatch(action), Ok(()));
+            assert_eq!(block_on(dispatcher.close()), Ok(()));
+            assert_eq!(block_on(handle), result);
         }
-    }
 
-    proptest! {
         #[test]
-        fn sink(actions: Vec<u8>) {
-            let (tx, rx) = channel(actions.len());
-            let store = Store::new(Mock::<_>::default(), Reactor::<Error = _>::from_sink(tx));
+        fn error(action: u8, error: u8) {
+            let mut store = MockDispatcher::new();
+
+            store
+                .expect_dispatch()
+                .with(eq(action))
+                .times(1)
+                .return_const(Err(error));
+
             let mut executor = POOL.clone();
             let (mut dispatcher, handle) = executor.spawn_dispatcher(store)?;
 
-            assert_eq!(
-                block_on(dispatcher.send_all(&mut iter(actions.clone()).map(Ok))),
-                Ok(())
-            );
+            assert_eq!(dispatcher.dispatch(action), Ok(()));
 
-            drop(dispatcher);
-
-            assert_eq!(block_on(handle), Ok(()));
-
-            let mut states = block_on_stream(rx).collect::<Vec<_>>();
-            assert_eq!(states.len(), actions.len());
-
-            for (i, state) in states.drain(..).enumerate() {
-                assert_eq!(state.calls(), &actions[0..=i]);
-            }
-        }
-    }
-
-    proptest! {
-        #[test]
-        fn error(state: Mock<_>, mut reactor: Mock<_, _>, error: String) {
-            let mut next = state.clone();
-            reduce(&mut next, ());
-            reactor.fail_if(next, error.clone());
-
-            let store = Store::new(state, reactor);
-            let mut executor = POOL.clone();
-            let (mut dispatcher, handle) = executor.spawn_dispatcher(store)?;
-
-            assert_eq!(dispatch(&mut dispatcher, ()), Ok(()));
-            assert_eq!(block_on(handle), Err(error));
-
-            while let Ok(()) = dispatch(&mut dispatcher, ()) {
+            while let Ok(()) = dispatcher.dispatch(action) {
                 // Wait for the information to propagate,
                 // that the spawned dispatcher has terminated.
-                thread::yield_now();
+                yield_now();
             }
 
             assert_eq!(
-                dispatch(&mut dispatcher, ()),
+                dispatcher.dispatch(action),
                 Err(AsyncDispatcherError::Terminated)
             );
+
+            assert_eq!(block_on(handle), Err(error));
+        }
+
+        #[test]
+        fn sink(action: u8, result: Result<(), u8>) {
+            let mut store = MockDispatcher::new();
+
+            store
+                .expect_dispatch()
+                .with(eq(action))
+                .times(1)
+                .return_const(result);
+
+            let mut executor = POOL.clone();
+            let (mut dispatcher, handle) = executor.spawn_dispatcher(store)?;
+
+            assert_eq!(block_on(dispatcher.send(action)), Ok(()));
+            assert_eq!(block_on(dispatcher.close()), Ok(()));
+            assert_eq!(block_on(handle), result);
         }
     }
 }

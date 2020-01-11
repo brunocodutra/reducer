@@ -15,19 +15,34 @@ pub trait Dispatcher<A> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mock::*;
+    use mockall::{predicate::*, *};
     use proptest::prelude::*;
+    use std::{boxed::Box, vec::Vec};
+
+    mock! {
+        pub(crate) Dispatcher<A: 'static, O: 'static> {}
+        trait Dispatcher<A> {
+            type Output = O;
+            fn dispatch(&mut self, action: A) -> O;
+        }
+    }
 
     proptest! {
         #[test]
-        fn dispatch(actions: Vec<u8>) {
-            let mut mock = Mock::<_>::default();
+        fn dispatch(action: u8, result: u8) {
+            let mut mock = MockDispatcher::<_, u8>::new();
 
-            for (i, &action) in actions.iter().enumerate() {
-                let dispatcher: &mut dyn Dispatcher<_, Output = _> = &mut mock;
-                assert_eq!(dispatcher.dispatch(action), Ok(()));
-                assert_eq!(mock.calls(), &actions[0..=i]);
-            }
+            mock.expect_dispatch()
+                .with(eq(action))
+                .times(1)
+                .return_const(result);
+
+            let dispatcher: &mut dyn Dispatcher<_, Output = _> = &mut mock;
+            assert_eq!(dispatcher.dispatch(action), result);
         }
     }
 }
+
+#[cfg(test)]
+#[cfg(feature = "std")]
+pub(crate) use self::tests::MockDispatcher;

@@ -40,19 +40,38 @@ pub trait Reactor<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mock::*;
+    use mockall::{predicate::*, *};
     use proptest::prelude::*;
+    use std::{boxed::Box, vec::Vec};
+
+    mock! {
+        pub(crate) Reactor<T: 'static, E: 'static> {
+            fn id(&self) -> usize;
+        }
+        trait Reactor<T> {
+            type Error = E;
+            fn react(&mut self, state: &T) -> Result<(), E>;
+        }
+        trait Clone {
+            fn clone(&self) -> Self;
+        }
+    }
 
     proptest! {
         #[test]
-        fn react(states: Vec<u8>) {
-            let mut mock = Mock::<_>::default();
+        fn react(state: u8, result: Result<(), u8>) {
+            let mut mock = MockReactor::new();
 
-            for (i, state) in states.iter().enumerate() {
-                let reactor: &mut dyn Reactor<_, Error = _> = &mut mock;
-                assert_eq!(reactor.react(state), Ok(()));
-                assert_eq!(mock.calls(), &states[0..=i]);
-            }
+            mock.expect_react()
+                .with(eq(state))
+                .times(1)
+                .return_const(result);
+
+            let reactor: &mut dyn Reactor<_, Error = _> = &mut mock;
+            assert_eq!(reactor.react(&state), result);
         }
     }
 }
+
+#[cfg(test)]
+pub(crate) use self::tests::MockReactor;
