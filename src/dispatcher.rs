@@ -44,5 +44,5 @@ mod tests {
 }
 
 #[cfg(test)]
-#[cfg(feature = "std")]
+#[cfg(feature = "async")]
 pub(crate) use self::tests::MockDispatcher;

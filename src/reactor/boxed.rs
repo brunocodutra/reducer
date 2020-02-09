@@ -1,8 +1,9 @@
 use crate::reactor::*;
+use alloc::boxed::Box;
 
-/// Forwards the event to the potentially _unsized_ nested [`Reactor`] (requires [`std`]).
+/// Forwards the event to the potentially _unsized_ nested [`Reactor`] (requires [`alloc`]).
 ///
-/// [`std`]: index.html#optional-features
+/// [`alloc`]: index.html#optional-features
 impl<S, T> Reactor<S> for Box<T>
 where
     T: Reactor<S> + ?Sized,

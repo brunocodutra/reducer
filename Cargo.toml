@@ -18,15 +18,15 @@ all-features = true
 members = ["examples/"]
 
 [features]
-default = ["std", "async"]
-std = []
-async = ["std", "derive_deref", "futures", "pin-project"]
+default = ["alloc", "async"]
+alloc = []
+std = ["alloc"]
+async = ["std", "futures", "pin-project"]
 
 [badges]
 codecov = { repository = "brunocodutra/reducer" }
 
 [dependencies]
-derive_deref = { version = "1.1.0", optional = true }
 futures = { version = "0.3.1", optional = true }
 pin-project = { version = "0.4.6", optional = true }
 

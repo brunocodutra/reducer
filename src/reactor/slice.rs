@@ -27,7 +27,7 @@ use crate::reactor::*;
 ///     }
 /// }
 ///
-/// # #[cfg(feature = "std")] {
+/// # #[cfg(feature = "alloc")] {
 /// let mut actors = vec![];
 ///
 /// actors.push(Actor { /* ... */ });

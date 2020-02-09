@@ -83,7 +83,9 @@ jobs:
         rust-version: ${{ matrix.rust }}
     - run: cargo +${{ matrix.rust }} test
     - run: cargo +${{ matrix.rust }} test --no-default-features
-    - run: cargo +${{ matrix.rust }} test --all-features
+    - run: cargo +${{ matrix.rust }} test --no-default-features --features alloc
+    - run: cargo +${{ matrix.rust }} test --no-default-features --features std
+    - run: cargo +${{ matrix.rust }} test --no-default-features --features async
 
   benchmark:
     needs: sanitize

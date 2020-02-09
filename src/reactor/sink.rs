@@ -1,16 +1,28 @@
 use crate::reactor::*;
-use derive_deref::{Deref, DerefMut};
+use core::{ops::*, pin::Pin};
 use futures::executor::block_on;
 use futures::sink::{Sink, SinkExt};
 use futures::task::{Context, Poll};
 use pin_project::*;
-use std::{ops::DerefMut, pin::Pin};
 
 #[pin_project]
-#[derive(Deref, DerefMut)]
 struct SinkAsReactor<T> {
     #[pin]
     sink: T,
+}
+
+impl<T> Deref for SinkAsReactor<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.sink
+    }
+}
+
+impl<T> DerefMut for SinkAsReactor<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.sink
+    }
 }
 
 impl<S, T> Reactor<S> for SinkAsReactor<T>
@@ -90,6 +102,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::vec::Vec;
     use mockall::predicate::*;
     use proptest::prelude::*;
 
@@ -115,6 +128,14 @@ mod tests {
     }
 
     proptest! {
+        #[test]
+        fn deref(mut sink: Vec<u8>) {
+            let mut reactor = Reactor::<Error = _>::from_sink(sink.clone());
+
+            assert_eq!(reactor.deref(), &sink);
+            assert_eq!(reactor.deref_mut(), &mut sink);
+        }
+
         #[test]
         fn react(state: u8, result: Result<(), u8>) {
             let mut mock = MockReactor::new();

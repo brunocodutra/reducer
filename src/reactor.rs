@@ -1,5 +1,5 @@
 mod array;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 mod boxed;
 mod reference;
 #[cfg(feature = "async")]
