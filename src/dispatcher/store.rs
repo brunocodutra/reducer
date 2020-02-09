@@ -124,9 +124,9 @@ where
 #[cfg(feature = "async")]
 mod sink {
     use super::*;
+    use core::pin::Pin;
     use futures::sink::Sink;
     use futures::task::{Context, Poll};
-    use std::pin::Pin;
 
     /// View Store as a Sink of actions (requires [`async`]).
     ///

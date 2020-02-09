@@ -28,18 +28,28 @@
 //!
 //! # Optional Features
 //!
-//! * `std` (enabled by default)
+//! * `alloc` (enabled by default)
 //!
-//!     You can disable this feature to use Reducer in a `#[no_std]` environment.
+//!     Controls whether [crate `alloc`] is linked.
 //!
-//! * `async` (enabled by default, requires `std`)
+//! * `std` (disabled by default; implies `alloc`)
+//!
+//!     Controls whether [crate `std`] is linked.
+//!
+//! * `async` (enabled by default; implies `std`)
 //!
 //!     Enables integration with [futures-rs](https://crates.io/crates/futures).
+//!
+//! [crate `alloc`]: https://doc.rust-lang.org/alloc/
+//! [crate `std`]: https://doc.rust-lang.org/std/
 
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 
-#[cfg(test)]
-#[macro_use]
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
+#[cfg(any(feature = "std", test))]
+#[cfg_attr(any(test), macro_use)]
 extern crate std;
 
 mod macros;

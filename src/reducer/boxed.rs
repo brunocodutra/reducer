@@ -1,8 +1,9 @@
 use crate::reducer::*;
+use alloc::boxed::Box;
 
-/// Updates the potentially _unsized_ nested [`Reducer`] (requires [`std`]).
+/// Updates the potentially _unsized_ nested [`Reducer`] (requires [`alloc`]).
 ///
-/// [`std`]: index.html#optional-features
+/// [`alloc`]: index.html#optional-features
 impl<A, T> Reducer<A> for Box<T>
 where
     T: Reducer<A> + ?Sized,

@@ -1,9 +1,9 @@
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 mod arc;
 mod array;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 mod boxed;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 mod rc;
 mod reference;
 mod slice;

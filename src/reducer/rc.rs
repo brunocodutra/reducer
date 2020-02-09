@@ -1,12 +1,12 @@
 use crate::reducer::*;
-use std::rc::Rc;
+use alloc::rc::Rc;
 
-/// Enhances a potentially _unsized_ [`Reducer`] with copy-on-write semantics (requires [`std`]).
+/// Enhances a potentially _unsized_ [`Reducer`] with copy-on-write semantics (requires [`alloc`]).
 ///
 /// Helps avoiding cloning the entire state when it needs to be sent to other parts of the
 /// application.
 ///
-/// [`std`]: index.html#optional-features
+/// [`alloc`]: index.html#optional-features
 ///
 /// # Example
 ///
@@ -17,6 +17,7 @@ use std::rc::Rc;
 /// #[derive(Clone)]
 /// struct State { /* ... */ }
 /// struct Action { /* ... */ }
+/// struct Actor<T> { states: Vec<T>, /* ... */ }
 ///
 /// impl Reducer<Action> for State {
 ///     fn reduce(&mut self, action: Action) {
@@ -24,26 +25,23 @@ use std::rc::Rc;
 ///     }
 /// }
 ///
-/// let state = Rc::new(State { /* ... */ });
-/// let reactor = Reactor::<Error = _>::from_sink(vec![]);
-///
-/// let mut store = Store::new(state, reactor);
-///
-/// store.dispatch(Action { /* ... */ }); // State is not cloned.
-///
-/// // The reactor now holds a reference to the current state.
-///
-/// store.dispatch(Action { /* ... */ }); // State is cloned.
-///
-/// // Replace the reactor by an empty one.
-/// let mut reactor = store.subscribe(Reactor::<Error = _>::from_sink(vec![]));
-///
-/// // Consume all references to the state.
-/// while let Some(s) = reactor.pop() {
-///     // Consume `s`.
+/// impl<T: Clone> Reactor<T> for Actor<T> {
+///     type Error = std::convert::Infallible; // TODO: use `!` once it's stable.
+///     fn react(&mut self, state: &T) -> Result<(), Self::Error> {
+///         self.states.push(state.clone());
+///         Ok(())
+///     }
 /// }
 ///
-/// store.dispatch(Action { /* ... */ }); // State is not cloned.
+/// let state = Rc::new(State { /* ... */ });
+/// let reactor = Actor { states: vec![], /* ... */ };
+/// let mut store = Store::new(state, reactor);
+///
+/// store.dispatch(Action { /* ... */ }); // `state` is not cloned yet.
+///
+/// // `reactor` now holds a reference to `state`.
+///
+/// store.dispatch(Action { /* ... */ }); // `state` is cloned through `Rc::make_mut`.
 /// ```
 impl<A, T> Reducer<A> for Rc<T>
 where
