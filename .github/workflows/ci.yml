@@ -3,12 +3,12 @@ name: CI
 on:
   push:
     branches:
-      - master
-      - next
+    - master
   pull_request:
     branches:
-      - master
-      - next
+    - master
+  schedule:
+  - cron:  '0 6 * * SAT'
 
 jobs:
   fmt:
