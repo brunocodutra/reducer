@@ -28,6 +28,7 @@ mod tests {
                 .map(|r| {
                     let mut mock = MockReducer::new();
 
+                    #[allow(clippy::unit_arg)]
                     mock.expect_reduce()
                         .with(eq(action))
                         .times(1)
