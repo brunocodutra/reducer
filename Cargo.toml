@@ -32,7 +32,6 @@ pin-project = { version = "0.4.6", optional = true }
 
 [dev-dependencies]
 criterion = "0.3.0"
-derivative = "1.0.3"
 lazy_static = "1.4.0"
 mockall = "0.6.0"
 proptest = "0.9.4"
