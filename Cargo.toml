@@ -27,17 +27,17 @@ async = ["std", "futures", "pin-project"]
 codecov = { repository = "brunocodutra/reducer" }
 
 [dependencies]
-futures = { version = "0.3.1", optional = true }
-pin-project = { version = "0.4.6", optional = true }
+futures = { version = "0.3.4", optional = true }
+pin-project = { version = "0.4.9", optional = true }
 
 [dev-dependencies]
-criterion = "0.3.0"
+criterion = "0.3.1"
 lazy_static = "1.4.0"
-mockall = "0.6.0"
-proptest = "0.9.4"
+mockall = "0.7.0"
+proptest = "0.9.6"
 
 [dev-dependencies.futures]
-version = "0.3.1"
+version = "0.3.4"
 features = ["thread-pool"]
 
 [[bench]]
