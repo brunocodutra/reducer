@@ -1,12 +1,18 @@
 use crate::reactor::*;
-use core::{ops::*, pin::Pin};
 use futures::executor::block_on;
 use futures::sink::{Sink, SinkExt};
 use futures::task::{Context, Poll};
 use pin_project::*;
+use std::{borrow::ToOwned, ops::*, pin::Pin};
 
+/// An adapter for types that implement [`Sink`] to behave as a [`Reactor`] (requires [`async`])
+///
+/// Returned by [`Reactor::from_sink`].
+///
+/// [`async`]: index.html#optional-features
+/// [`Reactor::from_sink`]: trait.Reactor.html#method.from_sink
 #[pin_project]
-struct SinkAsReactor<T> {
+pub struct SinkAsReactor<T> {
     #[pin]
     sink: T,
 }
@@ -27,19 +33,19 @@ impl<T> DerefMut for SinkAsReactor<T> {
 
 impl<S, T> Reactor<S> for SinkAsReactor<T>
 where
-    S: ?Sized + Clone,
-    T: Sink<S> + Unpin,
+    S: ?Sized + ToOwned,
+    T: Sink<S::Owned> + Unpin,
 {
     type Error = T::Error;
 
     fn react(&mut self, state: &S) -> Result<(), Self::Error> {
-        block_on(self.send(state.clone()))
+        block_on(self.send(state.to_owned()))
     }
 }
 
-impl<S, T> Sink<S> for SinkAsReactor<T>
+impl<O, T> Sink<O> for SinkAsReactor<T>
 where
-    T: Sink<S>,
+    T: Sink<O>,
 {
     type Error = T::Error;
 
@@ -47,7 +53,7 @@ where
         self.project().sink.poll_ready(cx)
     }
 
-    fn start_send(self: Pin<&mut Self>, state: S) -> Result<(), Self::Error> {
+    fn start_send(self: Pin<&mut Self>, state: O) -> Result<(), Self::Error> {
         self.project().sink.start_send(state)
     }
 
@@ -62,7 +68,7 @@ where
 
 impl<S, E> dyn Reactor<S, Error = E>
 where
-    S: Clone,
+    S: ToOwned + ?Sized,
 {
     /// Adapts any type that implements [`Sink`] as a [`Reactor`] (requires [`async`]).
     ///
@@ -76,24 +82,21 @@ where
     /// use std::thread;
     ///
     /// let (tx, rx) = channel(0);
-    /// let mut reactor = Reactor::<Error = _>::from_sink(tx);
+    /// let mut reactor = Reactor::<str, Error = _>::from_sink(tx);
     ///
     /// thread::spawn(move || {
-    ///     reactor.react(&1);
-    ///     reactor.react(&1);
-    ///     reactor.react(&3);
-    ///     reactor.react(&5);
-    ///     reactor.react(&8);
+    ///     reactor.react("1");
+    ///     reactor.react("1");
+    ///     reactor.react("3");
+    ///     reactor.react("5");
+    ///     reactor.react("8");
     /// });
     ///
-    /// assert_eq!(block_on_stream(rx).collect::<Vec<_>>(), vec![1, 1, 3, 5, 8]);
+    /// assert_eq!(block_on_stream(rx).collect::<String>(), "11358".to_string());
     /// ```
-    #[cfg(feature = "async")]
-    pub fn from_sink<T>(
-        sink: T,
-    ) -> impl Reactor<S, Error = E> + Sink<S, Error = E> + DerefMut<Target = T>
+    pub fn from_sink<T>(sink: T) -> SinkAsReactor<T>
     where
-        T: Sink<S, Error = E> + Unpin,
+        T: Sink<S::Owned, Error = E> + Unpin,
     {
         SinkAsReactor { sink }
     }
@@ -102,9 +105,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::vec::Vec;
     use mockall::predicate::*;
     use proptest::prelude::*;
+    use std::{string::String, vec::Vec};
 
     #[cfg_attr(tarpaulin, skip)]
     impl<T: Unpin, E: Unpin> Sink<T> for MockReactor<T, E> {
@@ -129,36 +132,36 @@ mod tests {
 
     proptest! {
         #[test]
-        fn deref(mut sink: Vec<u8>) {
-            let mut reactor = Reactor::<Error = _>::from_sink(sink.clone());
+        fn deref(mut sink: Vec<String>) {
+            let mut reactor = Reactor::<str, Error = _>::from_sink(sink.clone());
 
             assert_eq!(reactor.deref(), &sink);
             assert_eq!(reactor.deref_mut(), &mut sink);
         }
 
         #[test]
-        fn react(state: u8, result: Result<(), u8>) {
+        fn react(state: String, result: Result<(), u8>) {
             let mut mock = MockReactor::new();
 
             mock.expect_react()
-                .with(eq(state))
+                .with(eq(state.clone()))
                 .times(1)
                 .return_const(result);
 
-            let mut reactor = Reactor::<Error = _>::from_sink(mock);
+            let mut reactor = Reactor::<str, Error = _>::from_sink(mock);
             assert_eq!(Reactor::react(&mut reactor, &state), result);
         }
 
         #[test]
-        fn sink(state: u8, result: Result<(), u8>) {
+        fn sink(state: String, result: Result<(), u8>) {
             let mut mock = MockReactor::new();
 
             mock.expect_react()
-                .with(eq(state))
+                .with(eq(state.clone()))
                 .times(1)
                 .return_const(result);
 
-            let mut reactor = Reactor::<Error = _>::from_sink(mock);
+            let mut reactor = Reactor::<str, Error = _>::from_sink(mock);
             assert_eq!(block_on(reactor.send(state)), result);
             assert_eq!(block_on(reactor.close()), Ok(()));
         }

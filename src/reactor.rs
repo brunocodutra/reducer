@@ -7,6 +7,9 @@ mod sink;
 mod slice;
 mod tuple;
 
+#[cfg(feature = "async")]
+pub use sink::SinkAsReactor;
+
 /// Trait for types that react to state transitions.
 ///
 /// Reactors connect the _state_ to the _view_ components. They can implement arbitrary logic in
