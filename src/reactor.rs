@@ -8,7 +8,7 @@ mod slice;
 mod tuple;
 
 #[cfg(feature = "async")]
-pub use sink::SinkAsReactor;
+pub use sink::AsyncReactor;
 
 /// Trait for types that react to state transitions.
 ///
