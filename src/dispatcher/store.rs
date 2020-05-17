@@ -78,14 +78,14 @@ use pin_project::*;
 /// ```
 #[cfg_attr(feature = "async", pin_project(project = StoreProjection))]
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash, Deref)]
-pub struct Store<S, R: Reactor<S>> {
+pub struct Store<S, R> {
     #[deref]
     state: S,
     #[cfg_attr(feature = "async", pin)]
     reactor: R,
 }
 
-impl<S, R: Reactor<S>> Store<S, R> {
+impl<S, R> Store<S, R> {
     /// Constructs the Store given the initial state and a [`Reactor`].
     pub fn new(state: S, reactor: R) -> Self {
         Self { state, reactor }
@@ -126,7 +126,7 @@ mod sink {
     impl<A, S, R, E> Sink<A> for Store<S, R>
     where
         S: Reducer<A>,
-        R: Reactor<S, Error = E> + for<'s> Sink<&'s S, Error = E>,
+        R: for<'s> Sink<&'s S, Error = E>,
     {
         type Error = E;
 
@@ -166,28 +166,21 @@ mod tests {
 
     #[test]
     fn default() {
-        Store::<MockReducer<()>, MockReactor<_, ()>>::default();
-    }
-
-    #[test]
-    fn deref() {
-        let store = Store::new(MockReducer::<()>::new(), MockReactor::<_, ()>::new());
-        assert_eq!(&*store as *const _, &store.state as *const _);
+        Store::<(), ()>::default();
     }
 
     proptest! {
         #[test]
-        fn new(a: usize, b: usize) {
-            let mut reducer = MockReducer::<()>::new();
-            reducer.expect_id().return_const(a);
+        fn deref(state: usize) {
+            let store = Store::new(state, ());
+            assert_eq!(&*store as *const _, &store.state as *const _);
+        }
 
-            let mut reactor = MockReactor::<_, ()>::new();
-            reactor.expect_id().return_const(b);
-
-            let store = Store::new(reducer, reactor);
-
-            assert_eq!(store.state.id(), a);
-            assert_eq!(store.reactor.id(), b);
+        #[test]
+        fn new(state: usize, reactor: usize) {
+            let store = Store::new(state, reactor);
+            assert_eq!(store.state, state);
+            assert_eq!(store.reactor, reactor);
         }
 
         #[test]
@@ -200,7 +193,7 @@ mod tests {
                 mock
             });
 
-            let mut reactor = MockReactor::<_, ()>::new();
+            let mut reactor = MockReactor::<(), ()>::new();
             reactor.expect_id().return_const(b);
             reactor.expect_clone().times(1).returning(move || {
                 let mut mock = MockReactor::new();
@@ -217,10 +210,10 @@ mod tests {
 
         #[test]
         fn subscribe(a: usize, b: usize) {
-            let mut mock = MockReactor::<_, ()>::new();
+            let mut mock = MockReactor::<(), ()>::new();
             mock.expect_id().return_const(a);
 
-            let mut store = Store::new(MockReducer::<()>::new(), mock);
+            let mut store = Store::new((), mock);
 
             let mut mock = MockReactor::<_, ()>::new();
             mock.expect_id().return_const(b);
