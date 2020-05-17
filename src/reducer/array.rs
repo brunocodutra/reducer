@@ -9,6 +9,9 @@ macro_rules! impl_reducer_for_arrays {
         /// Updates all [`Reducer`]s in the array in order.
         ///
         /// <small>Currently implemented for arrays of up to 32 elements.</small>
+        ///
+        /// **Warning: this implementation is deprecated and will be removed in a future release.**
+        #[deprecated]
         impl<A, T> Reducer<A> for [T; count!($($tail,)*)]
         where
             A: Clone,

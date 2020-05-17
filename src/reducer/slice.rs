@@ -1,6 +1,9 @@
 use crate::reducer::*;
 
 /// Updates all [`Reducer`]s in the slice in order.
+///
+/// **Warning: this implementation is deprecated and will be removed in a future release.**
+#[deprecated]
 impl<A, T> Reducer<A> for [T]
 where
     A: Clone,

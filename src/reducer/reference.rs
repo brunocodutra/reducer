@@ -1,6 +1,9 @@
 use crate::reducer::*;
 
 /// Forwards the event to a potentially stack allocated [`Reducer`].
+///
+/// **Warning: this implementation is deprecated and will be removed in a future release.**
+#[deprecated]
 impl<'a, A, T> Reducer<A> for &'a mut T
 where
     T: Reducer<A> + ?Sized,
