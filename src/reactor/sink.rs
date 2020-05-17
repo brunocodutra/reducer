@@ -12,12 +12,12 @@ use std::{borrow::ToOwned, ops::*, pin::Pin};
 /// [`async`]: index.html#optional-features
 /// [`Reactor::from_sink`]: trait.Reactor.html#method.from_sink
 #[pin_project]
-pub struct SinkAsReactor<T> {
+pub struct AsyncReactor<T> {
     #[pin]
     sink: T,
 }
 
-impl<T> Deref for SinkAsReactor<T> {
+impl<T> Deref for AsyncReactor<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -25,13 +25,13 @@ impl<T> Deref for SinkAsReactor<T> {
     }
 }
 
-impl<T> DerefMut for SinkAsReactor<T> {
+impl<T> DerefMut for AsyncReactor<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.sink
     }
 }
 
-impl<S, T> Reactor<S> for SinkAsReactor<T>
+impl<S, T> Reactor<S> for AsyncReactor<T>
 where
     S: ?Sized + ToOwned,
     T: Sink<S::Owned> + Unpin,
@@ -43,7 +43,7 @@ where
     }
 }
 
-impl<O, T> Sink<O> for SinkAsReactor<T>
+impl<O, T> Sink<O> for AsyncReactor<T>
 where
     T: Sink<O>,
 {
@@ -94,11 +94,11 @@ where
     ///
     /// assert_eq!(block_on_stream(rx).collect::<String>(), "11358".to_string());
     /// ```
-    pub fn from_sink<T>(sink: T) -> SinkAsReactor<T>
+    pub fn from_sink<T>(sink: T) -> AsyncReactor<T>
     where
         T: Sink<S::Owned, Error = E> + Unpin,
     {
-        SinkAsReactor { sink }
+        AsyncReactor { sink }
     }
 }
 
