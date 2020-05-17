@@ -1,3 +1,5 @@
+#![cfg(feature = "deprecated")]
+
 use crate::reducer::*;
 
 /// Forwards the event to a potentially stack allocated [`Reducer`].
