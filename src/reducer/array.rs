@@ -1,3 +1,5 @@
+#![cfg(feature = "deprecated")]
+
 use crate::reducer::*;
 
 macro_rules! impl_reducer_for_arrays {

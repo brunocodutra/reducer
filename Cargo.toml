@@ -18,10 +18,11 @@ all-features = true
 members = ["examples/"]
 
 [features]
-default = ["alloc", "async"]
+default = ["alloc", "async", "deprecated"]
 alloc = []
 std = ["alloc"]
 async = ["std", "futures", "pin-project"]
+deprecated = []
 
 [badges]
 codecov = { repository = "brunocodutra/reducer" }

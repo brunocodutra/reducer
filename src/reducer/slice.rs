@@ -1,3 +1,5 @@
+#![cfg(feature = "deprecated")]
+
 use crate::reducer::*;
 
 /// Updates all [`Reducer`]s in the slice in order.
