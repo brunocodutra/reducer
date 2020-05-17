@@ -3,6 +3,7 @@ use crate::reactor::*;
 /// Forwards the event to a potentially stack allocated [`Reactor`].
 impl<'a, S, T> Reactor<S> for &'a mut T
 where
+    S: ?Sized,
     T: Reactor<S> + ?Sized,
 {
     type Error = T::Error;

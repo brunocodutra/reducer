@@ -51,6 +51,7 @@ macro_rules! impl_reactor_for_tuple {
         /// ```
         impl<S, X, $($args,)+> Reactor<S> for ($($args,)+)
         where
+            S: ?Sized,
             $($args: Reactor<S, Error = X>,)+
         {
             type Error = X;
