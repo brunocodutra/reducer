@@ -47,6 +47,7 @@ macro_rules! impl_reactor_for_arrays {
         /// ```
         impl<S, T> Reactor<S> for [T; count!($($tail,)*)]
         where
+            S: ?Sized,
             T: Reactor<S>,
         {
             type Error = T::Error;

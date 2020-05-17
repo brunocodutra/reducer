@@ -43,6 +43,7 @@ use crate::reactor::*;
 /// ```
 impl<S, T> Reactor<S> for [T]
 where
+    S: ?Sized,
     T: Reactor<S>,
 {
     type Error = T::Error;

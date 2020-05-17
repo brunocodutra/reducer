@@ -12,7 +12,7 @@ mod tuple;
 /// Reactors connect the _state_ to the _view_ components. They can implement arbitrary logic in
 /// response to state transitions, but it's often better to think of Reactors as _channels_ that
 /// transmit the current state to other parts of your application.
-pub trait Reactor<S> {
+pub trait Reactor<S: ?Sized> {
     /// The type returned if the Reactor fails.
     type Error;
 

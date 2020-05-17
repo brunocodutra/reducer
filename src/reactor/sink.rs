@@ -27,7 +27,7 @@ impl<T> DerefMut for SinkAsReactor<T> {
 
 impl<S, T> Reactor<S> for SinkAsReactor<T>
 where
-    S: Clone,
+    S: ?Sized + Clone,
     T: Sink<S> + Unpin,
 {
     type Error = T::Error;

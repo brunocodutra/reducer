@@ -6,6 +6,7 @@ use alloc::boxed::Box;
 /// [`alloc`]: index.html#optional-features
 impl<S, T> Reactor<S> for Box<T>
 where
+    S: ?Sized,
     T: Reactor<S> + ?Sized,
 {
     type Error = T::Error;
