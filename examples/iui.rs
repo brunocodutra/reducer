@@ -185,7 +185,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Create a Store to manage the state.
     let store = Store::new(
         Arc::new(State::default()),
-        Reactor::<Error = _>::from_sink(tx),
+        Reactor::<Arc<State>, Error = _>::from_sink(tx),
     );
 
     // Spin up a thread-pool to run our application.
