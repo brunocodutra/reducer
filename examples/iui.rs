@@ -123,7 +123,6 @@ fn run_iui(
         let mut checklist: Vec<Checkbox> = vec![];
         let mut body = body.clone();
         let mut filter = filter.clone();
-        let mut dispatcher = dispatcher.clone();
         let ui = ui.clone();
 
         move || {

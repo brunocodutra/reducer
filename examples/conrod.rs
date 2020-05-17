@@ -332,7 +332,7 @@ fn run_conrod<E: Error + 'static>(
                 }
             }
 
-            if let Some(event) = convert_event(event.clone(), &WindowRef(context.window())) {
+            if let Some(event) = convert_event(event, &WindowRef(context.window())) {
                 ui.handle_event(event);
             }
         });
