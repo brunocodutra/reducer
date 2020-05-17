@@ -70,7 +70,6 @@ jobs:
     - run: cargo +${{ matrix.rust }} test --no-default-features --features alloc
     - run: cargo +${{ matrix.rust }} test --no-default-features --features std
     - run: cargo +${{ matrix.rust }} test --no-default-features --features async
-    - run: cargo +${{ matrix.rust }} test --no-default-features --features deprecated
 
   sanitize:
     needs: [test]

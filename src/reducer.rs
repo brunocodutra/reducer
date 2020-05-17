@@ -1,12 +1,9 @@
 #[cfg(feature = "alloc")]
 mod arc;
-mod array;
 #[cfg(feature = "alloc")]
 mod boxed;
 #[cfg(feature = "alloc")]
 mod rc;
-mod reference;
-mod slice;
 mod tuple;
 
 /// Trait for types that represent the logical state of an application.
