@@ -1,8 +1,8 @@
 use crate::dispatcher::*;
-use futures::channel::mpsc;
+use futures::channel::mpsc::{channel, SendError, Sender};
 use futures::executor::block_on;
 use futures::future::{FutureExt, RemoteHandle};
-use futures::sink::{Sink, SinkExt};
+use futures::sink::{Sink, SinkExt, SinkMapErr};
 use futures::stream::StreamExt;
 use futures::task::{Context, Poll, Spawn, SpawnError, SpawnExt};
 use pin_project::*;
@@ -20,11 +20,10 @@ pub trait SpawnDispatcher {
     /// * successfully if [`RemoteHandle`] is is dropped, unless [`RemoteHandle::forget`] is called.
     /// * with an error if [`Dispatcher::dispatch`] fails.
     ///     * The error can be retrieved by polling [`RemoteHandle`] to completion.
-    #[allow(clippy::type_complexity)]
     fn spawn_dispatcher<D, A, E>(
         &mut self,
         dispatcher: D,
-    ) -> Result<(AsyncDispatcher<A, E>, RemoteHandle<D::Output>), SpawnError>
+    ) -> Result<(AsyncDispatcher<A>, RemoteHandle<D::Output>), SpawnError>
     where
         D: Dispatcher<A, Output = Result<(), E>> + Sink<A, Error = E> + Send + 'static,
         A: Send + 'static,
@@ -35,20 +34,23 @@ impl<S> SpawnDispatcher for S
 where
     S: Spawn + ?Sized,
 {
-    #[allow(clippy::type_complexity)]
     fn spawn_dispatcher<D, A, E>(
         &mut self,
         dispatcher: D,
-    ) -> Result<(AsyncDispatcher<A, E>, RemoteHandle<D::Output>), SpawnError>
+    ) -> Result<(AsyncDispatcher<A>, RemoteHandle<D::Output>), SpawnError>
     where
         D: Dispatcher<A, Output = Result<(), E>> + Sink<A, Error = E> + Send + 'static,
         A: Send + 'static,
         E: Send + 'static,
     {
-        let (tx, rx) = mpsc::channel(0);
-        let (future, handle) = rx.forward(dispatcher).remote_handle();
+        let (tx, rx) = channel(0);
+        let (future, handle) = rx.map(Ok).forward(dispatcher).remote_handle();
+        let dispatcher = AsyncDispatcher {
+            sink: tx.sink_map_err(|_| AsyncDispatcherError::Terminated),
+        };
+
         self.spawn(future)?;
-        Ok((AsyncDispatcher(tx), handle))
+        Ok((dispatcher, handle))
     }
 }
 
@@ -153,7 +155,10 @@ where
 /// ```
 #[pin_project]
 #[derive(Debug, Clone)]
-pub struct AsyncDispatcher<A, E>(#[pin] mpsc::Sender<Result<A, E>>);
+pub struct AsyncDispatcher<A> {
+    #[pin]
+    sink: SinkMapErr<Sender<A>, fn(SendError) -> AsyncDispatcherError>,
+}
 
 /// The error returned when [`AsyncDispatcher`] is unable to dispatch an action (requires [`async`]).
 ///
@@ -177,7 +182,7 @@ impl fmt::Display for AsyncDispatcherError {
 
 impl Error for AsyncDispatcherError {}
 
-impl<A, E> Dispatcher<A> for AsyncDispatcher<A, E> {
+impl<A> Dispatcher<A> for AsyncDispatcher<A> {
     /// Either confirmation that action has been dispatched or the reason why not.
     type Output = Result<(), AsyncDispatcherError>;
 
@@ -193,39 +198,23 @@ impl<A, E> Dispatcher<A> for AsyncDispatcher<A, E> {
     }
 }
 
-impl<A, E> Sink<A> for AsyncDispatcher<A, E> {
+impl<A> Sink<A> for AsyncDispatcher<A> {
     type Error = AsyncDispatcherError;
 
-    #[project]
     fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        #[project]
-        let AsyncDispatcher(tx) = self.project();
-        tx.poll_ready(cx)
-            .map_err(|_| AsyncDispatcherError::Terminated)
+        self.project().sink.poll_ready(cx)
     }
 
-    #[project]
     fn start_send(self: Pin<&mut Self>, action: A) -> Result<(), Self::Error> {
-        #[project]
-        let AsyncDispatcher(tx) = self.project();
-        tx.start_send(Ok(action))
-            .map_err(|_| AsyncDispatcherError::Terminated)
+        self.project().sink.start_send(action)
     }
 
-    #[project]
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        #[project]
-        let AsyncDispatcher(tx) = self.project();
-        tx.poll_flush(cx)
-            .map_err(|_| AsyncDispatcherError::Terminated)
+        self.project().sink.poll_flush(cx)
     }
 
-    #[project]
     fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        #[project]
-        let AsyncDispatcher(tx) = self.project();
-        tx.poll_close(cx)
-            .map_err(|_| AsyncDispatcherError::Terminated)
+        self.project().sink.poll_close(cx)
     }
 }
 
@@ -297,16 +286,14 @@ mod tests {
 
             assert_eq!(dispatcher.dispatch(action), Ok(()));
 
-            while let Ok(()) = dispatcher.dispatch(action) {
-                // Wait for the information to propagate,
-                // that the spawned dispatcher has terminated.
-                yield_now();
+            loop {
+                match dispatcher.dispatch(action) {
+                    // Wait for the information to propagate,
+                    // that the spawned dispatcher has terminated.
+                    Ok(()) => yield_now(),
+                    Err(e) => break assert_eq!(e, AsyncDispatcherError::Terminated),
+                }
             }
-
-            assert_eq!(
-                dispatcher.dispatch(action),
-                Err(AsyncDispatcherError::Terminated)
-            );
 
             assert_eq!(block_on(handle), Err(error));
         }
