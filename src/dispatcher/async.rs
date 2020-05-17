@@ -20,6 +20,99 @@ pub trait SpawnDispatcher {
     /// * successfully if [`RemoteHandle`] is is dropped, unless [`RemoteHandle::forget`] is called.
     /// * with an error if [`Dispatcher::dispatch`] fails.
     ///     * The error can be retrieved by polling [`RemoteHandle`] to completion.
+    ///
+    /// Spawning a [`Dispatcher`] requires all actions to be of the same type `A`;
+    /// an effective way of fulfilling this requirement is to define actions as `enum` variants.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use futures::executor::*;
+    /// use futures::prelude::*;
+    /// use futures::task::*;
+    /// use reducer::*;
+    /// use std::error::Error;
+    /// use std::io::{self, Write};
+    /// use std::pin::Pin;
+    ///
+    /// // The state of your app.
+    /// #[derive(Clone)]
+    /// struct Calculator(i32);
+    ///
+    /// // Actions the user can trigger.
+    /// enum Action {
+    ///     Add(i32),
+    ///     Sub(i32),
+    ///     Mul(i32),
+    ///     Div(i32),
+    /// }
+    ///
+    /// impl Reducer<Action> for Calculator {
+    ///     fn reduce(&mut self, action: Action) {
+    ///         match action {
+    ///             Action::Add(x) => self.0 += x,
+    ///             Action::Sub(x) => self.0 -= x,
+    ///             Action::Mul(x) => self.0 *= x,
+    ///             Action::Div(x) => self.0 /= x,
+    ///         }
+    ///     }
+    /// }
+    ///
+    /// // The user interface.
+    /// struct Console;
+    ///
+    /// impl Reactor<Calculator> for Console {
+    ///     type Error = io::Error;
+    ///     fn react(&mut self, state: &Calculator) -> io::Result<()> {
+    ///         io::stdout().write_fmt(format_args!("{}\n", state.0))
+    ///     }
+    /// }
+    ///
+    /// // Implementing Sink for Console, means it can asynchronously react to state changes.
+    /// impl Sink<Calculator> for Console {
+    ///     type Error = io::Error;
+    ///
+    ///     fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+    ///         Poll::Ready(Ok(()))
+    ///     }
+    ///
+    ///     fn start_send(mut self: Pin<&mut Self>, state: Calculator) -> io::Result<()> {
+    ///         self.react(&state)
+    ///     }
+    ///
+    ///     fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+    ///         Poll::Ready(Ok(()))
+    ///     }
+    ///
+    ///     fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+    ///         Poll::Ready(Ok(()))
+    ///     }
+    /// }
+    ///
+    /// fn main() -> Result<(), Box<dyn Error>> {
+    ///     let store = Store::new(Calculator(0), Console);
+    ///
+    ///     // Spin up a thread-pool.
+    ///     let mut executor = ThreadPool::new()?;
+    ///
+    ///     // Process incoming actions on a background task.
+    ///     let (mut dispatcher, handle) = executor.spawn_dispatcher(store)?;
+    ///
+    ///     dispatcher.dispatch(Action::Add(5))?; // eventually displays "5"
+    ///     dispatcher.dispatch(Action::Mul(3))?; // eventually displays "15"
+    ///     dispatcher.dispatch(Action::Sub(1))?; // eventually displays "14"
+    ///     dispatcher.dispatch(Action::Div(7))?; // eventually displays "2"
+    ///
+    ///     // Closing the AsyncDispatcher signals to the background task that
+    ///     // it can terminate once all pending actions have been processed.
+    ///     block_on(dispatcher.close())?;
+    ///
+    ///     // Wait for the background task to terminate.
+    ///     block_on(handle)?;
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
     fn spawn_dispatcher<D, A, E>(
         &mut self,
         dispatcher: D,
@@ -56,103 +149,10 @@ where
 
 /// A handle that allows dispatching actions on a [spawned] [`Dispatcher`] (requires [`async`]).
 ///
-/// [`AsyncDispatcher`] requires all actions to be of the same type `A`.
-/// An effective way to fulfill this requirement is to define actions as `enum` variants.
-///
 /// This type is a just lightweight handle that may be cloned and sent to other threads.
 ///
 /// [spawned]: trait.SpawnDispatcher.html
 /// [`async`]: index.html#optional-features
-///
-/// # Example
-///
-/// ```rust
-/// use futures::executor::*;
-/// use futures::prelude::*;
-/// use futures::task::*;
-/// use reducer::*;
-/// use std::error::Error;
-/// use std::io::{self, Write};
-/// use std::pin::Pin;
-///
-/// // The state of your app.
-/// #[derive(Clone)]
-/// struct Calculator(i32);
-///
-/// // Actions the user can trigger.
-/// enum Action {
-///     Add(i32),
-///     Sub(i32),
-///     Mul(i32),
-///     Div(i32),
-/// }
-///
-/// impl Reducer<Action> for Calculator {
-///     fn reduce(&mut self, action: Action) {
-///         match action {
-///             Action::Add(x) => self.0 += x,
-///             Action::Sub(x) => self.0 -= x,
-///             Action::Mul(x) => self.0 *= x,
-///             Action::Div(x) => self.0 /= x,
-///         }
-///     }
-/// }
-///
-/// // The user interface.
-/// struct Console;
-///
-/// impl Reactor<Calculator> for Console {
-///     type Error = io::Error;
-///     fn react(&mut self, state: &Calculator) -> io::Result<()> {
-///         io::stdout().write_fmt(format_args!("{}\n", state.0))
-///     }
-/// }
-///
-/// // Implementing Sink for Console, means it can asynchronously react to state changes.
-/// impl Sink<Calculator> for Console {
-///     type Error = io::Error;
-///
-///     fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
-///         Poll::Ready(Ok(()))
-///     }
-///
-///     fn start_send(mut self: Pin<&mut Self>, state: Calculator) -> io::Result<()> {
-///         self.react(&state)
-///     }
-///
-///     fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
-///         Poll::Ready(Ok(()))
-///     }
-///
-///     fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
-///         Poll::Ready(Ok(()))
-///     }
-/// }
-///
-/// fn main() -> Result<(), Box<dyn Error>> {
-///     let store = Store::new(Calculator(0), Console);
-///
-///     // Spin up a thread-pool.
-///     let mut executor = ThreadPool::new()?;
-///
-///     // Process incoming actions on a background task.
-///     let (mut dispatcher, handle) = executor.spawn_dispatcher(store)?;
-///
-///     dispatcher.dispatch(Action::Add(5))?; // eventually displays "5"
-///     dispatcher.dispatch(Action::Mul(3))?; // eventually displays "15"
-///     dispatcher.dispatch(Action::Sub(1))?; // eventually displays "14"
-///     dispatcher.dispatch(Action::Div(7))?; // eventually displays "2"
-///
-///     // Closing the AsyncDispatcher signals to the background task that
-///     // it can terminate once all pending actions have been processed.
-///     block_on(dispatcher.close())?;
-///
-///     // Wait for the background task to terminate.
-///     block_on(handle)?;
-///
-///     Ok(())
-/// }
-/// ```
 #[pin_project]
 #[derive(Debug, Clone)]
 pub struct AsyncDispatcher<A> {
