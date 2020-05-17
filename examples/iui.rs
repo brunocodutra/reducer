@@ -1,11 +1,11 @@
 //! A simple example demonstrating how to implement a Todo List app using Reducer & iui.
 
-use futures::channel::mpsc::{channel, Receiver};
+use futures::executor::*;
 use iui::controls::*;
 use iui::prelude::*;
 use reducer::*;
-use std::error::Error;
-use std::sync::Arc;
+use ring_channel::{ring_channel, RingReceiver};
+use std::{error::Error, num::NonZeroUsize, sync::Arc};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum View {
@@ -82,7 +82,7 @@ impl State {
 
 fn run_iui(
     mut dispatcher: impl Dispatcher<Action> + Clone + 'static,
-    mut states: Receiver<Arc<State>>,
+    mut states: RingReceiver<Arc<State>>,
 ) {
     let ui = UI::init().unwrap();
 
@@ -126,14 +126,8 @@ fn run_iui(
         let ui = ui.clone();
 
         move || {
-            let mut next = None;
-
-            while let Ok(n) = states.try_next() {
-                next = n;
-            }
-
             // Update widgets on state change.
-            if let Some(state) = next {
+            if let Ok(state) = states.try_recv() {
                 // Add new todos
                 let todos = state.get_todos();
                 for (i, (_, todo)) in todos.iter().enumerate().skip(checklist.len()) {
@@ -178,8 +172,8 @@ fn run_iui(
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // Create a channel to synchronize states.
-    let (tx, rx) = channel(0);
+    // Create a channel that always holds the latest state.
+    let (tx, rx) = ring_channel(NonZeroUsize::new(1).unwrap());
 
     // Create a Store to manage the state.
     let store = Store::new(
@@ -188,7 +182,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
 
     // Spin up a thread-pool to run our application.
-    let mut executor = futures::executor::ThreadPool::new()?;
+    let mut executor = ThreadPool::new()?;
 
     // Listen for actions on a separate thread.
     let (dispatcher, handle) = executor.spawn_dispatcher(store)?;
@@ -197,7 +191,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     run_iui(dispatcher, rx);
 
     // Wait for the background thread to complete.
-    futures::executor::block_on(handle)?;
+    block_on(handle)?;
 
     Ok(())
 }

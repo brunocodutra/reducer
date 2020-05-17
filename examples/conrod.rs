@@ -3,7 +3,7 @@
 use conrod_core::*;
 use conrod_gfx::*;
 use conrod_winit::*;
-use futures::channel::mpsc::{channel, Receiver};
+use futures::executor::*;
 use gfx::{format::DepthStencil, Device};
 use gfx_window_glutin::*;
 use glutin::dpi::LogicalSize;
@@ -11,10 +11,8 @@ use glutin::Event::WindowEvent;
 use glutin::WindowEvent::{CloseRequested, Resized};
 use glutin::{ContextBuilder, EventsLoop, WindowBuilder};
 use reducer::*;
-use std::error::Error;
-use std::mem;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
+use ring_channel::{ring_channel, RingReceiver};
+use std::{error::Error, mem, num::NonZeroUsize, sync::Arc, time::*};
 use winit::Window;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -263,7 +261,7 @@ fn render<E: Error + 'static>(
 
 fn run_conrod<E: Error + 'static>(
     mut dispatcher: impl Dispatcher<Action, Output = Result<(), E>>,
-    mut states: Receiver<Arc<State>>,
+    mut states: RingReceiver<Arc<State>>,
 ) -> Result<(), Box<dyn Error>> {
     const WIDTH: f64 = 400.;
     const HEIGHT: f64 = 500.;
@@ -299,7 +297,7 @@ fn run_conrod<E: Error + 'static>(
         // unwrap, instead break the loop
         let LogicalSize { width, height } = match context.window().get_inner_size() {
             Some(s) => s,
-            None => break Ok(()),
+            None => return Ok(()),
         };
 
         // Draw the `Ui` if it has changed.
@@ -338,12 +336,12 @@ fn run_conrod<E: Error + 'static>(
         });
 
         if exit {
-            break Ok(());
+            return Ok(());
         }
 
         // Render at 60fps.
         if Instant::now().duration_since(rerendered_at) > Duration::from_millis(16) {
-            while let Ok(Some(next)) = states.try_next() {
+            if let Ok(next) = states.try_recv() {
                 state = next;
             }
 
@@ -355,8 +353,8 @@ fn run_conrod<E: Error + 'static>(
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // Create a channel to synchronize states.
-    let (tx, rx) = channel(0);
+    // Create a channel that always holds the latest state.
+    let (tx, rx) = ring_channel(NonZeroUsize::new(1).unwrap());
 
     // Create a Store to manage the state.
     let store = Store::new(
@@ -365,7 +363,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
 
     // Spin up a thread-pool to run our application.
-    let mut executor = futures::executor::ThreadPool::new()?;
+    let mut executor = ThreadPool::new()?;
 
     // Listen for actions on a separate thread.
     let (dispatcher, handle) = executor.spawn_dispatcher(store)?;
@@ -374,7 +372,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     run_conrod(dispatcher, rx)?;
 
     // Wait for the background thread to complete.
-    futures::executor::block_on(handle)?;
+    block_on(handle)?;
 
     Ok(())
 }
