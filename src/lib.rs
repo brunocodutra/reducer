@@ -40,10 +40,6 @@
 //!
 //!     Enables integration with [futures-rs](https://crates.io/crates/futures).
 //!
-//! * `deprecated` (enabled by default)
-//!
-//!     Disabling this feature removes all code that has been marked for deprecation.
-//!
 //! [crate `alloc`]: https://doc.rust-lang.org/alloc/
 //! [crate `std`]: https://doc.rust-lang.org/std/
 
