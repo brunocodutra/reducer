@@ -31,6 +31,16 @@ jobs:
         components: clippy
     - run: cargo +stable clippy -- -D warnings
 
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: hecrj/setup-rust-action@master
+      with:
+        rust-version: stable
+    - run: cargo +stable install cargo-audit
+    - run: cargo +stable audit -D
+
   doc:
     runs-on: ubuntu-latest
     steps:
@@ -41,7 +51,7 @@ jobs:
     - run: cargo +nightly doc --all-features
 
   sanitize:
-    needs: [fmt, clippy, doc]
+    needs: [fmt, clippy, audit, doc]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
