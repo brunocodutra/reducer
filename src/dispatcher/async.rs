@@ -1,7 +1,7 @@
 use crate::dispatcher::*;
 use futures::channel::mpsc::{channel, SendError, Sender};
 use futures::executor::block_on;
-use futures::future::{FutureExt, RemoteHandle};
+use futures::future::{FutureExt, RemoteHandle, TryFuture};
 use futures::sink::{Sink, SinkExt, SinkMapErr};
 use futures::stream::StreamExt;
 use futures::task::{Context, Poll, Spawn, SpawnError, SpawnExt};
@@ -11,7 +11,17 @@ use std::{error::Error, fmt, pin::Pin};
 /// Trait for types that can spawn [`Dispatcher`]s as an asynchronous task (requires [`async`]).
 ///
 /// [`async`]: index.html#optional-features
-pub trait SpawnDispatcher {
+pub trait SpawnDispatcher<A, O, E> {
+    /// The type of the result handle returned by [`spawn_dispatcher`].
+    ///
+    /// [`spawn_dispatcher`]: trait.SpawnDispatcher.html#tymethod.spawn_dispatcher
+    type Handle: TryFuture<Ok = O, Error = E>;
+
+    /// The type of the [`Dispatcher`] returned by [`spawn_dispatcher`].
+    ///
+    /// [`spawn_dispatcher`]: trait.SpawnDispatcher.html#tymethod.spawn_dispatcher
+    type Dispatcher: Dispatcher<A>;
+
     /// Spawns a [`Dispatcher`] as a task that will listen to actions dispatched through the
     /// [`AsyncDispatcher`] returned.
     ///
@@ -113,31 +123,26 @@ pub trait SpawnDispatcher {
     ///     Ok(())
     /// }
     /// ```
-    fn spawn_dispatcher<D, A, E>(
-        &mut self,
-        dispatcher: D,
-    ) -> Result<(AsyncDispatcher<A>, RemoteHandle<D::Output>), SpawnError>
+    fn spawn_dispatcher<D>(&mut self, d: D) -> Result<(Self::Dispatcher, Self::Handle), SpawnError>
     where
-        D: Dispatcher<A, Output = Result<(), E>> + Sink<A, Error = E> + Send + 'static,
-        A: Send + 'static,
-        E: Send + 'static;
+        D: Dispatcher<A, Output = Result<O, E>> + Sink<A, Error = E> + Send + 'static;
 }
 
-impl<S> SpawnDispatcher for S
+impl<A, E, S> SpawnDispatcher<A, (), E> for S
 where
+    A: Send + 'static,
+    E: Send + 'static,
     S: Spawn + ?Sized,
 {
-    fn spawn_dispatcher<D, A, E>(
-        &mut self,
-        dispatcher: D,
-    ) -> Result<(AsyncDispatcher<A>, RemoteHandle<D::Output>), SpawnError>
+    type Handle = RemoteHandle<Result<(), E>>;
+    type Dispatcher = AsyncDispatcher<A>;
+
+    fn spawn_dispatcher<D>(&mut self, d: D) -> Result<(Self::Dispatcher, Self::Handle), SpawnError>
     where
         D: Dispatcher<A, Output = Result<(), E>> + Sink<A, Error = E> + Send + 'static,
-        A: Send + 'static,
-        E: Send + 'static,
     {
         let (tx, rx) = channel(0);
-        let (future, handle) = rx.map(Ok).forward(dispatcher).remote_handle();
+        let (future, handle) = rx.map(Ok).forward(d).remote_handle();
         let dispatcher = AsyncDispatcher {
             sink: tx.sink_map_err(|_| AsyncDispatcherError::Terminated),
         };
