@@ -60,6 +60,34 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "async")]
+    use futures::Sink;
+
+    #[cfg(feature = "async")]
+    use std::{pin::Pin, task::Context, task::Poll};
+
+    #[cfg(feature = "async")]
+    #[cfg_attr(tarpaulin, skip)]
+    impl<T: Unpin, E: Unpin> Sink<T> for MockReactor<T, E> {
+        type Error = E;
+
+        fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn start_send(self: Pin<&mut Self>, state: T) -> Result<(), Self::Error> {
+            self.get_mut().react(&state)
+        }
+
+        fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+    }
+
     proptest! {
         #[test]
         fn react(state: u8, result: Result<(), u8>) {

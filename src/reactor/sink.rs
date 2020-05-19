@@ -36,8 +36,10 @@ where
     S: ?Sized + ToOwned,
     T: Sink<S::Owned> + Unpin,
 {
+    /// The reason why the state couldn't be sent through the sink.
     type Error = T::Error;
 
+    /// Sends an owned version of the state through the sink.
     fn react(&mut self, state: &S) -> Result<(), Self::Error> {
         block_on(self.send(state.to_owned()))
     }
@@ -87,12 +89,13 @@ where
     /// thread::spawn(move || {
     ///     reactor.react("1");
     ///     reactor.react("1");
+    ///     reactor.react("2");
     ///     reactor.react("3");
     ///     reactor.react("5");
     ///     reactor.react("8");
     /// });
     ///
-    /// assert_eq!(block_on_stream(rx).collect::<String>(), "11358".to_string());
+    /// assert_eq!(block_on_stream(rx).collect::<String>(), "112358".to_string());
     /// ```
     pub fn from_sink<T>(sink: T) -> AsyncReactor<T>
     where
@@ -108,27 +111,6 @@ mod tests {
     use mockall::predicate::*;
     use proptest::prelude::*;
     use std::{string::String, vec::Vec};
-
-    #[cfg_attr(tarpaulin, skip)]
-    impl<T: Unpin, E: Unpin> Sink<T> for MockReactor<T, E> {
-        type Error = E;
-
-        fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-            Poll::Ready(Ok(()))
-        }
-
-        fn start_send(self: Pin<&mut Self>, state: T) -> Result<(), Self::Error> {
-            self.get_mut().react(&state)
-        }
-
-        fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-            Poll::Ready(Ok(()))
-        }
-
-        fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-            Poll::Ready(Ok(()))
-        }
-    }
 
     proptest! {
         #[test]
