@@ -12,6 +12,7 @@ use std::{borrow::ToOwned, ops::*, pin::Pin};
 /// [`async`]: index.html#optional-features
 /// [`Reactor::from_sink`]: trait.Reactor.html#method.from_sink
 #[pin_project]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct AsyncReactor<T> {
     #[pin]
     sink: T,
