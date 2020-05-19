@@ -21,7 +21,7 @@ members = ["examples/"]
 default = ["alloc", "async", "deprecated"]
 alloc = []
 std = ["alloc"]
-async = ["std", "futures", "pin-project"]
+async = ["std", "futures", "pin-project", "thiserror"]
 deprecated = []
 
 [badges]
@@ -30,6 +30,7 @@ codecov = { repository = "brunocodutra/reducer" }
 [dependencies]
 futures = { version = "0.3.4", optional = true }
 pin-project = { version = "0.4.9", optional = true }
+thiserror = { version = "1.0.18", optional = true }
 
 [dev-dependencies]
 criterion = "0.3.1"
