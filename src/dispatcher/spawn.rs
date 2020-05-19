@@ -4,7 +4,7 @@ use futures::future::{FutureExt, RemoteHandle, TryFuture};
 use futures::sink::{Sink, SinkExt, SinkMapErr};
 use futures::stream::StreamExt;
 use futures::task::{Spawn, SpawnError, SpawnExt};
-use std::{error::Error, fmt};
+use thiserror::Error;
 
 /// Trait for types that can spawn [`Dispatcher`]s as an asynchronous task (requires [`async`]).
 ///
@@ -129,24 +129,14 @@ pub trait SpawnDispatcher<A, O, E> {
 /// The error returned when [`AsyncDispatcher`] is unable to dispatch an action (requires [`async`]).
 ///
 /// [`async`]: index.html#optional-features
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Error)]
 pub enum AsyncDispatcherError {
     /// The [spawned] [`Dispatcher`] has terminated and cannot receive further actions.
     ///
     /// [spawned]: trait.SpawnDispatcher.html
+    #[error("The spawned Dispatcher has terminated and cannot receive further actions")]
     Terminated,
 }
-
-impl fmt::Display for AsyncDispatcherError {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            fmt,
-            "The spawned Dispatcher has terminated and cannot receive further actions"
-        )
-    }
-}
-
-impl Error for AsyncDispatcherError {}
 
 impl<A, E, S> SpawnDispatcher<A, (), E> for S
 where
