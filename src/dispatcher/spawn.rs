@@ -1,12 +1,10 @@
 use crate::dispatcher::*;
 use futures::channel::mpsc::{channel, SendError, Sender};
-use futures::executor::block_on;
 use futures::future::{FutureExt, RemoteHandle, TryFuture};
 use futures::sink::{Sink, SinkExt, SinkMapErr};
 use futures::stream::StreamExt;
-use futures::task::{Context, Poll, Spawn, SpawnError, SpawnExt};
-use pin_project::*;
-use std::{error::Error, fmt, pin::Pin};
+use futures::task::{Spawn, SpawnError, SpawnExt};
+use std::{error::Error, fmt};
 
 /// Trait for types that can spawn [`Dispatcher`]s as an asynchronous task (requires [`async`]).
 ///
@@ -157,6 +155,9 @@ where
     S: Spawn + ?Sized,
 {
     type Handle = RemoteHandle<Result<(), E>>;
+
+    #[doc(hidden)]
+    #[allow(clippy::type_complexity)]
     type Dispatcher = AsyncDispatcher<SinkMapErr<Sender<A>, fn(SendError) -> AsyncDispatcherError>>;
 
     fn spawn_dispatcher<D>(&mut self, d: D) -> Result<(Self::Dispatcher, Self::Handle), SpawnError>
@@ -165,65 +166,12 @@ where
     {
         let (tx, rx) = channel(0);
         let (future, handle) = rx.map(Ok).forward(d).remote_handle();
-        let dispatcher = AsyncDispatcher {
-            sink: tx.sink_map_err::<_, fn(_) -> _>(|_| AsyncDispatcherError::Terminated),
-        };
+        let dispatcher: Self::Dispatcher = Dispatcher::<_, Output = _>::from_sink(
+            tx.sink_map_err(|_| AsyncDispatcherError::Terminated),
+        );
 
         self.spawn(future)?;
         Ok((dispatcher, handle))
-    }
-}
-
-/// A handle that allows dispatching actions on a [spawned] [`Dispatcher`] (requires [`async`]).
-///
-/// This type is a just lightweight handle that may be cloned and sent to other threads.
-///
-/// [spawned]: trait.SpawnDispatcher.html
-/// [`async`]: index.html#optional-features
-#[pin_project]
-#[derive(Debug, Clone)]
-pub struct AsyncDispatcher<T> {
-    #[pin]
-    sink: T,
-}
-
-impl<A, T> Dispatcher<A> for AsyncDispatcher<T>
-where
-    T: Sink<A> + Unpin,
-{
-    /// Either confirmation that action has been dispatched through the sink or the reason why not.
-    type Output = Result<(), T::Error>;
-
-    /// Sends an action through the sink.
-    ///
-    /// Once this call returns, the action may or may not have taken effect,
-    /// but it's guaranteed to eventually do,
-    /// unless the sink is closed in between.
-    fn dispatch(&mut self, action: A) -> Self::Output {
-        block_on(self.send(action))
-    }
-}
-
-impl<A, T> Sink<A> for AsyncDispatcher<T>
-where
-    T: Sink<A>,
-{
-    type Error = T::Error;
-
-    fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.project().sink.poll_ready(cx)
-    }
-
-    fn start_send(self: Pin<&mut Self>, action: A) -> Result<(), Self::Error> {
-        self.project().sink.start_send(action)
-    }
-
-    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.project().sink.poll_flush(cx)
-    }
-
-    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.project().sink.poll_close(cx)
     }
 }
 
@@ -235,27 +183,6 @@ mod tests {
     use mockall::predicate::*;
     use proptest::prelude::*;
     use std::thread::yield_now;
-
-    #[cfg_attr(tarpaulin, skip)]
-    impl<A: Unpin, E: Unpin> Sink<A> for MockDispatcher<A, Result<(), E>> {
-        type Error = E;
-
-        fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-            Poll::Ready(Ok(()))
-        }
-
-        fn start_send(self: Pin<&mut Self>, action: A) -> Result<(), Self::Error> {
-            self.get_mut().dispatch(action)
-        }
-
-        fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-            Poll::Ready(Ok(()))
-        }
-
-        fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-            Poll::Ready(Ok(()))
-        }
-    }
 
     lazy_static! {
         static ref POOL: ThreadPool = ThreadPool::new().unwrap();

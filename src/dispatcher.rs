@@ -1,9 +1,13 @@
 #[cfg(feature = "async")]
-mod r#async;
+mod sink;
+#[cfg(feature = "async")]
+mod spawn;
 mod store;
 
 #[cfg(feature = "async")]
-pub use self::r#async::*;
+pub use self::sink::*;
+#[cfg(feature = "async")]
+pub use self::spawn::*;
 pub use self::store::*;
 
 /// Trait for types that allow dispatching actions.
@@ -24,6 +28,34 @@ mod tests {
         trait Dispatcher<A> {
             type Output = O;
             fn dispatch(&mut self, action: A) -> O;
+        }
+    }
+
+    #[cfg(feature = "async")]
+    use futures::Sink;
+
+    #[cfg(feature = "async")]
+    use std::{pin::Pin, task::Context, task::Poll};
+
+    #[cfg(feature = "async")]
+    #[cfg_attr(tarpaulin, skip)]
+    impl<A: Unpin, E: Unpin> Sink<A> for MockDispatcher<A, Result<(), E>> {
+        type Error = E;
+
+        fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn start_send(self: Pin<&mut Self>, action: A) -> Result<(), Self::Error> {
+            self.get_mut().dispatch(action)
+        }
+
+        fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
         }
     }
 
