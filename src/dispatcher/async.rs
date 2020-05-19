@@ -128,43 +128,6 @@ pub trait SpawnDispatcher<A, O, E> {
         D: Dispatcher<A, Output = Result<O, E>> + Sink<A, Error = E> + Send + 'static;
 }
 
-impl<A, E, S> SpawnDispatcher<A, (), E> for S
-where
-    A: Send + 'static,
-    E: Send + 'static,
-    S: Spawn + ?Sized,
-{
-    type Handle = RemoteHandle<Result<(), E>>;
-    type Dispatcher = AsyncDispatcher<A>;
-
-    fn spawn_dispatcher<D>(&mut self, d: D) -> Result<(Self::Dispatcher, Self::Handle), SpawnError>
-    where
-        D: Dispatcher<A, Output = Result<(), E>> + Sink<A, Error = E> + Send + 'static,
-    {
-        let (tx, rx) = channel(0);
-        let (future, handle) = rx.map(Ok).forward(d).remote_handle();
-        let dispatcher = AsyncDispatcher {
-            sink: tx.sink_map_err(|_| AsyncDispatcherError::Terminated),
-        };
-
-        self.spawn(future)?;
-        Ok((dispatcher, handle))
-    }
-}
-
-/// A handle that allows dispatching actions on a [spawned] [`Dispatcher`] (requires [`async`]).
-///
-/// This type is a just lightweight handle that may be cloned and sent to other threads.
-///
-/// [spawned]: trait.SpawnDispatcher.html
-/// [`async`]: index.html#optional-features
-#[pin_project]
-#[derive(Debug, Clone)]
-pub struct AsyncDispatcher<A> {
-    #[pin]
-    sink: SinkMapErr<Sender<A>, fn(SendError) -> AsyncDispatcherError>,
-}
-
 /// The error returned when [`AsyncDispatcher`] is unable to dispatch an action (requires [`async`]).
 ///
 /// [`async`]: index.html#optional-features
@@ -187,24 +150,65 @@ impl fmt::Display for AsyncDispatcherError {
 
 impl Error for AsyncDispatcherError {}
 
-impl<A> Dispatcher<A> for AsyncDispatcher<A> {
-    /// Either confirmation that action has been dispatched or the reason why not.
-    type Output = Result<(), AsyncDispatcherError>;
+impl<A, E, S> SpawnDispatcher<A, (), E> for S
+where
+    A: Send + 'static,
+    E: Send + 'static,
+    S: Spawn + ?Sized,
+{
+    type Handle = RemoteHandle<Result<(), E>>;
+    type Dispatcher = AsyncDispatcher<SinkMapErr<Sender<A>, fn(SendError) -> AsyncDispatcherError>>;
 
-    /// Sends an action to the associated [spawned] [`Dispatcher`].
+    fn spawn_dispatcher<D>(&mut self, d: D) -> Result<(Self::Dispatcher, Self::Handle), SpawnError>
+    where
+        D: Dispatcher<A, Output = Result<(), E>> + Sink<A, Error = E> + Send + 'static,
+    {
+        let (tx, rx) = channel(0);
+        let (future, handle) = rx.map(Ok).forward(d).remote_handle();
+        let dispatcher = AsyncDispatcher {
+            sink: tx.sink_map_err::<_, fn(_) -> _>(|_| AsyncDispatcherError::Terminated),
+        };
+
+        self.spawn(future)?;
+        Ok((dispatcher, handle))
+    }
+}
+
+/// A handle that allows dispatching actions on a [spawned] [`Dispatcher`] (requires [`async`]).
+///
+/// This type is a just lightweight handle that may be cloned and sent to other threads.
+///
+/// [spawned]: trait.SpawnDispatcher.html
+/// [`async`]: index.html#optional-features
+#[pin_project]
+#[derive(Debug, Clone)]
+pub struct AsyncDispatcher<T> {
+    #[pin]
+    sink: T,
+}
+
+impl<A, T> Dispatcher<A> for AsyncDispatcher<T>
+where
+    T: Sink<A> + Unpin,
+{
+    /// Either confirmation that action has been dispatched through the sink or the reason why not.
+    type Output = Result<(), T::Error>;
+
+    /// Sends an action through the sink.
     ///
     /// Once this call returns, the action may or may not have taken effect,
     /// but it's guaranteed to eventually do,
-    /// unless the [spawned] [`Dispatcher`] terminates in between.
-    ///
-    /// [spawned]: trait.SpawnDispatcher.html
+    /// unless the sink is closed in between.
     fn dispatch(&mut self, action: A) -> Self::Output {
         block_on(self.send(action))
     }
 }
 
-impl<A> Sink<A> for AsyncDispatcher<A> {
-    type Error = AsyncDispatcherError;
+impl<A, T> Sink<A> for AsyncDispatcher<T>
+where
+    T: Sink<A>,
+{
+    type Error = T::Error;
 
     fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.project().sink.poll_ready(cx)
