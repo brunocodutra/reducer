@@ -12,7 +12,7 @@ use std::{ops::*, pin::Pin};
 /// [spawned]: trait.SpawnDispatcher.html
 /// [`async`]: index.html#optional-features
 #[pin_project]
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct AsyncDispatcher<T> {
     #[pin]
     sink: T,
