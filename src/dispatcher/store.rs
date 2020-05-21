@@ -1,7 +1,8 @@
 use crate::dispatcher::Dispatcher;
 use crate::reactor::Reactor;
 use crate::reducer::Reducer;
-use core::{mem, ops::Deref};
+use core::mem::replace;
+use derive_more::Deref;
 
 #[cfg(feature = "async")]
 use pin_project::*;
@@ -76,8 +77,9 @@ use pin_project::*;
 /// }
 /// ```
 #[cfg_attr(feature = "async", pin_project)]
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash, Deref)]
 pub struct Store<S, R: Reactor<S>> {
+    #[deref]
     state: S,
     #[cfg_attr(feature = "async", pin)]
     reactor: R,
@@ -91,17 +93,7 @@ impl<S, R: Reactor<S>> Store<S, R> {
 
     /// Replaces the [`Reactor`] and returns the previous one.
     pub fn subscribe(&mut self, reactor: impl Into<R>) -> R {
-        mem::replace(&mut self.reactor, reactor.into())
-    }
-}
-
-/// View Store as a read-only owning smart pointer to the state.
-impl<S, R: Reactor<S>> Deref for Store<S, R> {
-    type Target = S;
-
-    /// Grants read access to the current state.
-    fn deref(&self) -> &Self::Target {
-        &self.state
+        replace(&mut self.reactor, reactor.into())
     }
 }
 
