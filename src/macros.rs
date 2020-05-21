@@ -4,11 +4,8 @@ macro_rules! count {
     ( $(,)? ) => { 0 };
     ( $a:ident $(,)? ) => { 1 };
     ( $a:ident, $b:ident $(,)? ) => { 2 };
-    ( $a:ident, $b:ident, $c:ident $(,)? ) => { 3 };
-    ( $a:ident, $b:ident, $c:ident, $d:ident $(,)? ) => { 4 };
-    ( $a:ident, $b:ident, $c:ident, $d:ident, $e:ident $(, $rest:ident)* $(,)? ) => {
-        (5 + count!($($rest,)*))
-    };
+    ( $( $a:ident, $b:ident $(,)? )+ ) => { 2 * count!($($a,)*) };
+    ( $a:ident $(, $rest:ident)* $(,)? ) => { 1 + count!($($rest,)*) };
 }
 
 macro_rules! reverse {
