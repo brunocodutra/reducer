@@ -14,12 +14,15 @@ use std::pin::Pin;
 /// [`Reactor::from_sink`]: trait.Reactor.html#method.from_sink
 #[pin_project]
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash, Deref, DerefMut)]
-pub struct AsyncReactor<T> {
+pub struct AsyncReactor<T, F> {
     #[pin]
+    #[deref]
+    #[deref_mut]
     sink: T,
+    with: F,
 }
 
-impl<S, T, E> Reactor<S> for AsyncReactor<T>
+impl<S, T, F, E> Reactor<S> for AsyncReactor<T, F>
 where
     Self: for<'s> Sink<&'s S, Error = E> + Unpin,
 {
@@ -32,10 +35,10 @@ where
     }
 }
 
-impl<S, T> Sink<&S> for AsyncReactor<T>
+impl<S, T, F, O> Sink<&S> for AsyncReactor<T, F>
 where
-    S: Clone,
-    T: Sink<S>,
+    T: Sink<O>,
+    F: for<'s> Fn(&'s S) -> O,
 {
     type Error = T::Error;
 
@@ -43,8 +46,11 @@ where
         self.project().sink.poll_ready(cx)
     }
 
+    #[project]
     fn start_send(self: Pin<&mut Self>, state: &S) -> Result<(), Self::Error> {
-        self.project().sink.start_send(state.clone())
+        #[project]
+        let AsyncReactor { sink, with } = self.project();
+        sink.start_send(with(state))
     }
 
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
@@ -59,6 +65,21 @@ where
 impl<S, E> dyn Reactor<S, Error = E> {
     /// Adapts any type that implements [`Sink`] as a [`Reactor`] (requires [`async`]).
     ///
+    /// This function is equivalent to 
+    /// [`Reactor::<S, Error = E>::from_sink_with(sink, S::clone)`][from_sink_with].
+    ///
+    /// [`async`]: index.html#optional-features
+    /// [from_sink_with]: trait.Reactor.html#method.from_sink_with
+    pub fn from_sink<T>(sink: T) -> AsyncReactor<T, fn(&S) -> S>
+    where
+        S: Clone,
+        T: Sink<S, Error = E> + Unpin,
+    {
+        Reactor::<S, Error = E>::from_sink_with(sink, S::clone)
+    }
+
+    /// Adapts any type that implements [`Sink`] as a [`Reactor`] (requires [`async`]).
+    ///
     /// [`async`]: index.html#optional-features
     ///
     /// # Example
@@ -66,10 +87,10 @@ impl<S, E> dyn Reactor<S, Error = E> {
     /// use reducer::*;
     /// use futures::channel::mpsc::channel;
     /// use futures::executor::block_on_stream;
-    /// use std::thread;
+    /// use std::{thread, string::ToString};
     ///
     /// let (tx, rx) = channel(0);
-    /// let mut reactor = Reactor::<_, Error = _>::from_sink(tx);
+    /// let mut reactor = Reactor::<_, Error = _>::from_sink_with(tx, ToString::to_string);
     ///
     /// thread::spawn(move || {
     ///     reactor.react(&1);
@@ -80,13 +101,14 @@ impl<S, E> dyn Reactor<S, Error = E> {
     ///     reactor.react(&8);
     /// });
     ///
-    /// assert_eq!(block_on_stream(rx).collect::<Vec<_>>(), vec![1, 1, 2, 3, 5, 8]);
+    /// assert_eq!(block_on_stream(rx).collect::<String>(), "112358".to_string());
     /// ```
-    pub fn from_sink<T>(sink: T) -> AsyncReactor<T>
+    pub fn from_sink_with<T, F, O>(sink: T, with: F) -> AsyncReactor<T, F>
     where
-        T: Sink<S, Error = E> + Unpin,
+        T: Sink<O, Error = E> + Unpin,
+        F: for<'s> Fn(&'s S) -> O,
     {
-        AsyncReactor { sink }
+        AsyncReactor { sink, with }
     }
 }
 
