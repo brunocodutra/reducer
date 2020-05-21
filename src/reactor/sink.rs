@@ -4,7 +4,7 @@ use futures::executor::block_on;
 use futures::sink::{Sink, SinkExt};
 use futures::task::{Context, Poll};
 use pin_project::*;
-use std::pin::Pin;
+use std::{borrow::ToOwned, pin::Pin};
 
 /// An adapter for types that implement [`Sink`] to behave as a [`Reactor`] (requires [`async`])
 ///
@@ -24,6 +24,7 @@ pub struct AsyncReactor<T, F> {
 
 impl<S, T, F, E> Reactor<S> for AsyncReactor<T, F>
 where
+    S: ?Sized,
     Self: for<'s> Sink<&'s S, Error = E> + Unpin,
 {
     /// The reason why the state couldn't be sent through the sink.
@@ -37,6 +38,7 @@ where
 
 impl<S, T, F, O> Sink<&S> for AsyncReactor<T, F>
 where
+    S: ?Sized,
     T: Sink<O>,
     F: for<'s> Fn(&'s S) -> O,
 {
@@ -62,20 +64,23 @@ where
     }
 }
 
-impl<S, E> dyn Reactor<S, Error = E> {
+impl<S, E> dyn Reactor<S, Error = E>
+where
+    S: ?Sized,
+{
     /// Adapts any type that implements [`Sink`] as a [`Reactor`] (requires [`async`]).
     ///
-    /// This function is equivalent to 
-    /// [`Reactor::<S, Error = E>::from_sink_with(sink, S::clone)`][from_sink_with].
+    /// This function is equivalent to
+    /// [`Reactor::<S, Error = E>::from_sink_with(sink, S::to_owned)`][from_sink_with].
     ///
     /// [`async`]: index.html#optional-features
     /// [from_sink_with]: trait.Reactor.html#method.from_sink_with
-    pub fn from_sink<T>(sink: T) -> AsyncReactor<T, fn(&S) -> S>
+    pub fn from_sink<T>(sink: T) -> AsyncReactor<T, fn(&S) -> S::Owned>
     where
-        S: Clone,
-        T: Sink<S, Error = E> + Unpin,
+        S: ToOwned,
+        T: Sink<S::Owned, Error = E> + Unpin,
     {
-        Reactor::<S, Error = E>::from_sink_with(sink, S::clone)
+        Reactor::<S, Error = E>::from_sink_with(sink, S::to_owned)
     }
 
     /// Adapts any type that implements [`Sink`] as a [`Reactor`] (requires [`async`]).
@@ -117,7 +122,7 @@ mod tests {
     use super::*;
     use mockall::predicate::*;
     use proptest::prelude::*;
-    use std::ops::*;
+    use std::{ops::*, string::String};
 
     #[test]
     fn deref() {
@@ -129,7 +134,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn react(state: u8, result: Result<(), u8>) {
+        fn react(state: String, result: Result<(), u8>) {
             let mut mock = MockReactor::new();
 
             mock.expect_react()
@@ -137,12 +142,12 @@ mod tests {
                 .times(1)
                 .return_const(result);
 
-            let mut reactor = Reactor::<_, Error = _>::from_sink(mock);
+            let mut reactor = Reactor::<str, Error = _>::from_sink(mock);
             assert_eq!(Reactor::react(&mut reactor, &state), result);
         }
 
         #[test]
-        fn sink(state: u8, result: Result<(), u8>) {
+        fn sink(state: String, result: Result<(), u8>) {
             let mut mock = MockReactor::new();
 
             mock.expect_react()
@@ -150,7 +155,7 @@ mod tests {
                 .times(1)
                 .return_const(result);
 
-            let mut reactor = Reactor::<_, Error = _>::from_sink(mock);
+            let mut reactor = Reactor::<str, Error = _>::from_sink(mock);
             assert_eq!(block_on(reactor.send(&state)), result);
             assert_eq!(block_on(reactor.close()), Ok(()));
         }
