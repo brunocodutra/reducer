@@ -19,23 +19,23 @@ pub struct AsyncReactor<T> {
     sink: T,
 }
 
-impl<S, T> Reactor<S> for AsyncReactor<T>
+impl<S, T, E> Reactor<S> for AsyncReactor<T>
 where
-    S: Clone,
-    T: Sink<S> + Unpin,
+    Self: for<'s> Sink<&'s S, Error = E> + Unpin,
 {
     /// The reason why the state couldn't be sent through the sink.
-    type Error = T::Error;
+    type Error = E;
 
     /// Sends an owned version of the state through the sink.
     fn react(&mut self, state: &S) -> Result<(), Self::Error> {
-        block_on(self.send(state.clone()))
+        block_on(self.send(state))
     }
 }
 
-impl<O, T> Sink<O> for AsyncReactor<T>
+impl<S, T> Sink<&S> for AsyncReactor<T>
 where
-    T: Sink<O>,
+    S: Clone,
+    T: Sink<S>,
 {
     type Error = T::Error;
 
@@ -43,8 +43,8 @@ where
         self.project().sink.poll_ready(cx)
     }
 
-    fn start_send(self: Pin<&mut Self>, state: O) -> Result<(), Self::Error> {
-        self.project().sink.start_send(state)
+    fn start_send(self: Pin<&mut Self>, state: &S) -> Result<(), Self::Error> {
+        self.project().sink.start_send(state.clone())
     }
 
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
@@ -129,7 +129,7 @@ mod tests {
                 .return_const(result);
 
             let mut reactor = Reactor::<_, Error = _>::from_sink(mock);
-            assert_eq!(block_on(reactor.send(state)), result);
+            assert_eq!(block_on(reactor.send(&state)), result);
             assert_eq!(block_on(reactor.close()), Ok(()));
         }
     }

@@ -69,13 +69,6 @@ pub trait SpawnDispatcher<A, O, E> {
     /// // The user interface.
     /// struct Console;
     ///
-    /// impl Reactor<Calculator> for Console {
-    ///     type Error = io::Error;
-    ///     fn react(&mut self, state: &Calculator) -> io::Result<()> {
-    ///         io::stdout().write_fmt(format_args!("{}\n", state.0))
-    ///     }
-    /// }
-    ///
     /// // Implementing Sink for Console, means it can asynchronously react to state changes.
     /// impl Sink<Calculator> for Console {
     ///     type Error = io::Error;
@@ -85,7 +78,7 @@ pub trait SpawnDispatcher<A, O, E> {
     ///     }
     ///
     ///     fn start_send(mut self: Pin<&mut Self>, state: Calculator) -> io::Result<()> {
-    ///         self.react(&state)
+    ///         io::stdout().write_fmt(format_args!("{}\n", state.0))
     ///     }
     ///
     ///     fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
@@ -98,7 +91,7 @@ pub trait SpawnDispatcher<A, O, E> {
     /// }
     ///
     /// fn main() -> Result<(), Box<dyn Error>> {
-    ///     let store = Store::new(Calculator(0), Console);
+    ///     let store = Store::new(Calculator(0), Reactor::<_, Error = _>::from_sink(Console));
     ///
     ///     // Spin up a thread-pool.
     ///     let mut executor = ThreadPool::new()?;
