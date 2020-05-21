@@ -68,14 +68,14 @@ mod tests {
 
     #[cfg(feature = "async")]
     #[cfg_attr(tarpaulin, skip)]
-    impl<T: Unpin, E: Unpin> Sink<T> for MockReactor<T, E> {
+    impl<S: Unpin, E: Unpin> Sink<S> for MockReactor<S, E> {
         type Error = E;
 
         fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
             Poll::Ready(Ok(()))
         }
 
-        fn start_send(self: Pin<&mut Self>, state: T) -> Result<(), Self::Error> {
+        fn start_send(self: Pin<&mut Self>, state: S) -> Result<(), Self::Error> {
             self.get_mut().react(&state)
         }
 

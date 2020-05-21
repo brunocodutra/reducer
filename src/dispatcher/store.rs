@@ -118,15 +118,15 @@ mod sink {
     use super::*;
     use futures::sink::Sink;
     use futures::task::{Context, Poll};
-    use std::{borrow::ToOwned, pin::Pin};
+    use std::pin::Pin;
 
     /// View Store as a Sink of actions (requires [`async`]).
     ///
     /// [`async`]: index.html#optional-features
     impl<A, S, R, E> Sink<A> for Store<S, R>
     where
-        S: Reducer<A> + ToOwned,
-        R: Reactor<S, Error = E> + Sink<S::Owned, Error = E>,
+        S: Reducer<A> + Clone,
+        R: Reactor<S, Error = E> + Sink<S, Error = E>,
     {
         type Error = E;
 
@@ -139,7 +139,7 @@ mod sink {
             #[project]
             let Store { state, reactor } = self.project();
             state.reduce(action);
-            reactor.start_send(state.to_owned())
+            reactor.start_send(state.clone())
         }
 
         fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {

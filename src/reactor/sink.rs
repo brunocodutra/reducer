@@ -4,7 +4,7 @@ use futures::executor::block_on;
 use futures::sink::{Sink, SinkExt};
 use futures::task::{Context, Poll};
 use pin_project::*;
-use std::{borrow::ToOwned, pin::Pin};
+use std::pin::Pin;
 
 /// An adapter for types that implement [`Sink`] to behave as a [`Reactor`] (requires [`async`])
 ///
@@ -21,15 +21,15 @@ pub struct AsyncReactor<T> {
 
 impl<S, T> Reactor<S> for AsyncReactor<T>
 where
-    S: ?Sized + ToOwned,
-    T: Sink<S::Owned> + Unpin,
+    S: Clone,
+    T: Sink<S> + Unpin,
 {
     /// The reason why the state couldn't be sent through the sink.
     type Error = T::Error;
 
     /// Sends an owned version of the state through the sink.
     fn react(&mut self, state: &S) -> Result<(), Self::Error> {
-        block_on(self.send(state.to_owned()))
+        block_on(self.send(state.clone()))
     }
 }
 
@@ -56,10 +56,7 @@ where
     }
 }
 
-impl<S, E> dyn Reactor<S, Error = E>
-where
-    S: ToOwned + ?Sized,
-{
+impl<S, E> dyn Reactor<S, Error = E> {
     /// Adapts any type that implements [`Sink`] as a [`Reactor`] (requires [`async`]).
     ///
     /// [`async`]: index.html#optional-features
@@ -72,22 +69,22 @@ where
     /// use std::thread;
     ///
     /// let (tx, rx) = channel(0);
-    /// let mut reactor = Reactor::<str, Error = _>::from_sink(tx);
+    /// let mut reactor = Reactor::<_, Error = _>::from_sink(tx);
     ///
     /// thread::spawn(move || {
-    ///     reactor.react("1");
-    ///     reactor.react("1");
-    ///     reactor.react("2");
-    ///     reactor.react("3");
-    ///     reactor.react("5");
-    ///     reactor.react("8");
+    ///     reactor.react(&1);
+    ///     reactor.react(&1);
+    ///     reactor.react(&2);
+    ///     reactor.react(&3);
+    ///     reactor.react(&5);
+    ///     reactor.react(&8);
     /// });
     ///
-    /// assert_eq!(block_on_stream(rx).collect::<String>(), "112358".to_string());
+    /// assert_eq!(block_on_stream(rx).collect::<Vec<_>>(), vec![1, 1, 2, 3, 5, 8]);
     /// ```
     pub fn from_sink<T>(sink: T) -> AsyncReactor<T>
     where
-        T: Sink<S::Owned, Error = E> + Unpin,
+        T: Sink<S, Error = E> + Unpin,
     {
         AsyncReactor { sink }
     }
@@ -98,19 +95,19 @@ mod tests {
     use super::*;
     use mockall::predicate::*;
     use proptest::prelude::*;
-    use std::{ops::*, string::String, vec::Vec};
+    use std::ops::*;
+
+    #[test]
+    fn deref() {
+        let mut reactor = Reactor::<(), Error = ()>::from_sink(MockReactor::new());
+
+        assert_eq!(reactor.deref() as *const _, &reactor.sink as *const _);
+        assert_eq!(reactor.deref_mut() as *mut _, &mut reactor.sink as *mut _);
+    }
 
     proptest! {
         #[test]
-        fn deref(mut sink: Vec<String>) {
-            let mut reactor = Reactor::<str, Error = _>::from_sink(sink.clone());
-
-            assert_eq!(reactor.deref(), &sink);
-            assert_eq!(reactor.deref_mut(), &mut sink);
-        }
-
-        #[test]
-        fn react(state: String, result: Result<(), u8>) {
+        fn react(state: u8, result: Result<(), u8>) {
             let mut mock = MockReactor::new();
 
             mock.expect_react()
@@ -118,12 +115,12 @@ mod tests {
                 .times(1)
                 .return_const(result);
 
-            let mut reactor = Reactor::<str, Error = _>::from_sink(mock);
+            let mut reactor = Reactor::<_, Error = _>::from_sink(mock);
             assert_eq!(Reactor::react(&mut reactor, &state), result);
         }
 
         #[test]
-        fn sink(state: String, result: Result<(), u8>) {
+        fn sink(state: u8, result: Result<(), u8>) {
             let mut mock = MockReactor::new();
 
             mock.expect_react()
@@ -131,7 +128,7 @@ mod tests {
                 .times(1)
                 .return_const(result);
 
-            let mut reactor = Reactor::<str, Error = _>::from_sink(mock);
+            let mut reactor = Reactor::<_, Error = _>::from_sink(mock);
             assert_eq!(block_on(reactor.send(state)), result);
             assert_eq!(block_on(reactor.close()), Ok(()));
         }
