@@ -125,8 +125,8 @@ mod sink {
     /// [`async`]: index.html#optional-features
     impl<A, S, R, E> Sink<A> for Store<S, R>
     where
-        S: Reducer<A> + Clone,
-        R: Reactor<S, Error = E> + Sink<S, Error = E>,
+        S: Reducer<A>,
+        R: Reactor<S, Error = E> + for<'s> Sink<&'s S, Error = E>,
     {
         type Error = E;
 
@@ -139,7 +139,7 @@ mod sink {
             #[project]
             let Store { state, reactor } = self.project();
             state.reduce(action);
-            reactor.start_send(state.clone())
+            reactor.start_send(state)
         }
 
         fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
@@ -279,7 +279,7 @@ mod tests {
                 .times(1)
                 .return_const(result);
 
-            let mut store = Store::new(reducer, reactor);
+            let mut store = Store::new(reducer, Reactor::<_, Error = _>::from_sink(reactor));
             assert_eq!(block_on(store.send(action)), result);
             assert_eq!(block_on(store.close()), Ok(()));
         }
