@@ -15,10 +15,10 @@ path = "iui.rs"
 
 [dependencies]
 reducer = { path = ".." }
-conrod_core = "0.69.0"
-conrod_gfx = "0.69.0"
-conrod_winit = "0.69.0"
-futures = { version = "0.3.4", features = ["thread-pool"] }
+conrod_core = "0.70.0"
+conrod_gfx = "0.70.0"
+conrod_winit = "0.70.0"
+futures = { version = "0.3.5", features = ["thread-pool"] }
 gfx = "0.18.2"
 gfx_window_glutin = "0.31.0"
 glutin = "0.21.2"
