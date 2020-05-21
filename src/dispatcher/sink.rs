@@ -1,9 +1,10 @@
 use crate::dispatcher::*;
+use derive_more::{Deref, DerefMut};
 use futures::executor::block_on;
 use futures::sink::{Sink, SinkExt};
 use futures::task::{Context, Poll};
 use pin_project::*;
-use std::{ops::*, pin::Pin};
+use std::pin::Pin;
 
 /// A handle that allows dispatching actions on a [spawned] [`Dispatcher`] (requires [`async`]).
 ///
@@ -12,24 +13,10 @@ use std::{ops::*, pin::Pin};
 /// [spawned]: trait.SpawnDispatcher.html
 /// [`async`]: index.html#optional-features
 #[pin_project]
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash, Deref, DerefMut)]
 pub struct AsyncDispatcher<T> {
     #[pin]
     sink: T,
-}
-
-impl<T> Deref for AsyncDispatcher<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.sink
-    }
-}
-
-impl<T> DerefMut for AsyncDispatcher<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.sink
-    }
 }
 
 impl<A, T> Dispatcher<A> for AsyncDispatcher<T>
@@ -111,7 +98,7 @@ mod tests {
     use super::*;
     use mockall::predicate::*;
     use proptest::prelude::*;
-    use std::vec::Vec;
+    use std::{ops::*, vec::Vec};
 
     proptest! {
         #[test]

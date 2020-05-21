@@ -1,9 +1,10 @@
 use crate::reactor::*;
+use derive_more::{Deref, DerefMut};
 use futures::executor::block_on;
 use futures::sink::{Sink, SinkExt};
 use futures::task::{Context, Poll};
 use pin_project::*;
-use std::{borrow::ToOwned, ops::*, pin::Pin};
+use std::{borrow::ToOwned, pin::Pin};
 
 /// An adapter for types that implement [`Sink`] to behave as a [`Reactor`] (requires [`async`])
 ///
@@ -12,24 +13,10 @@ use std::{borrow::ToOwned, ops::*, pin::Pin};
 /// [`async`]: index.html#optional-features
 /// [`Reactor::from_sink`]: trait.Reactor.html#method.from_sink
 #[pin_project]
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash, Deref, DerefMut)]
 pub struct AsyncReactor<T> {
     #[pin]
     sink: T,
-}
-
-impl<T> Deref for AsyncReactor<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.sink
-    }
-}
-
-impl<T> DerefMut for AsyncReactor<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.sink
-    }
 }
 
 impl<S, T> Reactor<S> for AsyncReactor<T>
@@ -111,7 +98,7 @@ mod tests {
     use super::*;
     use mockall::predicate::*;
     use proptest::prelude::*;
-    use std::{string::String, vec::Vec};
+    use std::{ops::*, string::String, vec::Vec};
 
     proptest! {
         #[test]
