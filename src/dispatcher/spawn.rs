@@ -1,10 +1,10 @@
 use crate::dispatcher::*;
+use derive_more::{Display, Error};
 use futures::channel::mpsc::{channel, SendError, Sender};
 use futures::future::{FutureExt, RemoteHandle, TryFuture};
 use futures::sink::{Sink, SinkExt, SinkMapErr};
 use futures::stream::StreamExt;
 use futures::task::{Spawn, SpawnError, SpawnExt};
-use thiserror::Error;
 
 /// Trait for types that can spawn [`Dispatcher`]s as an asynchronous task (requires [`async`]).
 ///
@@ -122,12 +122,12 @@ pub trait SpawnDispatcher<A, O, E> {
 /// The error returned when [`AsyncDispatcher`] is unable to dispatch an action (requires [`async`]).
 ///
 /// [`async`]: index.html#optional-features
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Error)]
+#[derive(Debug, Display, Copy, Clone, Eq, PartialEq, Hash, Error)]
 pub enum AsyncDispatcherError {
     /// The [spawned] [`Dispatcher`] has terminated and cannot receive further actions.
     ///
     /// [spawned]: trait.SpawnDispatcher.html
-    #[error("The spawned Dispatcher has terminated and cannot receive further actions")]
+    #[display(fmt = "The spawned task has terminated and cannot receive further actions")]
     Terminated,
 }
 
