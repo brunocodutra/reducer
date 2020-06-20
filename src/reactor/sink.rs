@@ -12,7 +12,7 @@ use std::{borrow::ToOwned, pin::Pin};
 ///
 /// [`async`]: index.html#optional-features
 /// [`Reactor::from_sink`]: trait.Reactor.html#method.from_sink
-#[pin_project]
+#[pin_project(project = AsyncReactorProjection)]
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash, Deref, DerefMut)]
 pub struct AsyncReactor<T, F> {
     #[pin]
@@ -48,10 +48,8 @@ where
         self.project().sink.poll_ready(cx)
     }
 
-    #[project]
     fn start_send(self: Pin<&mut Self>, state: &S) -> Result<(), Self::Error> {
-        #[project]
-        let AsyncReactor { sink, with } = self.project();
+        let AsyncReactorProjection { sink, with } = self.project();
         sink.start_send(with(state))
     }
 

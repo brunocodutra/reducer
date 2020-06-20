@@ -76,7 +76,7 @@ use pin_project::*;
 ///     Ok(())
 /// }
 /// ```
-#[cfg_attr(feature = "async", pin_project)]
+#[cfg_attr(feature = "async", pin_project(project = StoreProjection))]
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash, Deref)]
 pub struct Store<S, R: Reactor<S>> {
     #[deref]
@@ -134,10 +134,8 @@ mod sink {
             self.project().reactor.poll_ready(cx)
         }
 
-        #[project]
         fn start_send(self: Pin<&mut Self>, action: A) -> Result<(), Self::Error> {
-            #[project]
-            let Store { state, reactor } = self.project();
+            let StoreProjection { state, reactor } = self.project();
             state.reduce(action);
             reactor.start_send(state)
         }
