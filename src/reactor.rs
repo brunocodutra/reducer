@@ -67,7 +67,6 @@ mod tests {
     use std::{pin::Pin, task::Context, task::Poll};
 
     #[cfg(feature = "async")]
-    #[cfg_attr(tarpaulin, skip)]
     impl<S: Unpin, E: Unpin> Sink<S> for MockReactor<S, E> {
         type Error = E;
 
