@@ -41,7 +41,7 @@ jobs:
       with:
         rust-version: stable
     - run: cargo +stable install cargo-audit
-    - run: cargo +stable audit -D
+    - run: cargo +stable audit
 
   doc:
     runs-on: ubuntu-latest
