@@ -52,7 +52,6 @@ jobs:
         rust-version: nightly
     - run: cargo +nightly doc --all-features
 
-  upgrade:
   test:
     needs: [fmt, clippy, audit, doc]
     runs-on: ${{ matrix.os }}
