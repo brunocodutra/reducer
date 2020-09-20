@@ -28,15 +28,15 @@ deprecated = []
 codecov = { repository = "brunocodutra/reducer" }
 
 [dependencies]
-derive_more = "0.99.7"
+derive_more = "0.99.10"
 futures = { version = "0.3.5", optional = true }
-pin-project = { version = "0.4.17", optional = true }
+pin-project = { version = "0.4.23", optional = true }
 
 [dev-dependencies]
-criterion = "0.3.2"
+criterion = "0.3.3"
 lazy_static = "1.4.0"
-mockall = "0.7.1"
-proptest = "0.9.6"
+mockall = "0.8.1"
+proptest = "0.10.1"
 
 [dev-dependencies.futures]
 version = "0.3.5"
