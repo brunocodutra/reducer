@@ -52,36 +52,8 @@ jobs:
         rust-version: nightly
     - run: cargo +nightly doc --all-features
 
-  sanitize:
-    needs: [fmt, clippy, audit, doc]
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        sanitizer: [address, leak]
-    steps:
-    - uses: actions/checkout@master
-    - uses: hecrj/setup-rust-action@master
-      with:
-        rust-version: nightly
-    - run: RUSTFLAGS="-Z sanitizer=${{ matrix.sanitizer }}" cargo +nightly test --tests --lib --all-features --target x86_64-unknown-linux-gnu
-
-  coverage:
-    needs: sanitize
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@master
-    - uses: hecrj/setup-rust-action@master
-      with:
-        rust-version: nightly
-    - run: cargo +nightly install cargo-tarpaulin
-    - run: for i in 0 1 2; do cargo +nightly tarpaulin --all-features --out Xml && break; done
-    - run: bash <(curl -s https://codecov.io/bash) -C $GITHUB_SHA -B ${GITHUB_REF#refs/heads/} -Z
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
   test:
-    needs: sanitize
+    needs: [fmt, clippy, audit, doc]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -100,8 +72,36 @@ jobs:
     - run: cargo +${{ matrix.rust }} test --no-default-features --features async
     - run: cargo +${{ matrix.rust }} test --no-default-features --features deprecated
 
+  sanitize:
+    needs: [test]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address, leak]
+    steps:
+    - uses: actions/checkout@master
+    - uses: hecrj/setup-rust-action@master
+      with:
+        rust-version: nightly
+    - run: RUSTFLAGS="-Z sanitizer=${{ matrix.sanitizer }}" cargo +nightly test --tests --lib --all-features --target x86_64-unknown-linux-gnu
+
+  coverage:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: hecrj/setup-rust-action@master
+      with:
+        rust-version: nightly
+    - run: cargo +nightly install cargo-tarpaulin
+    - run: for i in 0 1 2; do cargo +nightly tarpaulin --all-features --out Xml && break; done
+    - run: bash <(curl -s https://codecov.io/bash) -C $GITHUB_SHA -B ${GITHUB_REF#refs/heads/} -Z
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
   benchmark:
-    needs: sanitize
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
@@ -111,7 +111,7 @@ jobs:
     - run: cargo +stable bench --all-features
 
   examples:
-    needs: sanitize
+    needs: [test]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
