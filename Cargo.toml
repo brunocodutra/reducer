@@ -28,9 +28,9 @@ deprecated = []
 codecov = { repository = "brunocodutra/reducer" }
 
 [dependencies]
-derive_more = "0.99.10"
+derive_more = "0.99.11"
 futures = { version = "0.3.5", optional = true }
-pin-project = { version = "0.4.23", optional = true }
+pin-project = { version = "0.4.25", optional = true }
 
 [dev-dependencies]
 criterion = "0.3.3"
