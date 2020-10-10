@@ -29,8 +29,8 @@ codecov = { repository = "brunocodutra/reducer" }
 
 [dependencies]
 derive_more = "0.99.11"
-futures = { version = "0.3.5", optional = true }
-pin-project = { version = "0.4.25", optional = true }
+futures = { version = "0.3.6", optional = true }
+pin-project = { version = "0.4.26", optional = true }
 
 [dev-dependencies]
 criterion = "0.3.3"
@@ -39,7 +39,7 @@ mockall = "0.8.1"
 proptest = "0.10.1"
 
 [dev-dependencies.futures]
-version = "0.3.5"
+version = "0.3.6"
 features = ["thread-pool"]
 
 [[bench]]
