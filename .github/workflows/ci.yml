@@ -110,7 +110,7 @@ jobs:
         rust-version: stable
     - run: cargo +stable bench --all-features
 
-  examples:
+  example:
     needs: [test]
     runs-on: ${{ matrix.os }}
     strategy:
@@ -126,9 +126,9 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
     - run: sudo -E apt-get -yq install libgtk-3-dev
       if: matrix.os == 'ubuntu-latest'
-    - run: cargo +stable build -p examples --release
+    - run: cargo +stable build -p example --release
       if: matrix.os != 'macOS-latest'
-    - run: cargo +stable build -p examples --release
+    - run: cargo +stable build -p example --release
       if: matrix.os == 'macOS-latest'
       env:
         CXXFLAGS: '-stdlib=libc++'

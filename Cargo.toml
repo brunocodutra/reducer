@@ -9,13 +9,12 @@ license = "MIT"
 readme = "README.md"
 keywords = ["redux", "flux", "reactive", "state"]
 categories = ["asynchronous", "gui"]
-autoexamples = false
 
 [package.metadata.docs.rs]
 all-features = true
 
 [workspace]
-members = ["examples/"]
+members = ["example/"]
 
 [features]
 default = ["alloc", "async", "deprecated"]

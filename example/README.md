@@ -6,7 +6,7 @@ GUI frameworks.
 To run an example, execute
 
 ```
-> cargo run -p examples --release --bin <NAME>
+> cargo run -p example --release --bin <NAME>
 ```
 
 where `<NAME>` can be one of [conrod] or [iui].
@@ -15,5 +15,5 @@ where `<NAME>` can be one of [conrod] or [iui].
 > `CXXFLAGS+=-stdlib=libc++` to the command above, see
 > [brunocodutra/reducer#1](https://github.com/brunocodutra/reducer/issues/1).
 
-[conrod]:           https://crates.io/crates/Conrod
-[iui]:              https://crates.io/crates/iui
+[conrod]:   https://crates.io/crates/Conrod
+[iui]:      https://crates.io/crates/iui
