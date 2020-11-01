@@ -5,8 +5,3 @@ updates:
     schedule:
       interval: "weekly"
       day: "saturday"
-  - package-ecosystem: "cargo"
-    directory: "/examples/"
-    schedule:
-      interval: "weekly"
-      day: "saturday"
