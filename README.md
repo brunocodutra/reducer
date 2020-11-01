@@ -2,7 +2,7 @@
 
 A platform for reactive programming in Rust that can be used to manage the state of
 any kind of application. It shines when used to drive graphical user interfaces and
-[integrates well with both immediate mode and retained mode GUI frameworks](#examples).
+[integrates well with both immediate mode and retained mode GUI frameworks](#example).
 
 ## Using Reducer
 
@@ -21,9 +21,9 @@ use reducer::*;
 
 The full API documentation is available on [docs.rs][docs.home]
 
-## Examples
+## Example
 
-To see Reducer in action, check out the [examples] directory.
+To see Reducer in action, check out the [example] directory.
 
 ## Contribution
 
@@ -46,7 +46,7 @@ Reducer is distributed under the terms of the MIT license, see [LICENSE] for det
 
 [issues]:           https://github.com/brunocodutra/reducer/issues
 [pulls]:            https://github.com/brunocodutra/reducer/pulls
-[examples]:         https://github.com/brunocodutra/reducer/tree/master/examples
+[example]:         https://github.com/brunocodutra/reducer/tree/master/example
 
 [LICENSE]:          https://github.com/brunocodutra/reducer/blob/master/LICENSE
 [CONTRIBUTING]:     https://github.com/brunocodutra/reducer/blob/master/CONTRIBUTING.md
