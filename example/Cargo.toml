@@ -21,7 +21,7 @@ conrod_winit = "0.70.0"
 futures = { version = "0.3.5", features = ["thread-pool"] }
 gfx = "0.18.2"
 gfx_window_glutin = "0.31.0"
-glutin = "0.21.2"
+glutin = "0.26.0"
 iui = "0.3.0"
 ring-channel = "0.8.2"
 ttf-noto-sans = "0.1.1"
