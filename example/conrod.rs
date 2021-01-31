@@ -17,7 +17,10 @@ use std::time::{Duration, Instant};
 use std::{error::Error, mem, num::NonZeroUsize, sync::Arc};
 
 use futures::executor::{block_on, ThreadPool};
-use reducer::{Dispatcher, Reactor, Reducer, SpawnDispatcher, Store};
+use futures::prelude::*;
+use futures::task::SpawnExt;
+
+use reducer::{Dispatcher, Reactor, Reducer, Store};
 use ring_channel::{ring_channel, RingReceiver};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -321,10 +324,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
 
     // Spin up a thread-pool to run our application.
-    let mut executor = ThreadPool::new()?;
+    let executor = ThreadPool::new()?;
 
-    // Listen for actions on a separate thread.
-    let (dispatcher, handle) = executor.spawn_dispatcher(store)?;
+    // Turn store into an asynchronous task
+    let (task, dispatcher) = store.into_task();
+
+    // Spawn the asynchronous task on a background thread.
+    let (task, handle) = task.remote_handle();
+    executor.spawn(task)?;
 
     // Run the rendering loop.
     run(dispatcher, rx)?;

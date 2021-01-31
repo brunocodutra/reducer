@@ -1,6 +1,6 @@
 use criterion::*;
 use futures::executor::*;
-use futures::sink::*;
+use futures::prelude::*;
 use futures::task::*;
 use reducer::*;
 use std::iter::repeat;
@@ -54,12 +54,15 @@ fn dispatch(c: &mut Criterion) {
     c.bench(
         "async/dispatch",
         Benchmark::new(ACTIONS.to_string(), |b| {
-            let mut executor = ThreadPool::new().unwrap();
+            let executor = ThreadPool::new().unwrap();
 
             b.iter_batched(
                 move || {
                     let store = Store::new(BlackBox, BlackBox);
-                    executor.spawn_dispatcher(store).unwrap()
+                    let (task, dispatcher) = store.into_task();
+                    let (task, handle) = task.remote_handle();
+                    executor.spawn(task).unwrap();
+                    (dispatcher, handle)
                 },
                 |(mut dispatcher, handle)| {
                     for a in 0..ACTIONS {
@@ -82,12 +85,14 @@ fn sink(c: &mut Criterion) {
     c.bench(
         "async/sink",
         Benchmark::new(ACTIONS.to_string(), |b| {
-            let mut executor = ThreadPool::new().unwrap();
+            let executor = ThreadPool::new().unwrap();
 
             b.iter_batched(
                 move || {
                     let store = Store::new(BlackBox, BlackBox);
-                    let (dispatcher, handle) = executor.spawn_dispatcher(store).unwrap();
+                    let (task, dispatcher) = store.into_task();
+                    let (task, handle) = task.remote_handle();
+                    executor.spawn(task).unwrap();
                     (dispatcher, handle, executor.clone())
                 },
                 |(dispatcher, handle, executor)| {

@@ -10,7 +10,7 @@ use std::pin::Pin;
 ///
 /// This type is a just lightweight handle that may be cloned and sent to other threads.
 ///
-/// [spawned]: trait.SpawnDispatcher.html
+/// [spawned]: Store::into_task
 /// [`async`]: index.html#optional-features
 #[pin_project]
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash, Deref, DerefMut)]

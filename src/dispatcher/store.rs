@@ -1,4 +1,4 @@
-use crate::dispatcher::Dispatcher;
+use crate::dispatcher::*;
 use crate::reactor::Reactor;
 use crate::reducer::Reducer;
 use core::mem::replace;
@@ -13,7 +13,7 @@ use pin_project::*;
 /// [dispatching] actions on it.
 /// The associated [`Reactor`] is notified upon every state transition.
 ///
-/// [dispatching]: trait.Dispatcher.html#tymethod.dispatch
+/// [dispatching]: Store::dispatch
 ///
 /// # Example
 ///
@@ -116,6 +116,9 @@ where
 #[cfg(feature = "async")]
 mod sink {
     use super::*;
+    use derive_more::{Display, Error};
+    use futures::channel::mpsc::channel;
+    use futures::prelude::*;
     use futures::sink::Sink;
     use futures::task::{Context, Poll};
     use std::pin::Pin;
@@ -148,6 +151,124 @@ mod sink {
             self.project().reactor.poll_close(cx)
         }
     }
+
+    /// The error returned when dispatching an action to a [spawned] [`Store`] fails
+    /// (requires [`async`]).
+    ///
+    /// [spawned]: Store::into_task
+    /// [`async`]: index.html#optional-features
+    #[derive(Debug, Display, Copy, Clone, Eq, PartialEq, Hash, Error)]
+    pub enum AsyncDispatcherError {
+        /// The [spawned] task has terminated and cannot receive further actions.
+        ///
+        /// [spawned]: Store::into_task
+        #[display(fmt = "The spawned task has terminated and cannot receive further actions")]
+        Terminated,
+    }
+
+    impl<S, R> Store<S, R> {
+        /// Turns the [`Store`] into a task that can be spawned onto an executor
+        /// (requires [`async`]).
+        ///
+        /// Once spawned, the task will receive actions dispatched through the [`Dispatcher`]
+        /// returned.
+        ///
+        /// The task completes
+        /// * successfully if the asynchronous [`Dispatcher`] (or the last of its clones)
+        ///   is dropped or [closed].
+        /// * with an error if [`Store::dispatch`] fails.
+        ///
+        /// Turning a [`Store`] into an asynchronous task requires all actions to be of the same
+        /// type `A`; an effective way of fulfilling this requirement is to define actions as
+        /// `enum` variants.
+        ///
+        /// [`async`]: index.html#optional-features
+        /// [closed]: futures::sink::SinkExt::close
+        ///
+        /// # Example
+        ///
+        /// ```rust
+        /// use futures::executor::{block_on, ThreadPool};
+        /// use futures::prelude::*;
+        /// use futures::task::SpawnExt;
+        /// use reducer::*;
+        /// use std::error::Error;
+        /// use std::io::{self, Write};
+        ///
+        /// // The state of your app.
+        /// #[derive(Clone)]
+        /// struct Calculator(i32);
+        ///
+        /// // Actions the user can trigger.
+        /// enum Action {
+        ///     Add(i32),
+        ///     Sub(i32),
+        ///     Mul(i32),
+        ///     Div(i32),
+        /// }
+        ///
+        /// impl Reducer<Action> for Calculator {
+        ///     fn reduce(&mut self, action: Action) {
+        ///         match action {
+        ///             Action::Add(x) => self.0 += x,
+        ///             Action::Sub(x) => self.0 -= x,
+        ///             Action::Mul(x) => self.0 *= x,
+        ///             Action::Div(x) => self.0 /= x,
+        ///         }
+        ///     }
+        /// }
+        ///
+        /// fn main() -> Result<(), Box<dyn Error>> {
+        ///     let store = Store::new(
+        ///         Calculator(0),
+        ///         Reactor::<_, Error = _>::from_sink(sink::unfold((), |_, state: Calculator| {
+        ///             future::ready(io::stdout().write_fmt(format_args!("{}\n", state.0)))
+        ///         })),
+        ///     );
+        ///
+        ///     // Spin up a thread-pool.
+        ///     let executor = ThreadPool::new()?;
+        ///
+        ///     // Process incoming actions on a background task.
+        ///     let (task, mut dispatcher) = store.into_task();
+        ///     let (task, handle) = task.remote_handle();
+        ///     executor.spawn(task)?;
+        ///
+        ///     dispatcher.dispatch(Action::Add(5))?; // eventually displays "5"
+        ///     dispatcher.dispatch(Action::Mul(3))?; // eventually displays "15"
+        ///     dispatcher.dispatch(Action::Sub(1))?; // eventually displays "14"
+        ///     dispatcher.dispatch(Action::Div(7))?; // eventually displays "2"
+        ///
+        ///     // Closing the AsyncDispatcher signals to the background task that
+        ///     // it can terminate once all pending actions have been processed.
+        ///     block_on(dispatcher.close())?;
+        ///
+        ///     // Wait for the background task to terminate.
+        ///     block_on(handle)?;
+        ///
+        ///     Ok(())
+        /// }
+        /// ```
+        pub fn into_task<A, E>(
+            self,
+        ) -> (
+            impl Future<Output = Result<(), E>>,
+            impl Dispatcher<A, Output = Result<(), AsyncDispatcherError>>
+                + Sink<A, Error = AsyncDispatcherError>
+                + Clone,
+        )
+        where
+            Self: Sink<A, Error = E>,
+        {
+            let (tx, rx) = channel(0);
+            let future = rx.map(Ok).forward(self);
+            let dispatcher = Dispatcher::<_, Output = _>::from_sink(
+                tx.sink_map_err(|_| AsyncDispatcherError::Terminated),
+            );
+
+            (future, dispatcher)
+        }
+    }
 }
 
 #[cfg(feature = "async")]
@@ -162,7 +283,18 @@ mod tests {
     use proptest::prelude::*;
 
     #[cfg(feature = "async")]
-    use futures::{executor::block_on, sink::SinkExt};
+    use futures::{executor::*, prelude::*, task::SpawnExt};
+
+    #[cfg(feature = "async")]
+    use lazy_static::lazy_static;
+
+    #[cfg(feature = "async")]
+    use std::thread::yield_now;
+
+    #[cfg(feature = "async")]
+    lazy_static! {
+        static ref POOL: ThreadPool = ThreadPool::new().unwrap();
+    }
 
     #[test]
     fn default() {
@@ -273,6 +405,91 @@ mod tests {
             let mut store = Store::new(reducer, Reactor::<_, Error = _>::from_sink(reactor));
             assert_eq!(block_on(store.send(action)), result);
             assert_eq!(block_on(store.close()), Ok(()));
+        }
+
+        #[cfg(feature = "async")]
+        #[test]
+        fn spawn(action: u8, result: Result<(), u8>, id: usize) {
+            let mut reducer = MockReducer::new();
+            reducer.expect_id().return_const(id);
+            reducer.expect_clone().returning(move || {
+                let mut mock = MockReducer::new();
+                mock.expect_id().return_const(id);
+                mock.expect_reduce().never();
+                mock.expect_clone().never();
+                mock
+            });
+
+            reducer
+                .expect_reduce()
+                .with(eq(action))
+                .times(1)
+                .return_const(());
+
+            let mut reactor = MockReactor::new();
+            reactor
+                .expect_react()
+                .with(function(move |x: &MockReducer<_>| x.id() == id))
+                .times(1)
+                .return_const(result);
+
+            let store = Store::new(reducer, Reactor::<_, Error = _>::from_sink(reactor));
+            let (task, mut dispatcher) = store.into_task();
+
+            let executor = POOL.clone();
+            let (task, handle) = task.remote_handle();
+            executor.spawn(task)?;
+
+            assert_eq!(dispatcher.dispatch(action), Ok(()));
+            assert_eq!(block_on(dispatcher.close()), Ok(()));
+            assert_eq!(block_on(handle), result);
+        }
+
+        #[cfg(feature = "async")]
+        #[test]
+        fn error(action: u8, error: u8, id: usize) {
+            let mut reducer = MockReducer::new();
+            reducer.expect_id().return_const(id);
+            reducer.expect_clone().returning(move || {
+                let mut mock = MockReducer::new();
+                mock.expect_id().return_const(id);
+                mock.expect_reduce().never();
+                mock.expect_clone().never();
+                mock
+            });
+
+            reducer
+                .expect_reduce()
+                .with(eq(action))
+                .times(1)
+                .return_const(());
+
+            let mut reactor = MockReactor::new();
+            reactor
+                .expect_react()
+                .with(function(move |x: &MockReducer<_>| x.id() == id))
+                .times(1)
+                .return_const(Err(error));
+
+            let store = Store::new(reducer, Reactor::<_, Error = _>::from_sink(reactor));
+            let (task, mut dispatcher) = store.into_task();
+
+            let executor = POOL.clone();
+            let (task, handle) = task.remote_handle();
+            executor.spawn(task)?;
+
+            assert_eq!(dispatcher.dispatch(action), Ok(()));
+
+            loop {
+                match dispatcher.dispatch(action) {
+                    // Wait for the information to propagate,
+                    // that the spawned task has terminated.
+                    Ok(()) => yield_now(),
+                    Err(e) => break assert_eq!(e, AsyncDispatcherError::Terminated),
+                }
+            }
+
+            assert_eq!(block_on(handle), Err(error));
         }
     }
 }

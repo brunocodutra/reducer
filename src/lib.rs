@@ -21,10 +21,10 @@
 //! [updates] its internal state and [notifies] back the _view_.
 //!
 //! [Flux pattern]: https://facebook.github.io/flux/docs/in-depth-overview.html
-//! [dispatches]: struct.Store.html#method.dispatch
-//! [_store_]: struct.Store.html
-//! [updates]: trait.Reducer.html#tymethod.reduce
-//! [notifies]: trait.Reactor.html#tymethod.react
+//! [dispatches]: Store::dispatch
+//! [_store_]: Store
+//! [updates]: Reducer::reduce
+//! [notifies]: Reactor::react
 //!
 //! # Optional Features
 //!
