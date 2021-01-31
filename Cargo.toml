@@ -3,7 +3,7 @@ name = "reducer"
 version = "2.1.1"
 edition = "2018"
 authors = ["Bruno Dutra <brunocodutra@gmail.com>"]
-description= "A predictable reactive framework for Rust apps"
+description = "A predictable reactive framework for Rust apps"
 repository = "https://github.com/brunocodutra/reducer.git"
 license = "MIT"
 readme = "README.md"
@@ -12,9 +12,6 @@ categories = ["asynchronous", "gui"]
 
 [package.metadata.docs.rs]
 all-features = true
-
-[workspace]
-members = ["example/"]
 
 [features]
 default = ["alloc", "async"]
@@ -31,10 +28,18 @@ futures = { version = "0.3.7", optional = true }
 pin-project = { version = "1.0.1", optional = true }
 
 [dev-dependencies]
+conrod_core = "0.71.0"
+conrod_glium = "0.71.0"
+conrod_winit = "0.71.0"
 criterion = "0.3.3"
+glium = "0.28"
+iui = "0.3.0"
 lazy_static = "1.4.0"
 mockall = "0.8.3"
 proptest = "0.10.1"
+ring-channel = "0.8.2"
+ttf-noto-sans = "0.1.1"
+winit = "0.23"
 
 [dev-dependencies.futures]
 version = "0.3.7"
