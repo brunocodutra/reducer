@@ -1,9 +1,10 @@
 //! A simple example demonstrating how to implement a Todo List app using Reducer & iui.
 
-use futures::executor::*;
 use iui::controls::*;
 use iui::prelude::*;
-use reducer::*;
+
+use futures::executor::{block_on, ThreadPool};
+use reducer::{Dispatcher, Reactor, Reducer, SpawnDispatcher, Store};
 use ring_channel::{ring_channel, RingReceiver};
 use std::{error::Error, num::NonZeroUsize, sync::Arc};
 
@@ -80,7 +81,7 @@ impl State {
     }
 }
 
-fn run_iui(
+fn run(
     mut dispatcher: impl Dispatcher<Action> + Clone + 'static,
     mut states: RingReceiver<Arc<State>>,
 ) {
@@ -188,7 +189,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let (dispatcher, handle) = executor.spawn_dispatcher(store)?;
 
     // Run the rendering loop.
-    run_iui(dispatcher, rx);
+    run(dispatcher, rx);
 
     // Wait for the background thread to complete.
     block_on(handle)?;

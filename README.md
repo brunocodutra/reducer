@@ -2,7 +2,7 @@
 
 A platform for reactive programming in Rust that can be used to manage the state of
 any kind of application. It shines when used to drive graphical user interfaces and
-[integrates well with both immediate mode and retained mode GUI frameworks](#example).
+[integrates particularly well with immediate mode GUI frameworks](#example).
 
 ## Using Reducer
 
