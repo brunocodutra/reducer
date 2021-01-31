@@ -1,13 +1,9 @@
 #[cfg(feature = "async")]
 mod sink;
-#[cfg(feature = "async")]
-mod spawn;
 mod store;
 
 #[cfg(feature = "async")]
 pub use self::sink::*;
-#[cfg(feature = "async")]
-pub use self::spawn::*;
 pub use self::store::*;
 
 /// Trait for types that allow dispatching actions.

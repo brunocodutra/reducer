@@ -8,10 +8,11 @@ use std::{borrow::ToOwned, pin::Pin};
 
 /// An adapter for types that implement [`Sink`] to behave as a [`Reactor`] (requires [`async`])
 ///
-/// Returned by [`Reactor::from_sink`].
+/// Returned by [`Reactor::from_sink`] and [`Reactor::from_sink_with`].
 ///
 /// [`async`]: index.html#optional-features
 /// [`Reactor::from_sink`]: trait.Reactor.html#method.from_sink
+/// [`Reactor::from_sink_with`]: trait.Reactor.html#method.from_sink_with
 #[pin_project(project = AsyncReactorProjection)]
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash, Deref, DerefMut)]
 pub struct AsyncReactor<T, F> {
