@@ -71,13 +71,15 @@ mod tests {
     use std::{boxed::Box, vec::Vec};
 
     mock! {
-        pub(crate) Reducer<A: 'static> {
-            fn id(&self) -> usize;
+        pub Reducer<A: 'static> {
+            pub fn id(&self) -> usize;
         }
-        trait Reducer<A> {
+
+        impl<A: 'static> Reducer<A> for Reducer<A> {
             fn reduce(&mut self, action: A);
         }
-        trait Clone {
+
+        impl<A: 'static> Clone for Reducer<A> {
             fn clone(&self) -> Self;
         }
     }
