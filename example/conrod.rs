@@ -13,15 +13,11 @@ use glium::glutin::event_loop::{ControlFlow, EventLoop};
 use glium::glutin::{dpi::LogicalSize, window::WindowBuilder, ContextBuilder};
 use glium::{Display, Surface};
 
-use std::time::{Duration, Instant};
-use std::{error::Error, mem, num::NonZeroUsize, sync::Arc};
-
-use futures::executor::{block_on, ThreadPool};
-use futures::prelude::*;
-use futures::task::SpawnExt;
-
 use reducer::{Dispatcher, Reactor, Reducer, Store};
 use ring_channel::{ring_channel, RingReceiver};
+use smol::{block_on, spawn};
+use std::time::{Duration, Instant};
+use std::{error::Error, mem, num::NonZeroUsize, sync::Arc};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum View {
@@ -323,15 +319,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         Reactor::<Arc<State>, Error = _>::from_sink(tx),
     );
 
-    // Spin up a thread-pool to run our application.
-    let executor = ThreadPool::new()?;
-
     // Turn store into an asynchronous task
     let (task, dispatcher) = store.into_task();
 
     // Spawn the asynchronous task on a background thread.
-    let (task, handle) = task.remote_handle();
-    executor.spawn(task)?;
+    let handle = spawn(task);
 
     // Run the rendering loop.
     run(dispatcher, rx)?;

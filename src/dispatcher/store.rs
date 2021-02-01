@@ -120,8 +120,8 @@ mod sink {
     use futures::channel::mpsc::channel;
     use futures::prelude::*;
     use futures::sink::Sink;
-    use futures::task::{Context, Poll};
     use std::pin::Pin;
+    use std::task::{Context, Poll};
 
     /// View Store as a Sink of actions (requires [`async`]).
     ///
@@ -188,9 +188,8 @@ mod sink {
         /// # Example
         ///
         /// ```rust
-        /// use futures::executor::{block_on, ThreadPool};
+        /// use smol::{block_on, spawn};
         /// use futures::prelude::*;
-        /// use futures::task::SpawnExt;
         /// use reducer::*;
         /// use std::error::Error;
         /// use std::io::{self, Write};
@@ -226,13 +225,9 @@ mod sink {
         ///         })),
         ///     );
         ///
-        ///     // Spin up a thread-pool.
-        ///     let executor = ThreadPool::new()?;
-        ///
         ///     // Process incoming actions on a background task.
         ///     let (task, mut dispatcher) = store.into_task();
-        ///     let (task, handle) = task.remote_handle();
-        ///     executor.spawn(task)?;
+        ///     let handle = spawn(task);
         ///
         ///     dispatcher.dispatch(Action::Add(5))?; // eventually displays "5"
         ///     dispatcher.dispatch(Action::Mul(3))?; // eventually displays "15"
@@ -283,18 +278,13 @@ mod tests {
     use proptest::prelude::*;
 
     #[cfg(feature = "async")]
-    use futures::{executor::*, prelude::*, task::SpawnExt};
+    use futures::SinkExt;
 
     #[cfg(feature = "async")]
-    use lazy_static::lazy_static;
+    use smol::{block_on, spawn};
 
     #[cfg(feature = "async")]
     use std::thread::yield_now;
-
-    #[cfg(feature = "async")]
-    lazy_static! {
-        static ref POOL: ThreadPool = ThreadPool::new().unwrap();
-    }
 
     #[test]
     fn default() {
@@ -409,7 +399,7 @@ mod tests {
 
         #[cfg(feature = "async")]
         #[test]
-        fn spawn(action: u8, result: Result<(), u8>, id: usize) {
+        fn task(action: u8, result: Result<(), u8>, id: usize) {
             let mut reducer = MockReducer::new();
             reducer.expect_id().return_const(id);
             reducer.expect_clone().returning(move || {
@@ -436,9 +426,7 @@ mod tests {
             let store = Store::new(reducer, Reactor::<_, Error = _>::from_sink(reactor));
             let (task, mut dispatcher) = store.into_task();
 
-            let executor = POOL.clone();
-            let (task, handle) = task.remote_handle();
-            executor.spawn(task)?;
+            let handle = spawn(task);
 
             assert_eq!(dispatcher.dispatch(action), Ok(()));
             assert_eq!(block_on(dispatcher.close()), Ok(()));
@@ -474,9 +462,7 @@ mod tests {
             let store = Store::new(reducer, Reactor::<_, Error = _>::from_sink(reactor));
             let (task, mut dispatcher) = store.into_task();
 
-            let executor = POOL.clone();
-            let (task, handle) = task.remote_handle();
-            executor.spawn(task)?;
+            let handle = spawn(task);
 
             assert_eq!(dispatcher.dispatch(action), Ok(()));
 

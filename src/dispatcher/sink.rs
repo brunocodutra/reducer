@@ -2,9 +2,9 @@ use crate::dispatcher::*;
 use derive_more::{Deref, DerefMut};
 use futures::executor::block_on;
 use futures::sink::{Sink, SinkExt};
-use futures::task::{Context, Poll};
 use pin_project::*;
 use std::pin::Pin;
+use std::task::{Context, Poll};
 
 /// A handle that allows dispatching actions on a [spawned] [`Dispatcher`] (requires [`async`]).
 ///
