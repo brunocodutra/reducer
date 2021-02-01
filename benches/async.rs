@@ -1,10 +1,10 @@
 use criterion::*;
-use futures::{never::Never, prelude::*};
+use futures::{sink::drain, SinkExt};
 use reducer::{Dispatcher, Reactor, Reducer, Store};
 use smol::{block_on, spawn};
 use std::iter::repeat;
-use std::pin::Pin;
-use std::task::{Context, Poll};
+
+const ACTIONS: u64 = 500;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 struct BlackBox;
@@ -15,49 +15,17 @@ impl<T> Reducer<T> for BlackBox {
     }
 }
 
-impl<T: Copy> Reactor<T> for BlackBox {
-    type Error = Never;
-
-    fn react(&mut self, &val: &T) -> Result<(), Self::Error> {
-        black_box(val);
-        Ok(())
-    }
-}
-
-impl<T: Copy> Sink<T> for BlackBox {
-    type Error = Never;
-
-    fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        Poll::Ready(Ok(()))
-    }
-
-    fn start_send(self: Pin<&mut Self>, val: T) -> Result<(), Self::Error> {
-        black_box(val);
-        Ok(())
-    }
-
-    fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        Poll::Ready(Ok(()))
-    }
-
-    fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        Poll::Ready(Ok(()))
-    }
-}
-
 fn dispatch(c: &mut Criterion) {
-    const ACTIONS: usize = 50;
-
-    c.bench(
-        "async/dispatch",
-        Benchmark::new(ACTIONS.to_string(), |b| {
+    c.benchmark_group("async")
+        .throughput(Throughput::Elements(ACTIONS))
+        .bench_function("dispatch", |b| {
             b.iter_batched(
                 move || {
-                    let store = Store::new(BlackBox, BlackBox);
-                    let (task, dispatcher) = store.into_task();
-                    (dispatcher, spawn(task))
+                    let reactor = Reactor::<_, Error = _>::from_sink(drain());
+                    let (task, dispatcher) = Store::new(BlackBox, reactor).into_task();
+                    (spawn(task), dispatcher)
                 },
-                |(mut dispatcher, handle)| {
+                |(handle, mut dispatcher)| {
                     for a in 0..ACTIONS {
                         dispatcher.dispatch(a).unwrap();
                     }
@@ -67,25 +35,21 @@ fn dispatch(c: &mut Criterion) {
                 },
                 BatchSize::SmallInput,
             );
-        })
-        .throughput(Throughput::Elements(ACTIONS as u64)),
-    );
+        });
 }
 
 fn sink(c: &mut Criterion) {
-    const ACTIONS: usize = 500;
-
-    c.bench(
-        "async/sink",
-        Benchmark::new(ACTIONS.to_string(), |b| {
+    c.benchmark_group("async")
+        .throughput(Throughput::Elements(ACTIONS))
+        .bench_function("sink", |b| {
             b.iter_batched(
                 move || {
-                    let store = Store::new(BlackBox, BlackBox);
-                    let (task, dispatcher) = store.into_task();
-                    (dispatcher, spawn(task))
+                    let reactor = Reactor::<_, Error = _>::from_sink(drain());
+                    let (task, dispatcher) = Store::new(BlackBox, reactor).into_task();
+                    (spawn(task), dispatcher)
                 },
-                |(dispatcher, handle)| {
-                    for (a, mut d) in repeat(dispatcher).enumerate().take(ACTIONS) {
+                |(handle, dispatcher)| {
+                    for (a, mut d) in repeat(dispatcher).enumerate().take(ACTIONS as usize) {
                         spawn(async move {
                             d.send(a).await.unwrap();
                         })
@@ -96,9 +60,8 @@ fn sink(c: &mut Criterion) {
                 },
                 BatchSize::SmallInput,
             );
-        })
-        .throughput(Throughput::Elements(ACTIONS as u64)),
-    );
+        });
 }
+
 criterion_group!(benches, dispatch, sink);
 criterion_main!(benches);

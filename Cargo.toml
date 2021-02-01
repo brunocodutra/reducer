@@ -31,7 +31,7 @@ futures = { version = "0.3.7", optional = true }
 pin-project = { version = "1.0.1", optional = true }
 
 [dev-dependencies]
-criterion = "0.3.3"
+criterion = "0.3.4"
 mockall = "0.8.3"
 proptest = "0.10.1"
 smol = "1.2.5"
