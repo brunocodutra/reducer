@@ -48,14 +48,16 @@ mod tests {
     use std::{boxed::Box, vec::Vec};
 
     mock! {
-        pub(crate) Reactor<T: 'static, E: 'static> {
-            fn id(&self) -> usize;
+        pub Reactor<T: 'static, E: 'static> {
+            pub fn id(&self) -> usize;
         }
-        trait Reactor<T> {
+
+        impl<T: 'static, E: 'static> Reactor<T> for Reactor<T, E> {
             type Error = E;
             fn react(&mut self, state: &T) -> Result<(), E>;
         }
-        trait Clone {
+
+        impl<T: 'static, E: 'static> Clone for Reactor<T, E> {
             fn clone(&self) -> Self;
         }
     }

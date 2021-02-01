@@ -20,8 +20,8 @@ mod tests {
     use std::{boxed::Box, vec::Vec};
 
     mock! {
-        pub(crate) Dispatcher<A: 'static, O: 'static> {}
-        trait Dispatcher<A> {
+        pub Dispatcher<A: 'static, O: 'static> {}
+        impl<A: 'static, O: 'static> Dispatcher<A> for Dispatcher<A, O> {
             type Output = O;
             fn dispatch(&mut self, action: A) -> O;
         }
