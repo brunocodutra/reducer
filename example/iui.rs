@@ -2,13 +2,9 @@
 
 use iui::controls::*;
 use iui::prelude::*;
-
-use futures::executor::{block_on, ThreadPool};
-use futures::prelude::*;
-use futures::task::SpawnExt;
-
 use reducer::{Dispatcher, Reactor, Reducer, Store};
 use ring_channel::{ring_channel, RingReceiver};
+use smol::{block_on, spawn};
 use std::{error::Error, num::NonZeroUsize, sync::Arc};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -185,15 +181,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         Reactor::<Arc<State>, Error = _>::from_sink(tx),
     );
 
-    // Spin up a thread-pool to run our application.
-    let executor = ThreadPool::new()?;
-
     // Turn store into an asynchronous task
     let (task, dispatcher) = store.into_task();
 
     // Spawn the asynchronous task on a background thread.
-    let (task, handle) = task.remote_handle();
-    executor.spawn(task)?;
+    let handle = spawn(task);
 
     // Run the rendering loop.
     run(dispatcher, rx);

@@ -1,10 +1,10 @@
 use criterion::*;
-use futures::executor::*;
-use futures::prelude::*;
-use futures::task::*;
-use reducer::*;
+use futures::{never::Never, prelude::*};
+use reducer::{Dispatcher, Reactor, Reducer, Store};
+use smol::{block_on, spawn};
 use std::iter::repeat;
 use std::pin::Pin;
+use std::task::{Context, Poll};
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 struct BlackBox;
@@ -14,9 +14,6 @@ impl<T> Reducer<T> for BlackBox {
         black_box(val);
     }
 }
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum Never {}
 
 impl<T: Copy> Reactor<T> for BlackBox {
     type Error = Never;
@@ -54,15 +51,11 @@ fn dispatch(c: &mut Criterion) {
     c.bench(
         "async/dispatch",
         Benchmark::new(ACTIONS.to_string(), |b| {
-            let executor = ThreadPool::new().unwrap();
-
             b.iter_batched(
                 move || {
                     let store = Store::new(BlackBox, BlackBox);
                     let (task, dispatcher) = store.into_task();
-                    let (task, handle) = task.remote_handle();
-                    executor.spawn(task).unwrap();
-                    (dispatcher, handle)
+                    (dispatcher, spawn(task))
                 },
                 |(mut dispatcher, handle)| {
                     for a in 0..ACTIONS {
@@ -85,23 +78,18 @@ fn sink(c: &mut Criterion) {
     c.bench(
         "async/sink",
         Benchmark::new(ACTIONS.to_string(), |b| {
-            let executor = ThreadPool::new().unwrap();
-
             b.iter_batched(
                 move || {
                     let store = Store::new(BlackBox, BlackBox);
                     let (task, dispatcher) = store.into_task();
-                    let (task, handle) = task.remote_handle();
-                    executor.spawn(task).unwrap();
-                    (dispatcher, handle, executor.clone())
+                    (dispatcher, spawn(task))
                 },
-                |(dispatcher, handle, executor)| {
+                |(dispatcher, handle)| {
                     for (a, mut d) in repeat(dispatcher).enumerate().take(ACTIONS) {
-                        executor
-                            .spawn(async move {
-                                d.send(a).await.unwrap();
-                            })
-                            .unwrap();
+                        spawn(async move {
+                            d.send(a).await.unwrap();
+                        })
+                        .detach();
                     }
 
                     block_on(handle).unwrap();

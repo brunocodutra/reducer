@@ -2,8 +2,8 @@ use crate::reactor::*;
 use derive_more::{Deref, DerefMut};
 use futures::executor::block_on;
 use futures::sink::{Sink, SinkExt};
-use futures::task::{Context, Poll};
 use pin_project::*;
+use std::task::{Context, Poll};
 use std::{borrow::ToOwned, pin::Pin};
 
 /// An adapter for types that implement [`Sink`] to behave as a [`Reactor`] (requires [`async`])
