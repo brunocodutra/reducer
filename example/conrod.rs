@@ -275,11 +275,13 @@ fn run<E: Error + 'static>(
 
     event_loop.run(move |event, _, ctrl| {
         // Stop the event loop when the window is closed.
-        if let Event::WindowEvent { ref event, .. } = event {
-            if let WindowEvent::CloseRequested = event {
-                *ctrl = ControlFlow::Exit;
-                return;
-            }
+        if let Event::WindowEvent {
+            event: WindowEvent::CloseRequested,
+            ..
+        } = event
+        {
+            *ctrl = ControlFlow::Exit;
+            return;
         }
 
         // Process window events.
