@@ -49,8 +49,8 @@ jobs:
     - uses: actions/checkout@master
     - uses: hecrj/setup-rust-action@master
       with:
-        rust-version: nightly
-    - run: cargo +nightly doc --all-features
+        rust-version: stable
+    - run: cargo +stable doc --all-features --no-deps
 
   test:
     needs: [fmt, clippy, audit, doc]
