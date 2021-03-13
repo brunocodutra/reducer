@@ -123,7 +123,7 @@ jobs:
         rust-version: stable
     - run: sudo -E apt-get -yq update
       if: matrix.os == 'ubuntu-latest'
-    - run: sudo -E apt-get -yq install libgtk-3-dev
+    - run: sudo -E apt-get -yq install libgtk-3-dev libxcb-shape0-dev libxcb-xfixes0-dev
       if: matrix.os == 'ubuntu-latest'
     - run: cargo +stable build -p example --release
       if: matrix.os != 'macOS-latest'
