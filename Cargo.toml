@@ -33,7 +33,7 @@ pin-project = { version = "1.0.1", optional = true }
 [dev-dependencies]
 criterion = "0.3.4"
 mockall = "0.9.0"
-proptest = "0.10.1"
+proptest = "1.0.0"
 smol = "1.2.5"
 
 [[bench]]
