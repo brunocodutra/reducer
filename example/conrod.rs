@@ -2,7 +2,7 @@
 
 use conrod_core::color::{Colorable, DARK_CHARCOAL, LIGHT_BLUE, WHITE};
 use conrod_core::position::{Positionable, Sizeable};
-use conrod_core::text::FontCollection;
+use conrod_core::text::Font;
 use conrod_core::widget::{text_box, Button, Canvas, List, TextBox, Toggle, Widget};
 use conrod_core::{image, widget_ids, Borderable, Labelable, UiBuilder, UiCell};
 use conrod_glium::Renderer;
@@ -263,7 +263,7 @@ fn run<E: Error + 'static>(
     let display = Display::new(window, context, &event_loop)?;
     let mut renderer = Renderer::new(&display)?;
 
-    let font = FontCollection::from_bytes(ttf_noto_sans::REGULAR)?.into_font()?;
+    let font = Font::from_bytes(ttf_noto_sans::REGULAR)?;
     let mut ui = UiBuilder::new([WIDTH, HEIGHT]).build();
     ui.fonts.insert(font);
 
