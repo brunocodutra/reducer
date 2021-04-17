@@ -16,7 +16,7 @@ path = "iui.rs"
 [dependencies]
 reducer = { path = ".." }
 conrod_core = "0.71.0"
-conrod_glium = "0.71.0"
+conrod_glium = "0.72.0"
 conrod_winit = "0.71.0"
 glium = "0.28"
 iui = "0.3.0"
