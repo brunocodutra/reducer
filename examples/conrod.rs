@@ -285,7 +285,7 @@ fn run<E: Error + 'static>(
         }
 
         // Process window events.
-        if let Some(event) = convert_event(&event, &display.gl_window().window()) {
+        if let Some(event) = convert_event(&event, display.gl_window().window()) {
             ui.handle_event(event);
         }
 
@@ -318,7 +318,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Create a Store to manage the state.
     let store = Store::new(
         Arc::new(State::default()),
-        Reactor::<Arc<State>, Error = _>::from_sink(tx),
+        <dyn Reactor<Arc<State>, Error = _>>::from_sink(tx),
     );
 
     // Turn store into an asynchronous task
