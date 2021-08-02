@@ -257,7 +257,7 @@ mod sink {
         {
             let (tx, rx) = channel(0);
             let future = rx.map(Ok).forward(self);
-            let dispatcher = Dispatcher::<_, Output = _>::from_sink(
+            let dispatcher = <dyn Dispatcher<_, Output = _>>::from_sink(
                 tx.sink_map_err(|_| AsyncDispatcherError::Terminated),
             );
 
@@ -392,7 +392,7 @@ mod tests {
                 .times(1)
                 .return_const(result);
 
-            let mut store = Store::new(reducer, Reactor::<_, Error = _>::from_sink(reactor));
+            let mut store = Store::new(reducer, <dyn Reactor<_, Error = _>>::from_sink(reactor));
             assert_eq!(block_on(store.send(action)), result);
             assert_eq!(block_on(store.close()), Ok(()));
         }
@@ -423,7 +423,7 @@ mod tests {
                 .times(1)
                 .return_const(result);
 
-            let store = Store::new(reducer, Reactor::<_, Error = _>::from_sink(reactor));
+            let store = Store::new(reducer, <dyn Reactor<_, Error = _>>::from_sink(reactor));
             let (task, mut dispatcher) = store.into_task();
 
             let handle = spawn(task);
@@ -459,7 +459,7 @@ mod tests {
                 .times(1)
                 .return_const(Err(error));
 
-            let store = Store::new(reducer, Reactor::<_, Error = _>::from_sink(reactor));
+            let store = Store::new(reducer, <dyn Reactor<_, Error = _>>::from_sink(reactor));
             let (task, mut dispatcher) = store.into_task();
 
             let handle = spawn(task);

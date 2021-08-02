@@ -21,7 +21,7 @@ fn dispatch(c: &mut Criterion) {
         .bench_function("dispatch", |b| {
             b.iter_batched(
                 move || {
-                    let reactor = Reactor::<_, Error = _>::from_sink(drain());
+                    let reactor = <dyn Reactor<_, Error = _>>::from_sink(drain());
                     let (task, dispatcher) = Store::new(BlackBox, reactor).into_task();
                     (spawn(task), dispatcher)
                 },
@@ -44,7 +44,7 @@ fn sink(c: &mut Criterion) {
         .bench_function("sink", |b| {
             b.iter_batched(
                 move || {
-                    let reactor = Reactor::<_, Error = _>::from_sink(drain());
+                    let reactor = <dyn Reactor<_, Error = _>>::from_sink(drain());
                     let (task, dispatcher) = Store::new(BlackBox, reactor).into_task();
                     (spawn(task), dispatcher)
                 },

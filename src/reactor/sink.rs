@@ -79,7 +79,7 @@ where
         S: ToOwned,
         T: Sink<S::Owned, Error = E> + Unpin,
     {
-        Reactor::<S, Error = E>::from_sink_with(sink, S::to_owned)
+        <dyn Reactor<S, Error = E>>::from_sink_with(sink, S::to_owned)
     }
 
     /// Adapts any type that implements [`Sink`] as a [`Reactor`] (requires [`async`]).
@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn deref() {
-        let mut reactor = Reactor::<(), Error = ()>::from_sink(MockReactor::new());
+        let mut reactor = <dyn Reactor<(), Error = ()>>::from_sink(MockReactor::new());
 
         assert_eq!(reactor.deref() as *const _, &reactor.sink as *const _);
         assert_eq!(reactor.deref_mut() as *mut _, &mut reactor.sink as *mut _);
@@ -141,7 +141,7 @@ mod tests {
                 .times(1)
                 .return_const(result);
 
-            let mut reactor = Reactor::<str, Error = _>::from_sink(mock);
+            let mut reactor = <dyn Reactor<str, Error = _>>::from_sink(mock);
             assert_eq!(Reactor::react(&mut reactor, &state), result);
         }
 
@@ -154,7 +154,7 @@ mod tests {
                 .times(1)
                 .return_const(result);
 
-            let mut reactor = Reactor::<str, Error = _>::from_sink(mock);
+            let mut reactor = <dyn Reactor<str, Error = _>>::from_sink(mock);
             assert_eq!(block_on(reactor.send(&state)), result);
             assert_eq!(block_on(reactor.close()), Ok(()));
         }

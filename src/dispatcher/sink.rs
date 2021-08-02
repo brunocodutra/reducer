@@ -103,7 +103,7 @@ mod tests {
     proptest! {
         #[test]
         fn deref(mut sink: Vec<u8>) {
-            let mut dispatcher = Dispatcher::<_, Output = _>::from_sink(sink.clone());
+            let mut dispatcher = <dyn Dispatcher<_, Output = _>>::from_sink(sink.clone());
 
             assert_eq!(dispatcher.deref(), &sink);
             assert_eq!(dispatcher.deref_mut(), &mut sink);
@@ -118,7 +118,7 @@ mod tests {
                 .times(1)
                 .return_const(result);
 
-            let mut dispatcher = Dispatcher::<_, Output = _>::from_sink(mock);
+            let mut dispatcher = <dyn Dispatcher<_, Output = _>>::from_sink(mock);
             assert_eq!(Dispatcher::dispatch(&mut dispatcher, action), result);
         }
 
@@ -131,7 +131,7 @@ mod tests {
                 .times(1)
                 .return_const(result);
 
-            let mut dispatcher = Dispatcher::<_, Output = _>::from_sink(mock);
+            let mut dispatcher = <dyn Dispatcher<_, Output = _>>::from_sink(mock);
             assert_eq!(block_on(dispatcher.send(action)), result);
             assert_eq!(block_on(dispatcher.close()), Ok(()));
         }
