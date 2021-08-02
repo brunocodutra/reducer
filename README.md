@@ -1,4 +1,4 @@
-# Reducer [![crate.badge]][crate.home] [![docs.badge]][docs.home] [![codecov.badge]][codecov.home]
+# Reducer [![docs.badge]][docs.home] [![codecov.badge]][codecov.home]
 
 A platform for reactive programming in Rust that can be used to manage the state of
 any kind of application. It shines when used to drive graphical user interfaces and
@@ -39,9 +39,6 @@ guidelines.
 ## License
 
 Reducer is distributed under the terms of the MIT license, see [LICENSE] for details.
-
-[crate.home]:       https://crates.io/crates/reducer
-[crate.badge]:      https://meritbadge.herokuapp.com/reducer
 
 [docs.home]:        https://docs.rs/reducer
 [docs.badge]:       https://docs.rs/reducer/badge.svg
