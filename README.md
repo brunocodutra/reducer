@@ -2,7 +2,7 @@
 
 A platform for reactive programming in Rust that can be used to manage the state of
 any kind of application. It shines when used to drive graphical user interfaces and
-[integrates particularly well with immediate mode GUI frameworks](#example).
+[integrates particularly well with immediate mode GUI frameworks](#examples).
 
 ## Using Reducer
 
@@ -21,9 +21,14 @@ use reducer::*;
 
 The full API documentation is available on [docs.rs][docs.home]
 
-## Example
+## Examples
 
-To see Reducer in action, check out the [example] directory.
+The [examples] folder contains the implementation of a simple Todo List app using Reducer 
+and [Conrod].
+
+```
+> cargo run --release --example conrod
+```
 
 ## Contribution
 
@@ -44,9 +49,11 @@ Reducer is distributed under the terms of the MIT license, see [LICENSE] for det
 [codecov.home]:     https://codecov.io/gh/brunocodutra/reducer
 [codecov.badge]:    https://codecov.io/gh/brunocodutra/reducer/branch/master/graph/badge.svg
 
+[Conrod]:           https://crates.io/crates/Conrod
+
 [issues]:           https://github.com/brunocodutra/reducer/issues
 [pulls]:            https://github.com/brunocodutra/reducer/pulls
-[example]:         https://github.com/brunocodutra/reducer/tree/master/example
+[examples]:         https://github.com/brunocodutra/reducer/tree/master/examples
 
 [LICENSE]:          https://github.com/brunocodutra/reducer/blob/master/LICENSE
 [CONTRIBUTING]:     https://github.com/brunocodutra/reducer/blob/master/CONTRIBUTING.md

@@ -29,9 +29,7 @@ jobs:
       with:
         rust-version: stable
         components: clippy
-    - run: sudo -E apt-get -yq update
-    - run: sudo -E apt-get -yq install libgtk-3-dev
-    - run: cargo +stable clippy --all-targets --workspace -- -D warnings
+    - run: cargo +stable clippy --all-targets -- -D warnings
 
   audit:
     runs-on: ubuntu-latest
@@ -65,6 +63,10 @@ jobs:
     - uses: hecrj/setup-rust-action@master
       with:
         rust-version: ${{ matrix.rust }}
+    - run: sudo -E apt-get -yq update
+      if: matrix.os == 'ubuntu-latest'
+    - run: sudo -E apt-get -yq install libxcb-shape0-dev libxcb-xfixes0-dev
+      if: matrix.os == 'ubuntu-latest'
     - run: cargo +${{ matrix.rust }} test
     - run: cargo +${{ matrix.rust }} test --no-default-features
     - run: cargo +${{ matrix.rust }} test --no-default-features --features alloc
@@ -109,7 +111,7 @@ jobs:
         rust-version: stable
     - run: cargo +stable bench --all-features
 
-  example:
+  examples:
     needs: [test]
     runs-on: ${{ matrix.os }}
     strategy:
@@ -123,11 +125,6 @@ jobs:
         rust-version: stable
     - run: sudo -E apt-get -yq update
       if: matrix.os == 'ubuntu-latest'
-    - run: sudo -E apt-get -yq install libgtk-3-dev libxcb-shape0-dev libxcb-xfixes0-dev
+    - run: sudo -E apt-get -yq install libxcb-shape0-dev libxcb-xfixes0-dev
       if: matrix.os == 'ubuntu-latest'
-    - run: cargo +stable build -p example --release
-      if: matrix.os != 'macOS-latest'
-    - run: cargo +stable build -p example --release
-      if: matrix.os == 'macOS-latest'
-      env:
-        CXXFLAGS: '-stdlib=libc++'
+    - run: cargo +stable build --release --examples
