@@ -28,7 +28,7 @@ futures = { version = "0.3.7", optional = true }
 pin-project = { version = "1.0.1", optional = true }
 
 [dev-dependencies]
-conrod_core = "0.72.0"
+conrod_core = "0.74.0"
 conrod_glium = "0.72.0"
 conrod_winit = "0.72.0"
 criterion = "0.3.4"
