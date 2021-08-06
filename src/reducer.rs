@@ -68,7 +68,6 @@ mod tests {
     use super::*;
     use mockall::{predicate::*, *};
     use proptest::prelude::*;
-    use std::{boxed::Box, vec::Vec};
 
     mock! {
         pub Reducer<A: 'static> {
