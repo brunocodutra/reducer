@@ -15,40 +15,53 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - uses: hecrj/setup-rust-action@master
+    - uses: actions-rs/toolchain@v1
       with:
-        rust-version: stable
+        override: true
+        profile: minimal
+        toolchain: stable
         components: rustfmt
-    - run: cargo +stable fmt --all -- --check
+    - uses: actions-rs/cargo@v1
+      with:
+        command: fmt
+        args: --all -- --check
 
   clippy:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - uses: hecrj/setup-rust-action@master
+    - uses: actions-rs/toolchain@v1
       with:
-        rust-version: stable
+        override: true
+        profile: minimal
+        toolchain: stable
         components: clippy
-    - run: cargo +stable clippy --all-targets -- -D warnings
+    - uses: actions-rs/clippy-check@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        args: --all-targets -- -D warnings
 
   audit:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - uses: hecrj/setup-rust-action@master
+    - uses: actions-rs/audit-check@v1
       with:
-        rust-version: stable
-    - run: cargo +stable install cargo-audit
-    - run: cargo +stable audit --ignore RUSTSEC-2021-0019
+        token: ${{ secrets.GITHUB_TOKEN }}
 
   doc:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - uses: hecrj/setup-rust-action@master
+    - uses: actions-rs/toolchain@v1
       with:
-        rust-version: stable
-    - run: cargo +stable doc --all-features --no-deps
+        override: true
+        profile: minimal
+        toolchain: stable
+    - uses: actions-rs/cargo@v1
+      with:
+        command: doc
+        args: --all-features --no-deps
 
   test:
     needs: [fmt, clippy, audit, doc]
@@ -59,19 +72,35 @@ jobs:
         os: [ubuntu-latest, windows-latest, macOS-latest]
         rust: [stable, nightly]
     steps:
-    - uses: actions/checkout@master
-    - uses: hecrj/setup-rust-action@master
-      with:
-        rust-version: ${{ matrix.rust }}
     - run: sudo -E apt-get -yq update
       if: matrix.os == 'ubuntu-latest'
     - run: sudo -E apt-get -yq install libxcb-shape0-dev libxcb-xfixes0-dev
       if: matrix.os == 'ubuntu-latest'
-    - run: cargo +${{ matrix.rust }} test
-    - run: cargo +${{ matrix.rust }} test --no-default-features
-    - run: cargo +${{ matrix.rust }} test --no-default-features --features alloc
-    - run: cargo +${{ matrix.rust }} test --no-default-features --features std
-    - run: cargo +${{ matrix.rust }} test --no-default-features --features async
+    - uses: actions/checkout@master
+    - uses: actions-rs/toolchain@v1
+      with:
+        override: true
+        profile: minimal
+        toolchain: ${{ matrix.rust }}
+    - uses: actions-rs/cargo@v1
+      with:
+        command: test
+    - uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --no-default-features
+    - uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --no-default-features --features alloc
+    - uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --no-default-features --features std
+    - uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --no-default-features --features async
 
   sanitize:
     needs: [test]
@@ -82,34 +111,50 @@ jobs:
         sanitizer: [address, leak]
     steps:
     - uses: actions/checkout@master
-    - uses: hecrj/setup-rust-action@master
+    - uses: actions-rs/toolchain@v1
       with:
-        rust-version: nightly
-    - run: RUSTFLAGS="-Z sanitizer=${{ matrix.sanitizer }}" cargo +nightly test --tests --lib --all-features --target x86_64-unknown-linux-gnu
+        override: true
+        profile: minimal
+        toolchain: nightly
+    - uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --tests --lib --all-features --target x86_64-unknown-linux-gnu
+      env:
+        RUSTFLAGS: "-Z sanitizer=${{ matrix.sanitizer }}"
 
   coverage:
     needs: [test]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - uses: hecrj/setup-rust-action@master
+    - uses: actions-rs/toolchain@v1
       with:
-        rust-version: nightly
-    - run: cargo +nightly install cargo-tarpaulin
-    - run: cargo +nightly tarpaulin --all-features --avoid-cfg-tarpaulin --out Xml
-    - run: bash <(curl -s https://codecov.io/bash) -C $GITHUB_SHA -B ${GITHUB_REF#refs/heads/} -Z
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        override: true
+        profile: minimal
+        toolchain: stable
+    - uses: actions-rs/tarpaulin@v0.1
+      with:
+        args: --all-features --avoid-cfg-tarpaulin
+    - uses: codecov/codecov-action@v2
+      with:
+        token: ${{secrets.CODECOV_TOKEN}}
+        fail_ci_if_error: true
 
   benchmark:
     needs: [test]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - uses: hecrj/setup-rust-action@master
+    - uses: actions-rs/toolchain@v1
       with:
-        rust-version: stable
-    - run: cargo +stable bench --all-features
+        override: true
+        profile: minimal
+        toolchain: stable
+    - uses: actions-rs/cargo@v1
+      with:
+        command: bench
+        args: --all-features
 
   examples:
     needs: [test]
@@ -119,12 +164,17 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
     steps:
-    - uses: actions/checkout@master
-    - uses: hecrj/setup-rust-action@master
-      with:
-        rust-version: stable
     - run: sudo -E apt-get -yq update
       if: matrix.os == 'ubuntu-latest'
     - run: sudo -E apt-get -yq install libxcb-shape0-dev libxcb-xfixes0-dev
       if: matrix.os == 'ubuntu-latest'
-    - run: cargo +stable build --release --examples
+    - uses: actions/checkout@master
+    - uses: actions-rs/toolchain@v1
+      with:
+        override: true
+        profile: minimal
+        toolchain: stable
+    - uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --release --examples
