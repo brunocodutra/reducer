@@ -9,7 +9,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - uses: hecrj/setup-rust-action@master
+    - uses: actions-rs/toolchain@v1
       with:
-        rust-version: stable
-    - run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        override: true
+        profile: minimal
+        toolchain: stable
+    - uses: actions-rs/cargo@v1
+      with:
+        command: publish
+        args: --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
