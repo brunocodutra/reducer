@@ -1,11 +1,11 @@
-use crate::dispatcher::*;
+use crate::dispatcher::Dispatcher;
 use crate::reactor::Reactor;
 use crate::reducer::Reducer;
 use core::mem::replace;
 use derive_more::Deref;
 
 #[cfg(feature = "async")]
-use pin_project::*;
+use pin_project::pin_project;
 
 /// A reactive state container.
 ///
@@ -76,7 +76,7 @@ use pin_project::*;
 ///     Ok(())
 /// }
 /// ```
-#[cfg_attr(feature = "async", pin_project(project = StoreProjection))]
+#[cfg_attr(feature = "async", pin_project(project = PinnedStore))]
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash, Deref)]
 pub struct Store<S, R> {
     #[deref]
@@ -116,6 +116,7 @@ where
 #[cfg(feature = "async")]
 mod sink {
     use super::*;
+    use crate::dispatcher::AsyncDispatcher;
     use derive_more::{Display, Error};
     use futures::channel::mpsc::channel;
     use futures::prelude::*;
@@ -138,7 +139,7 @@ mod sink {
         }
 
         fn start_send(self: Pin<&mut Self>, action: A) -> Result<(), Self::Error> {
-            let StoreProjection { state, reactor } = self.project();
+            let PinnedStore { state, reactor } = self.project();
             state.reduce(action);
             reactor.start_send(state)
         }
@@ -158,7 +159,7 @@ mod sink {
     /// [spawned]: Store::into_task
     /// [`async`]: index.html#optional-features
     #[derive(Debug, Display, Copy, Clone, Eq, PartialEq, Hash, Error)]
-    pub enum AsyncDispatcherError {
+    pub enum DispatchError {
         /// The [spawned] task has terminated and cannot receive further actions.
         ///
         /// [spawned]: Store::into_task
@@ -170,8 +171,8 @@ mod sink {
         /// Turns the [`Store`] into a task that can be spawned onto an executor
         /// (requires [`async`]).
         ///
-        /// Once spawned, the task will receive actions dispatched through the [`Dispatcher`]
-        /// returned.
+        /// Once spawned, the task will receive actions dispatched through a lightweight
+        /// [`Dispatcher`] handle that can be cloned and sent to other threads.
         ///
         /// The task completes
         /// * successfully if the asynchronous [`Dispatcher`] (or the last of its clones)
@@ -188,9 +189,9 @@ mod sink {
         /// # Example
         ///
         /// ```rust
-        /// use smol::{block_on, spawn};
-        /// use futures::prelude::*;
         /// use reducer::*;
+        /// use futures::prelude::*;
+        /// use smol::{block_on, spawn};
         /// use std::error::Error;
         /// use std::io::{self, Write};
         ///
@@ -220,8 +221,8 @@ mod sink {
         /// fn main() -> Result<(), Box<dyn Error>> {
         ///     let store = Store::new(
         ///         Calculator(0),
-        ///         Reactor::<_, Error = _>::from_sink(sink::unfold((), |_, state: Calculator| {
-        ///             future::ready(io::stdout().write_fmt(format_args!("{}\n", state.0)))
+        ///         AsyncReactor(sink::unfold((), |_, state: Calculator| async move {
+        ///             writeln!(&mut io::stdout(), "{}", state.0)
         ///         })),
         ///     );
         ///
@@ -229,12 +230,12 @@ mod sink {
         ///     let (task, mut dispatcher) = store.into_task();
         ///     let handle = spawn(task);
         ///
-        ///     dispatcher.dispatch(Action::Add(5))?; // eventually displays "5"
-        ///     dispatcher.dispatch(Action::Mul(3))?; // eventually displays "15"
-        ///     dispatcher.dispatch(Action::Sub(1))?; // eventually displays "14"
-        ///     dispatcher.dispatch(Action::Div(7))?; // eventually displays "2"
+        ///     dispatcher.dispatch(Action::Add(5))?; // asynchronously prints "5" to stdout
+        ///     dispatcher.dispatch(Action::Mul(3))?; // asynchronously prints "15" to stdout
+        ///     dispatcher.dispatch(Action::Sub(1))?; // asynchronously prints "14" to stdout
+        ///     dispatcher.dispatch(Action::Div(7))?; // asynchronously prints "2" to stdout
         ///
-        ///     // Closing the AsyncDispatcher signals to the background task that
+        ///     // Closing the asynchronous dispatcher signals to the background task that
         ///     // it can terminate once all pending actions have been processed.
         ///     block_on(dispatcher.close())?;
         ///
@@ -248,8 +249,8 @@ mod sink {
             self,
         ) -> (
             impl Future<Output = Result<(), E>>,
-            impl Dispatcher<A, Output = Result<(), AsyncDispatcherError>>
-                + Sink<A, Error = AsyncDispatcherError>
+            impl Dispatcher<A, Output = Result<(), DispatchError>>
+                + Sink<A, Error = DispatchError>
                 + Clone,
         )
         where
@@ -257,9 +258,7 @@ mod sink {
         {
             let (tx, rx) = channel(0);
             let future = rx.map(Ok).forward(self);
-            let dispatcher = <dyn Dispatcher<_, Output = _>>::from_sink(
-                tx.sink_map_err(|_| AsyncDispatcherError::Terminated),
-            );
+            let dispatcher = AsyncDispatcher(tx.sink_map_err(|_| DispatchError::Terminated));
 
             (future, dispatcher)
         }
@@ -276,6 +275,9 @@ mod tests {
     use crate::reducer::MockReducer;
     use mockall::predicate::*;
     use proptest::prelude::*;
+
+    #[cfg(feature = "async")]
+    use crate::reactor::AsyncReactor;
 
     #[cfg(feature = "async")]
     use futures::SinkExt;
@@ -392,7 +394,7 @@ mod tests {
                 .times(1)
                 .return_const(result);
 
-            let mut store = Store::new(reducer, <dyn Reactor<_, Error = _>>::from_sink(reactor));
+            let mut store = Store::new(reducer, AsyncReactor(reactor));
             assert_eq!(block_on(store.send(action)), result);
             assert_eq!(block_on(store.close()), Ok(()));
         }
@@ -423,7 +425,7 @@ mod tests {
                 .times(1)
                 .return_const(result);
 
-            let store = Store::new(reducer, <dyn Reactor<_, Error = _>>::from_sink(reactor));
+            let store = Store::new(reducer, AsyncReactor(reactor));
             let (task, mut dispatcher) = store.into_task();
 
             let handle = spawn(task);
@@ -459,7 +461,7 @@ mod tests {
                 .times(1)
                 .return_const(Err(error));
 
-            let store = Store::new(reducer, <dyn Reactor<_, Error = _>>::from_sink(reactor));
+            let store = Store::new(reducer, AsyncReactor(reactor));
             let (task, mut dispatcher) = store.into_task();
 
             let handle = spawn(task);
@@ -471,7 +473,7 @@ mod tests {
                     // Wait for the information to propagate,
                     // that the spawned task has terminated.
                     Ok(()) => yield_now(),
-                    Err(e) => break assert_eq!(e, AsyncDispatcherError::Terminated),
+                    Err(e) => break assert_eq!(e, DispatchError::Terminated),
                 }
             }
 

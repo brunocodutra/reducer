@@ -13,7 +13,7 @@ use glium::glutin::event_loop::{ControlFlow, EventLoop};
 use glium::glutin::{dpi::LogicalSize, window::WindowBuilder, ContextBuilder};
 use glium::{Display, Surface};
 
-use reducer::{Dispatcher, Reactor, Reducer, Store};
+use reducer::{AsyncReactor, Dispatcher, Reducer, Store};
 use ring_channel::{ring_channel, RingReceiver};
 use smol::{block_on, spawn};
 use std::time::{Duration, Instant};
@@ -316,10 +316,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let (tx, rx) = ring_channel(NonZeroUsize::new(1).unwrap());
 
     // Create a Store to manage the state.
-    let store = Store::new(
-        Arc::new(State::default()),
-        <dyn Reactor<Arc<State>, Error = _>>::from_sink(tx),
-    );
+    let store = Store::new(Arc::new(State::default()), AsyncReactor(tx));
 
     // Turn store into an asynchronous task
     let (task, dispatcher) = store.into_task();

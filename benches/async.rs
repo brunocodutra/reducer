@@ -1,6 +1,6 @@
 use criterion::*;
 use futures::{sink::drain, SinkExt};
-use reducer::{Dispatcher, Reactor, Reducer, Store};
+use reducer::{AsyncReactor, Dispatcher, Reducer, Store};
 use smol::{block_on, spawn};
 use std::iter::repeat;
 
@@ -21,7 +21,7 @@ fn dispatch(c: &mut Criterion) {
         .bench_function("dispatch", |b| {
             b.iter_batched(
                 move || {
-                    let reactor = <dyn Reactor<_, Error = _>>::from_sink(drain());
+                    let reactor = AsyncReactor(drain());
                     let (task, dispatcher) = Store::new(BlackBox, reactor).into_task();
                     (spawn(task), dispatcher)
                 },
@@ -44,7 +44,7 @@ fn sink(c: &mut Criterion) {
         .bench_function("sink", |b| {
             b.iter_batched(
                 move || {
-                    let reactor = <dyn Reactor<_, Error = _>>::from_sink(drain());
+                    let reactor = AsyncReactor(drain());
                     let (task, dispatcher) = Store::new(BlackBox, reactor).into_task();
                     (spawn(task), dispatcher)
                 },

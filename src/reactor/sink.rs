@@ -1,29 +1,41 @@
 use crate::reactor::*;
-use derive_more::{Deref, DerefMut};
+use derive_more::{Deref, DerefMut, From};
 use futures::executor::block_on;
 use futures::sink::{Sink, SinkExt};
-use pin_project::*;
+use pin_project::pin_project;
 use std::task::{Context, Poll};
 use std::{borrow::ToOwned, pin::Pin};
 
-/// An adapter for types that implement [`Sink`] to behave as a [`Reactor`] (requires [`async`])
-///
-/// Returned by [`Reactor::from_sink`] and [`Reactor::from_sink_with`].
+/// An adapter for [`Sink`]s that behaves as an asynchronous [`Reactor`] (requires [`async`])
 ///
 /// [`async`]: index.html#optional-features
-/// [`Reactor::from_sink`]: trait.Reactor.html#method.from_sink
-/// [`Reactor::from_sink_with`]: trait.Reactor.html#method.from_sink_with
-#[pin_project(project = AsyncReactorProjection)]
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash, Deref, DerefMut)]
-pub struct AsyncReactor<T, F> {
-    #[pin]
-    #[deref]
-    #[deref_mut]
-    sink: T,
-    with: F,
-}
+///
+/// # Example
+/// ```rust
+/// use reducer::*;
+/// use futures::channel::mpsc::channel;
+/// use futures::executor::block_on_stream;
+/// use std::thread;
+///
+/// let (tx, rx) = channel(0);
+/// let mut reactor = AsyncReactor(tx);
+///
+/// thread::spawn(move || {
+///     reactor.react(&'1');
+///     reactor.react(&'1');
+///     reactor.react(&'2');
+///     reactor.react(&'3');
+///     reactor.react(&'5');
+///     reactor.react(&'8');
+/// });
+///
+/// assert_eq!(block_on_stream(rx).collect::<String>(), "112358");
+/// ```
+#[pin_project]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash, From, Deref, DerefMut)]
+pub struct AsyncReactor<T>(#[pin] pub T);
 
-impl<S, T, F, E> Reactor<S> for AsyncReactor<T, F>
+impl<S, T, E> Reactor<S> for AsyncReactor<T>
 where
     S: ?Sized,
     Self: for<'s> Sink<&'s S, Error = E> + Unpin,
@@ -37,82 +49,27 @@ where
     }
 }
 
-impl<S, T, F, O> Sink<&S> for AsyncReactor<T, F>
+impl<S, T, O> Sink<&S> for AsyncReactor<T>
 where
-    S: ?Sized,
+    S: ToOwned<Owned = O> + ?Sized,
     T: Sink<O>,
-    F: for<'s> Fn(&'s S) -> O,
 {
     type Error = T::Error;
 
     fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.project().sink.poll_ready(cx)
+        self.project().0.poll_ready(cx)
     }
 
     fn start_send(self: Pin<&mut Self>, state: &S) -> Result<(), Self::Error> {
-        let AsyncReactorProjection { sink, with } = self.project();
-        sink.start_send(with(state))
+        self.project().0.start_send(state.to_owned())
     }
 
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.project().sink.poll_flush(cx)
+        self.project().0.poll_flush(cx)
     }
 
     fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.project().sink.poll_close(cx)
-    }
-}
-
-impl<S, E> dyn Reactor<S, Error = E>
-where
-    S: ?Sized,
-{
-    /// Adapts any type that implements [`Sink`] as a [`Reactor`] (requires [`async`]).
-    ///
-    /// This function is equivalent to
-    /// [`Reactor::<S, Error = E>::from_sink_with(sink, S::to_owned)`][from_sink_with].
-    ///
-    /// [`async`]: index.html#optional-features
-    /// [from_sink_with]: trait.Reactor.html#method.from_sink_with
-    pub fn from_sink<T>(sink: T) -> AsyncReactor<T, fn(&S) -> S::Owned>
-    where
-        S: ToOwned,
-        T: Sink<S::Owned, Error = E> + Unpin,
-    {
-        <dyn Reactor<S, Error = E>>::from_sink_with(sink, S::to_owned)
-    }
-
-    /// Adapts any type that implements [`Sink`] as a [`Reactor`] (requires [`async`]).
-    ///
-    /// [`async`]: index.html#optional-features
-    ///
-    /// # Example
-    /// ```rust
-    /// use reducer::*;
-    /// use futures::channel::mpsc::channel;
-    /// use futures::executor::block_on_stream;
-    /// use std::{thread, string::ToString};
-    ///
-    /// let (tx, rx) = channel(0);
-    /// let mut reactor = Reactor::<_, Error = _>::from_sink_with(tx, ToString::to_string);
-    ///
-    /// thread::spawn(move || {
-    ///     reactor.react(&1);
-    ///     reactor.react(&1);
-    ///     reactor.react(&2);
-    ///     reactor.react(&3);
-    ///     reactor.react(&5);
-    ///     reactor.react(&8);
-    /// });
-    ///
-    /// assert_eq!(block_on_stream(rx).collect::<String>(), "112358".to_string());
-    /// ```
-    pub fn from_sink_with<T, F, O>(sink: T, with: F) -> AsyncReactor<T, F>
-    where
-        T: Sink<O, Error = E> + Unpin,
-        F: for<'s> Fn(&'s S) -> O,
-    {
-        AsyncReactor { sink, with }
+        self.project().0.poll_close(cx)
     }
 }
 
@@ -121,17 +78,17 @@ mod tests {
     use super::*;
     use mockall::predicate::*;
     use proptest::prelude::*;
-    use std::{ops::*, string::String};
-
-    #[test]
-    fn deref() {
-        let mut reactor = <dyn Reactor<(), Error = ()>>::from_sink(MockReactor::new());
-
-        assert_eq!(reactor.deref() as *const _, &reactor.sink as *const _);
-        assert_eq!(reactor.deref_mut() as *mut _, &mut reactor.sink as *mut _);
-    }
+    use std::{ops::*, string::String, vec::Vec};
 
     proptest! {
+        #[test]
+        fn deref(mut sink: Vec<u8>) {
+            let mut dispatcher = AsyncReactor(sink.clone());
+
+            assert_eq!(dispatcher.deref(), &sink);
+            assert_eq!(dispatcher.deref_mut(), &mut sink);
+        }
+
         #[test]
         fn react(state: String, result: Result<(), u8>) {
             let mut mock = MockReactor::new();
@@ -141,8 +98,8 @@ mod tests {
                 .times(1)
                 .return_const(result);
 
-            let mut reactor = <dyn Reactor<str, Error = _>>::from_sink(mock);
-            assert_eq!(Reactor::react(&mut reactor, &state), result);
+            let mut reactor = AsyncReactor(mock);
+            assert_eq!(Reactor::react(&mut reactor, state.as_str()), result);
         }
 
         #[test]
@@ -154,9 +111,8 @@ mod tests {
                 .times(1)
                 .return_const(result);
 
-            let mut reactor = <dyn Reactor<str, Error = _>>::from_sink(mock);
-            assert_eq!(block_on(reactor.send(&state)), result);
-            assert_eq!(block_on(reactor.close()), Ok(()));
+            let mut reactor = AsyncReactor(mock);
+            assert_eq!(block_on(reactor.send(state.as_str())), result);
         }
     }
 }
