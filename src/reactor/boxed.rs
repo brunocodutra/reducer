@@ -20,20 +20,18 @@ where
 mod tests {
     use super::*;
     use mockall::predicate::*;
-    use proptest::prelude::*;
+    use test_strategy::proptest;
 
-    proptest! {
-        #[test]
-        fn react(state: u8, result: Result<(), u8>) {
-            let mut mock = MockReactor::new();
+    #[proptest]
+    fn react(state: u8, result: Result<(), u8>) {
+        let mut mock = MockReactor::new();
 
-            mock.expect_react()
-                .with(eq(state))
-                .times(1)
-                .return_const(result);
+        mock.expect_react()
+            .with(eq(state))
+            .once()
+            .return_const(result);
 
-            let mut reactor = Box::new(mock);
-            assert_eq!(Reactor::react(&mut reactor, &state), result);
-        }
+        let mut reactor = Box::new(mock);
+        assert_eq!(Reactor::react(&mut reactor, &state), result);
     }
 }

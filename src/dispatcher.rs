@@ -16,7 +16,7 @@ pub trait Dispatcher<A> {
 mod tests {
     use super::*;
     use mockall::{predicate::*, *};
-    use proptest::prelude::*;
+    use test_strategy::proptest;
 
     mock! {
         pub Dispatcher<A: 'static, O: 'static> {}
@@ -53,19 +53,17 @@ mod tests {
         }
     }
 
-    proptest! {
-        #[test]
-        fn dispatch(action: u8, result: u8) {
-            let mut mock = MockDispatcher::<_, u8>::new();
+    #[proptest]
+    fn dispatch(action: u8, result: u8) {
+        let mut mock = MockDispatcher::<_, u8>::new();
 
-            mock.expect_dispatch()
-                .with(eq(action))
-                .times(1)
-                .return_const(result);
+        mock.expect_dispatch()
+            .with(eq(action))
+            .once()
+            .return_const(result);
 
-            let dispatcher: &mut dyn Dispatcher<_, Output = _> = &mut mock;
-            assert_eq!(dispatcher.dispatch(action), result);
-        }
+        let dispatcher: &mut dyn Dispatcher<_, Output = _> = &mut mock;
+        assert_eq!(dispatcher.dispatch(action), result);
     }
 }
 

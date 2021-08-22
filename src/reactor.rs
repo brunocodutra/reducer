@@ -44,7 +44,7 @@ pub trait Reactor<S: ?Sized> {
 mod tests {
     use super::*;
     use mockall::{predicate::*, *};
-    use proptest::prelude::*;
+    use test_strategy::proptest;
 
     mock! {
         pub Reactor<T: 'static, E: 'static> {
@@ -88,19 +88,17 @@ mod tests {
         }
     }
 
-    proptest! {
-        #[test]
-        fn react(state: u8, result: Result<(), u8>) {
-            let mut mock = MockReactor::new();
+    #[proptest]
+    fn react(state: u8, result: Result<(), u8>) {
+        let mut mock = MockReactor::new();
 
-            mock.expect_react()
-                .with(eq(state))
-                .times(1)
-                .return_const(result);
+        mock.expect_react()
+            .with(eq(state))
+            .once()
+            .return_const(result);
 
-            let reactor: &mut dyn Reactor<_, Error = _> = &mut mock;
-            assert_eq!(reactor.react(&state), result);
-        }
+        let reactor: &mut dyn Reactor<_, Error = _> = &mut mock;
+        assert_eq!(reactor.react(&state), result);
     }
 }
 

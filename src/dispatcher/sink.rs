@@ -79,43 +79,41 @@ where
 mod tests {
     use super::*;
     use mockall::predicate::*;
-    use proptest::prelude::*;
     use std::{ops::*, vec::Vec};
+    use test_strategy::proptest;
 
-    proptest! {
-        #[test]
-        fn deref(mut sink: Vec<u8>) {
-            let mut dispatcher = AsyncDispatcher(sink.clone());
+    #[proptest]
+    fn deref(sink: Vec<u8>) {
+        let mut dispatcher = AsyncDispatcher(sink.clone());
 
-            assert_eq!(dispatcher.deref(), &sink);
-            assert_eq!(dispatcher.deref_mut(), &mut sink);
-        }
+        assert_eq!(dispatcher.deref(), &sink);
+        assert_eq!(dispatcher.deref_mut(), &sink);
+    }
 
-        #[test]
-        fn dispatch(action: u8, result: Result<(), u8>) {
-            let mut mock = MockDispatcher::new();
+    #[proptest]
+    fn dispatch(action: u8, result: Result<(), u8>) {
+        let mut mock = MockDispatcher::new();
 
-            mock.expect_dispatch()
-                .with(eq(action))
-                .times(1)
-                .return_const(result);
+        mock.expect_dispatch()
+            .with(eq(action))
+            .once()
+            .return_const(result);
 
-            let mut dispatcher = AsyncDispatcher(mock);
-            assert_eq!(Dispatcher::dispatch(&mut dispatcher, action), result);
-        }
+        let mut dispatcher = AsyncDispatcher(mock);
+        assert_eq!(Dispatcher::dispatch(&mut dispatcher, action), result);
+    }
 
-        #[test]
-        fn sink(action: u8, result: Result<(), u8>) {
-            let mut mock = MockDispatcher::new();
+    #[proptest]
+    fn sink(action: u8, result: Result<(), u8>) {
+        let mut mock = MockDispatcher::new();
 
-            mock.expect_dispatch()
-                .with(eq(action))
-                .times(1)
-                .return_const(result);
+        mock.expect_dispatch()
+            .with(eq(action))
+            .once()
+            .return_const(result);
 
-            let mut dispatcher = AsyncDispatcher(mock);
-            assert_eq!(block_on(dispatcher.send(action)), result);
-            assert_eq!(block_on(dispatcher.close()), Ok(()));
-        }
+        let mut dispatcher = AsyncDispatcher(mock);
+        assert_eq!(block_on(dispatcher.send(action)), result);
+        assert_eq!(block_on(dispatcher.close()), Ok(()));
     }
 }

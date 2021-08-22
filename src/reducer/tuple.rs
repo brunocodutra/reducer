@@ -79,28 +79,26 @@ impl_reducer_for_tuples!(M, L, K, J, I, H, G, F, E, D, C, B);
 mod tests {
     use super::*;
     use mockall::predicate::*;
-    use proptest::prelude::*;
+    use test_strategy::proptest;
 
     macro_rules! test_reducer_for_tuples {
         () => {};
 
         ( $head:ident $(, $tail:ident)* $(,)? ) => {
-            proptest! {
-                #[test]
-                fn $head(action: u8) {
-                    let mut mocks: [MockReducer<_>; count!($($tail,)*) + 1] = Default::default();
+            #[proptest]
+            fn $head(action: u8) {
+                let mut mocks: [MockReducer<_>; count!($($tail,)*) + 1] = Default::default();
 
-                    for mock in &mut mocks {
-                        mock.expect_reduce()
-                            .with(eq(action))
-                            .times(1)
-                            .return_const(());
-                    }
-
-                    let [$head, $($tail,)*] = mocks;
-                    let mut reducer = ($head, $($tail,)*);
-                    Reducer::reduce(&mut reducer, action);
+                for mock in &mut mocks {
+                    mock.expect_reduce()
+                        .with(eq(action))
+                        .once()
+                        .return_const(());
                 }
+
+                let [$head, $($tail,)*] = mocks;
+                let mut reducer = ($head, $($tail,)*);
+                Reducer::reduce(&mut reducer, action);
             }
 
             test_reducer_for_tuples!($($tail,)*);

@@ -67,7 +67,7 @@ pub trait Reducer<A> {
 mod tests {
     use super::*;
     use mockall::{predicate::*, *};
-    use proptest::prelude::*;
+    use test_strategy::proptest;
 
     mock! {
         pub Reducer<A: 'static> {
@@ -83,19 +83,17 @@ mod tests {
         }
     }
 
-    proptest! {
-        #[test]
-        fn reduce(action: u8) {
-            let mut mock = MockReducer::new();
+    #[proptest]
+    fn reduce(action: u8) {
+        let mut mock = MockReducer::new();
 
-            mock.expect_reduce()
-                .with(eq(action))
-                .times(1)
-                .return_const(());
+        mock.expect_reduce()
+            .with(eq(action))
+            .once()
+            .return_const(());
 
-            let reducer: &mut dyn Reducer<_> = &mut mock;
-            reducer.reduce(action);
-        }
+        let reducer: &mut dyn Reducer<_> = &mut mock;
+        reducer.reduce(action);
     }
 }
 

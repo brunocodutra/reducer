@@ -61,35 +61,33 @@ where
 mod tests {
     use super::*;
     use mockall::predicate::*;
-    use proptest::prelude::*;
     use std::vec::Vec;
+    use test_strategy::proptest;
 
-    proptest! {
-        #[test]
-        fn react(state: u8, mut results: Vec<Result<(), u8>>) {
-            let (idx, result) = results
-                .iter()
-                .enumerate()
-                .find(|(_, r)| r.is_err())
-                .map_or((results.len(), Ok(())), |(i, &r)| (i, r));
+    #[proptest]
+    fn react(state: u8, results: Vec<Result<(), u8>>) {
+        let (idx, result) = results
+            .iter()
+            .enumerate()
+            .find(|(_, r)| r.is_err())
+            .map_or((results.len(), Ok(())), |(i, &r)| (i, r));
 
-            let mut mocks: Vec<_> = results
-                .drain(..)
-                .enumerate()
-                .map(move |(i, r)| {
-                    let mut mock = MockReactor::new();
+        let mut mocks: Vec<_> = results
+            .into_iter()
+            .enumerate()
+            .map(move |(i, r)| {
+                let mut mock = MockReactor::new();
 
-                    mock.expect_react()
-                        .with(eq(state))
-                        .times(if i > idx { 0 } else { 1 })
-                        .return_const(r);
+                mock.expect_react()
+                    .with(eq(state))
+                    .times(if i > idx { 0 } else { 1 })
+                    .return_const(r);
 
-                    mock
-                })
-                .collect();
+                mock
+            })
+            .collect();
 
-            let reactor = mocks.as_mut_slice();
-            assert_eq!(Reactor::react(reactor, &state), result);
-        }
+        let reactor = mocks.as_mut_slice();
+        assert_eq!(Reactor::react(reactor, &state), result);
     }
 }
