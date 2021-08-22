@@ -31,7 +31,6 @@ pin-project = { version = "1.0.1", optional = true }
 conrod_core = "0.74.0"
 conrod_glium = "0.74.0"
 conrod_winit = "0.74.0"
-criterion = "0.3.4"
 glium = "0.28"
 mockall = "0.10.2"
 proptest = "1.0.0"
@@ -44,11 +43,3 @@ winit = "0.23"
 name = "conrod"
 harness = false
 required-features = ["async"]
-
-[[bench]]
-name = "async"
-harness = false
-required-features = ["async"]
-
-[lib]
-bench = false
