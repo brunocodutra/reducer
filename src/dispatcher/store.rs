@@ -274,7 +274,8 @@ mod tests {
     use crate::reactor::MockReactor;
     use crate::reducer::MockReducer;
     use mockall::predicate::*;
-    use proptest::prelude::*;
+    use std::ops::Deref;
+    use test_strategy::proptest;
 
     #[cfg(feature = "async")]
     use crate::reactor::AsyncReactor;
@@ -293,191 +294,189 @@ mod tests {
         Store::<(), ()>::default();
     }
 
-    proptest! {
-        #[test]
-        fn deref(state: usize) {
-            let store = Store::new(state, ());
-            assert_eq!(&*store as *const _, &store.state as *const _);
-        }
+    #[proptest]
+    fn deref(state: u8) {
+        let store = Store::new(state, ());
+        assert_eq!(store.deref(), &store.state);
+    }
 
-        #[test]
-        fn new(state: usize, reactor: usize) {
-            let store = Store::new(state, reactor);
-            assert_eq!(store.state, state);
-            assert_eq!(store.reactor, reactor);
-        }
+    #[proptest]
+    fn new(state: u8, reactor: u8) {
+        let store = Store::new(state, reactor);
+        assert_eq!(store.state, state);
+        assert_eq!(store.reactor, reactor);
+    }
 
-        #[test]
-        fn clone(a: usize, b: usize) {
-            let mut reducer = MockReducer::<()>::new();
-            reducer.expect_id().return_const(a);
-            reducer.expect_clone().times(1).returning(move || {
-                let mut mock = MockReducer::new();
-                mock.expect_id().return_const(a);
-                mock
-            });
-
-            let mut reactor = MockReactor::<(), ()>::new();
-            reactor.expect_id().return_const(b);
-            reactor.expect_clone().times(1).returning(move || {
-                let mut mock = MockReactor::new();
-                mock.expect_id().return_const(b);
-                mock
-            });
-
-            #[allow(clippy::redundant_clone)]
-            let store = Store::new(reducer, reactor).clone();
-
-            assert_eq!(store.state.id(), a);
-            assert_eq!(store.reactor.id(), b);
-        }
-
-        #[test]
-        fn subscribe(a: usize, b: usize) {
-            let mut mock = MockReactor::<(), ()>::new();
+    #[proptest]
+    fn clone(a: usize, b: usize) {
+        let mut reducer = MockReducer::<()>::new();
+        reducer.expect_id().return_const(a);
+        reducer.expect_clone().once().returning(move || {
+            let mut mock = MockReducer::new();
             mock.expect_id().return_const(a);
+            mock
+        });
 
-            let mut store = Store::new((), mock);
-
-            let mut mock = MockReactor::<_, ()>::new();
+        let mut reactor = MockReactor::<(), ()>::new();
+        reactor.expect_id().return_const(b);
+        reactor.expect_clone().once().returning(move || {
+            let mut mock = MockReactor::new();
             mock.expect_id().return_const(b);
+            mock
+        });
 
-            assert_eq!(store.subscribe(mock).id(), a);
-            assert_eq!(store.reactor.id(), b);
-        }
+        #[allow(clippy::redundant_clone)]
+        let store = Store::new(reducer, reactor).clone();
 
-        #[test]
-        fn dispatch(action: u8, result: Result<(), u8>, id: usize) {
-            let mut reducer = MockReducer::new();
-            reducer.expect_id().return_const(id);
-            reducer.expect_clone().never();
-            reducer
-                .expect_reduce()
-                .with(eq(action))
-                .times(1)
-                .return_const(());
+        assert_eq!(store.state.id(), a);
+        assert_eq!(store.reactor.id(), b);
+    }
 
-            let mut reactor = MockReactor::new();
-            reactor
-                .expect_react()
-                .with(function(move |x: &MockReducer<_>| x.id() == id))
-                .times(1)
-                .return_const(result);
+    #[proptest]
+    fn subscribe(a: usize, b: usize) {
+        let mut mock = MockReactor::<(), ()>::new();
+        mock.expect_id().return_const(a);
 
-            let mut store = Store::new(reducer, reactor);
-            assert_eq!(Dispatcher::dispatch(&mut store, action), result);
-        }
+        let mut store = Store::new((), mock);
 
-        #[cfg(feature = "async")]
-        #[test]
-        fn sink(action: u8, result: Result<(), u8>, id: usize) {
-            let mut reducer = MockReducer::new();
-            reducer.expect_id().return_const(id);
-            reducer.expect_clone().returning(move || {
-                let mut mock = MockReducer::new();
-                mock.expect_id().return_const(id);
-                mock.expect_reduce().never();
-                mock.expect_clone().never();
-                mock
-            });
+        let mut mock = MockReactor::<_, ()>::new();
+        mock.expect_id().return_const(b);
 
-            reducer
-                .expect_reduce()
-                .with(eq(action))
-                .times(1)
-                .return_const(());
+        assert_eq!(store.subscribe(mock).id(), a);
+        assert_eq!(store.reactor.id(), b);
+    }
 
-            let mut reactor = MockReactor::new();
-            reactor
-                .expect_react()
-                .with(function(move |x: &MockReducer<_>| x.id() == id))
-                .times(1)
-                .return_const(result);
+    #[proptest]
+    fn dispatch(action: u8, result: Result<(), u8>, id: usize) {
+        let mut reducer = MockReducer::new();
+        reducer.expect_id().return_const(id);
+        reducer.expect_clone().never();
+        reducer
+            .expect_reduce()
+            .with(eq(action))
+            .once()
+            .return_const(());
 
-            let mut store = Store::new(reducer, AsyncReactor(reactor));
-            assert_eq!(block_on(store.send(action)), result);
-            assert_eq!(block_on(store.close()), Ok(()));
-        }
+        let mut reactor = MockReactor::new();
+        reactor
+            .expect_react()
+            .with(function(move |x: &MockReducer<_>| x.id() == id))
+            .once()
+            .return_const(result);
 
-        #[cfg(feature = "async")]
-        #[test]
-        fn task(action: u8, result: Result<(), u8>, id: usize) {
-            let mut reducer = MockReducer::new();
-            reducer.expect_id().return_const(id);
-            reducer.expect_clone().returning(move || {
-                let mut mock = MockReducer::new();
-                mock.expect_id().return_const(id);
-                mock.expect_reduce().never();
-                mock.expect_clone().never();
-                mock
-            });
+        let mut store = Store::new(reducer, reactor);
+        assert_eq!(Dispatcher::dispatch(&mut store, action), result);
+    }
 
-            reducer
-                .expect_reduce()
-                .with(eq(action))
-                .times(1)
-                .return_const(());
+    #[cfg(feature = "async")]
+    #[proptest]
+    fn sink(action: u8, result: Result<(), u8>, id: usize) {
+        let mut reducer = MockReducer::new();
+        reducer.expect_id().return_const(id);
+        reducer.expect_clone().returning(move || {
+            let mut mock = MockReducer::new();
+            mock.expect_id().return_const(id);
+            mock.expect_reduce().never();
+            mock.expect_clone().never();
+            mock
+        });
 
-            let mut reactor = MockReactor::new();
-            reactor
-                .expect_react()
-                .with(function(move |x: &MockReducer<_>| x.id() == id))
-                .times(1)
-                .return_const(result);
+        reducer
+            .expect_reduce()
+            .with(eq(action))
+            .once()
+            .return_const(());
 
-            let store = Store::new(reducer, AsyncReactor(reactor));
-            let (task, mut dispatcher) = store.into_task();
+        let mut reactor = MockReactor::new();
+        reactor
+            .expect_react()
+            .with(function(move |x: &MockReducer<_>| x.id() == id))
+            .once()
+            .return_const(result);
 
-            let handle = spawn(task);
+        let mut store = Store::new(reducer, AsyncReactor(reactor));
+        assert_eq!(block_on(store.send(action)), result);
+        assert_eq!(block_on(store.close()), Ok(()));
+    }
 
-            assert_eq!(dispatcher.dispatch(action), Ok(()));
-            assert_eq!(block_on(dispatcher.close()), Ok(()));
-            assert_eq!(block_on(handle), result);
-        }
+    #[cfg(feature = "async")]
+    #[proptest]
+    fn task(action: u8, result: Result<(), u8>, id: usize) {
+        let mut reducer = MockReducer::new();
+        reducer.expect_id().return_const(id);
+        reducer.expect_clone().returning(move || {
+            let mut mock = MockReducer::new();
+            mock.expect_id().return_const(id);
+            mock.expect_reduce().never();
+            mock.expect_clone().never();
+            mock
+        });
 
-        #[cfg(feature = "async")]
-        #[test]
-        fn error(action: u8, error: u8, id: usize) {
-            let mut reducer = MockReducer::new();
-            reducer.expect_id().return_const(id);
-            reducer.expect_clone().returning(move || {
-                let mut mock = MockReducer::new();
-                mock.expect_id().return_const(id);
-                mock.expect_reduce().never();
-                mock.expect_clone().never();
-                mock
-            });
+        reducer
+            .expect_reduce()
+            .with(eq(action))
+            .once()
+            .return_const(());
 
-            reducer
-                .expect_reduce()
-                .with(eq(action))
-                .times(1)
-                .return_const(());
+        let mut reactor = MockReactor::new();
+        reactor
+            .expect_react()
+            .with(function(move |x: &MockReducer<_>| x.id() == id))
+            .once()
+            .return_const(result);
 
-            let mut reactor = MockReactor::new();
-            reactor
-                .expect_react()
-                .with(function(move |x: &MockReducer<_>| x.id() == id))
-                .times(1)
-                .return_const(Err(error));
+        let store = Store::new(reducer, AsyncReactor(reactor));
+        let (task, mut dispatcher) = store.into_task();
 
-            let store = Store::new(reducer, AsyncReactor(reactor));
-            let (task, mut dispatcher) = store.into_task();
+        let handle = spawn(task);
 
-            let handle = spawn(task);
+        assert_eq!(dispatcher.dispatch(action), Ok(()));
+        assert_eq!(block_on(dispatcher.close()), Ok(()));
+        assert_eq!(block_on(handle), result);
+    }
 
-            assert_eq!(dispatcher.dispatch(action), Ok(()));
+    #[cfg(feature = "async")]
+    #[proptest]
+    fn error(action: u8, error: u8, id: usize) {
+        let mut reducer = MockReducer::new();
+        reducer.expect_id().return_const(id);
+        reducer.expect_clone().returning(move || {
+            let mut mock = MockReducer::new();
+            mock.expect_id().return_const(id);
+            mock.expect_reduce().never();
+            mock.expect_clone().never();
+            mock
+        });
 
-            loop {
-                match dispatcher.dispatch(action) {
-                    // Wait for the information to propagate,
-                    // that the spawned task has terminated.
-                    Ok(()) => yield_now(),
-                    Err(e) => break assert_eq!(e, DispatchError::Terminated),
-                }
+        reducer
+            .expect_reduce()
+            .with(eq(action))
+            .once()
+            .return_const(());
+
+        let mut reactor = MockReactor::new();
+        reactor
+            .expect_react()
+            .with(function(move |x: &MockReducer<_>| x.id() == id))
+            .once()
+            .return_const(Err(error));
+
+        let store = Store::new(reducer, AsyncReactor(reactor));
+        let (task, mut dispatcher) = store.into_task();
+
+        let handle = spawn(task);
+
+        assert_eq!(dispatcher.dispatch(action), Ok(()));
+
+        loop {
+            match dispatcher.dispatch(action) {
+                // Wait for the information to propagate,
+                // that the spawned task has terminated.
+                Ok(()) => yield_now(),
+                Err(e) => break assert_eq!(e, DispatchError::Terminated),
             }
-
-            assert_eq!(block_on(handle), Err(error));
         }
+
+        assert_eq!(block_on(handle), Err(error));
     }
 }

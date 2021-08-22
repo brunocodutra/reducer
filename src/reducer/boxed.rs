@@ -17,20 +17,18 @@ where
 mod tests {
     use super::*;
     use mockall::predicate::*;
-    use proptest::prelude::*;
+    use test_strategy::proptest;
 
-    proptest! {
-        #[test]
-        fn reduce(action: u8) {
-            let mut mock = MockReducer::new();
+    #[proptest]
+    fn reduce(action: u8) {
+        let mut mock = MockReducer::new();
 
-            mock.expect_reduce()
-                .with(eq(action))
-                .times(1)
-                .return_const(());
+        mock.expect_reduce()
+            .with(eq(action))
+            .once()
+            .return_const(());
 
-            let mut reducer = Box::new(mock);
-            Reducer::reduce(&mut reducer, action);
-        }
+        let mut reducer = Box::new(mock);
+        Reducer::reduce(&mut reducer, action);
     }
 }

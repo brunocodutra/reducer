@@ -55,27 +55,25 @@ where
 mod tests {
     use super::*;
     use mockall::predicate::*;
-    use proptest::prelude::*;
+    use test_strategy::proptest;
 
-    proptest! {
-        #[test]
-        fn react(state: u8, results in vec![any::<Result<(), u8>>(); 32]) {
-            let (idx, result) = results
-                .iter()
-                .enumerate()
-                .find(|(_, r)| r.is_err())
-                .map_or((results.len(), Ok(())), |(i, &r)| (i, r));
+    #[proptest]
+    fn react(state: u8, results: [Result<(), u8>; 32]) {
+        let (idx, result) = results
+            .iter()
+            .enumerate()
+            .find(|(_, r)| r.is_err())
+            .map_or((results.len(), Ok(())), |(i, &r)| (i, r));
 
-            let mut reactor: [MockReactor<_, _>; 32] = Default::default();
+        let mut reactor: [MockReactor<_, _>; 32] = Default::default();
 
-            for (i, (mock, result)) in reactor.iter_mut().zip(results).enumerate() {
-                mock.expect_react()
-                    .with(eq(state))
-                    .times(if i > idx { 0 } else { 1 })
-                    .return_const(result);
-            }
-
-            assert_eq!(Reactor::react(&mut reactor, &state), result);
+        for (i, (mock, result)) in reactor.iter_mut().zip(results).enumerate() {
+            mock.expect_react()
+                .with(eq(state))
+                .times(if i > idx { 0 } else { 1 })
+                .return_const(result);
         }
+
+        assert_eq!(Reactor::react(&mut reactor, &state), result);
     }
 }

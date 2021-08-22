@@ -77,42 +77,40 @@ where
 mod tests {
     use super::*;
     use mockall::predicate::*;
-    use proptest::prelude::*;
     use std::{ops::*, string::String, vec::Vec};
+    use test_strategy::proptest;
 
-    proptest! {
-        #[test]
-        fn deref(mut sink: Vec<u8>) {
-            let mut dispatcher = AsyncReactor(sink.clone());
+    #[proptest]
+    fn deref(sink: Vec<u8>) {
+        let mut dispatcher = AsyncReactor(sink.clone());
 
-            assert_eq!(dispatcher.deref(), &sink);
-            assert_eq!(dispatcher.deref_mut(), &mut sink);
-        }
+        assert_eq!(dispatcher.deref(), &sink);
+        assert_eq!(dispatcher.deref_mut(), &sink);
+    }
 
-        #[test]
-        fn react(state: String, result: Result<(), u8>) {
-            let mut mock = MockReactor::new();
+    #[proptest]
+    fn react(state: String, result: Result<(), u8>) {
+        let mut mock = MockReactor::new();
 
-            mock.expect_react()
-                .with(eq(state.clone()))
-                .times(1)
-                .return_const(result);
+        mock.expect_react()
+            .with(eq(state.clone()))
+            .once()
+            .return_const(result);
 
-            let mut reactor = AsyncReactor(mock);
-            assert_eq!(Reactor::react(&mut reactor, state.as_str()), result);
-        }
+        let mut reactor = AsyncReactor(mock);
+        assert_eq!(Reactor::react(&mut reactor, state.as_str()), result);
+    }
 
-        #[test]
-        fn sink(state: String, result: Result<(), u8>) {
-            let mut mock = MockReactor::new();
+    #[proptest]
+    fn sink(state: String, result: Result<(), u8>) {
+        let mut mock = MockReactor::new();
 
-            mock.expect_react()
-                .with(eq(state.clone()))
-                .times(1)
-                .return_const(result);
+        mock.expect_react()
+            .with(eq(state.clone()))
+            .once()
+            .return_const(result);
 
-            let mut reactor = AsyncReactor(mock);
-            assert_eq!(block_on(reactor.send(state.as_str())), result);
-        }
+        let mut reactor = AsyncReactor(mock);
+        assert_eq!(block_on(reactor.send(state.as_str())), result);
     }
 }

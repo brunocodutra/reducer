@@ -36,6 +36,7 @@ mockall = "0.10.2"
 proptest = "1.0.0"
 ring-channel = "0.8.2"
 smol = "1.2.5"
+test-strategy = "0.1.1"
 ttf-noto-sans = "0.1.1"
 winit = "0.23"
 

@@ -56,37 +56,38 @@ where
 mod tests {
     use super::*;
     use mockall::predicate::*;
-    use proptest::prelude::*;
+    use test_strategy::proptest;
 
-    proptest! {
-        #[test]
-        fn reduce(action: u8) {
+    #[proptest]
+    fn reduce(action: u8) {
+        let mut mock = MockReducer::new();
+
+        mock.expect_reduce()
+            .with(eq(action))
+            .once()
+            .return_const(());
+
+        let mut reducer = Rc::new(mock);
+        Reducer::reduce(&mut reducer, action);
+    }
+
+    #[proptest]
+    fn cow(action: u8) {
+        let mut mock = MockReducer::new();
+        mock.expect_reduce().never();
+        mock.expect_clone().once().returning(move || {
             let mut mock = MockReducer::new();
-
             mock.expect_reduce()
                 .with(eq(action))
-                .times(1)
+                .once()
                 .return_const(());
+            mock.expect_clone().never();
+            mock
+        });
 
-            let mut reducer = Rc::new(mock);
-            Reducer::reduce(&mut reducer, action);
-        }
-
-        #[test]
-        fn cow(action: u8) {
-            let mut mock = MockReducer::new();
-            mock.expect_reduce().never();
-            mock.expect_clone().times(1).returning(move || {
-                let mut mock = MockReducer::new();
-                mock.expect_reduce().with(eq(action)).times(1).return_const(());
-                mock.expect_clone().never();
-                mock
-            });
-
-            let mut reducer = Rc::new(mock);
-            let other = reducer.clone();
-            Reducer::reduce(&mut reducer, action);
-            drop(other);
-        }
+        let mut reducer = Rc::new(mock);
+        let other = reducer.clone();
+        Reducer::reduce(&mut reducer, action);
+        drop(other);
     }
 }
