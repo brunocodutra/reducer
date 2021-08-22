@@ -32,7 +32,7 @@
 //!
 //!     Controls whether [crate `alloc`] is linked.
 //!
-//! * `std` (disabled by default; implies `alloc`)
+//! * `std` (enabled by default; implies `alloc`)
 //!
 //!     Controls whether [crate `std`] is linked.
 //!

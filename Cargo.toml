@@ -14,7 +14,7 @@ categories = ["asynchronous", "gui"]
 all-features = true
 
 [features]
-default = ["alloc", "async"]
+default = ["async"]
 alloc = []
 std = ["alloc"]
 async = ["std", "futures", "pin-project"]

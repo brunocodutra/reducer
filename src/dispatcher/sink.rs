@@ -6,7 +6,7 @@ use pin_project::pin_project;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-/// An adapter for [`Sink`]s that behaves as an asynchronous [`Dispatcher`] (requires [`async`])
+/// An adapter for [`Sink`]s that behaves as an asynchronous [`Dispatcher`] (requires [`async`]).
 ///
 /// [`async`]: index.html#optional-features
 ///
