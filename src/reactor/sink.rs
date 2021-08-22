@@ -6,7 +6,7 @@ use pin_project::pin_project;
 use std::task::{Context, Poll};
 use std::{borrow::ToOwned, pin::Pin};
 
-/// An adapter for [`Sink`]s that behaves as an asynchronous [`Reactor`] (requires [`async`])
+/// An adapter for [`Sink`]s that behaves as an asynchronous [`Reactor`] (requires [`async`]).
 ///
 /// [`async`]: index.html#optional-features
 ///
