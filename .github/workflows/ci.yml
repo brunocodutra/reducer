@@ -141,21 +141,6 @@ jobs:
         token: ${{secrets.CODECOV_TOKEN}}
         fail_ci_if_error: true
 
-  benchmark:
-    needs: [test]
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@master
-    - uses: actions-rs/toolchain@v1
-      with:
-        override: true
-        profile: minimal
-        toolchain: stable
-    - uses: actions-rs/cargo@v1
-      with:
-        command: bench
-        args: --all-features
-
   examples:
     needs: [test]
     runs-on: ${{ matrix.os }}
