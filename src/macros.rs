@@ -1,5 +1,6 @@
 #![macro_use]
 
+#[cfg(test)]
 macro_rules! count {
     ( $(,)? ) => { 0 };
     ( $a:ident $(,)? ) => { 1 };
