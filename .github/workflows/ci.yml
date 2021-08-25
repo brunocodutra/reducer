@@ -49,6 +49,25 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: actions-rs/toolchain@v1
+      with:
+        override: true
+        profile: minimal
+        toolchain: stable
+        target: thumbv7m-none-eabi
+    - uses: actions-rs/cargo@v1
+      with:
+        command: check
+        args: --all
+    - uses: actions-rs/cargo@v1
+      with:
+        command: check
+        args: --all --no-default-features --target thumbv7m-none-eabi
+
   doc:
     runs-on: ubuntu-latest
     steps:
@@ -64,7 +83,7 @@ jobs:
         args: --all-features --no-deps
 
   test:
-    needs: [fmt, clippy, audit, doc]
+    needs: [fmt, clippy, audit, check, doc]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
