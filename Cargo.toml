@@ -38,7 +38,7 @@ ring-channel = "0.9"
 smol = "1.2"
 test-strategy = "0.1"
 ttf-noto-sans = "0.1"
-winit = "0.23"
+winit = "0.25"
 
 [[example]]
 name = "conrod"
