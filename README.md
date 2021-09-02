@@ -6,7 +6,7 @@ any kind of application. It shines when used to drive graphical user interfaces 
 
 ## Using Reducer
 
-Reducer is available on [crates.io][crate.home], simply add it as a dependency in your `Cargo.toml`:
+Reducer is available on [crates.io], simply add it as a dependency in your `Cargo.toml`:
 
 ```
 [dependencies]
@@ -23,7 +23,7 @@ The full API documentation is available on [docs.rs][docs.home]
 
 ## Examples
 
-The [examples] folder contains the implementation of a simple Todo List app using Reducer 
+The [examples] folder contains the implementation of a simple Todo List app using Reducer
 and [Conrod].
 
 ```
@@ -39,6 +39,8 @@ guidelines.
 ## License
 
 Reducer is distributed under the terms of the MIT license, see [LICENSE] for details.
+
+[crates.io]:        https://crates.io/crates/reducer
 
 [docs.home]:        https://docs.rs/reducer
 [docs.badge]:       https://docs.rs/reducer/badge.svg
