@@ -30,7 +30,7 @@ pin-project = { version = "1.0", optional = true }
 [dev-dependencies]
 conrod_core = "0.74"
 conrod_glium = "0.74"
-conrod_winit = "0.74"
+conrod_winit = "0.75"
 glium = "0.28"
 mockall = "0.10"
 proptest = "1.0"
