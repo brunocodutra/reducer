@@ -121,6 +121,29 @@ jobs:
         command: test
         args: --no-default-features --features async
 
+  miri:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: actions-rs/toolchain@v1
+      with:
+        override: true
+        profile: minimal
+        toolchain: nightly
+        components: miri, rust-src
+    - uses: actions-rs/cargo@v1
+      with:
+        command: miri
+        args: setup
+    - uses: actions-rs/cargo@v1
+      with:
+        command: miri
+        args: test --all-features
+      env:
+        MIRIFLAGS: "-Zmiri-disable-isolation"
+        PROPTEST_CASES: 1
+
   sanitize:
     needs: [test]
     runs-on: ubuntu-latest
