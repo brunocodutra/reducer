@@ -289,7 +289,7 @@ mod tests {
     #[cfg(feature = "async")]
     use std::thread::yield_now;
 
-    #[test]
+    #[proptest]
     fn default() {
         Store::<(), ()>::default();
     }
