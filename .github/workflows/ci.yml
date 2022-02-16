@@ -127,7 +127,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sanitizer: [address, leak]
+        sanitizer: [address, leak, memory, thread]
     steps:
     - uses: actions/checkout@master
     - uses: actions-rs/toolchain@v1
@@ -135,10 +135,11 @@ jobs:
         override: true
         profile: minimal
         toolchain: nightly
+        components: rust-src
     - uses: actions-rs/cargo@v1
       with:
         command: test
-        args: --tests --lib --all-features --target x86_64-unknown-linux-gnu
+        args: --tests --lib --all-features --target x86_64-unknown-linux-gnu -Z build-std
       env:
         RUSTFLAGS: "-Z sanitizer=${{ matrix.sanitizer }}"
 
