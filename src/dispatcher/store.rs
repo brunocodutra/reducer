@@ -191,9 +191,9 @@ mod sink {
         /// ```rust
         /// use reducer::*;
         /// use futures::prelude::*;
-        /// use smol::{block_on, spawn};
         /// use std::error::Error;
         /// use std::io::{self, Write};
+        /// use tokio::task::spawn;
         ///
         /// // The state of your app.
         /// #[derive(Clone)]
@@ -218,7 +218,8 @@ mod sink {
         ///     }
         /// }
         ///
-        /// fn main() -> Result<(), Box<dyn Error>> {
+        /// #[tokio::main]
+        /// async fn main() -> Result<(), Box<dyn Error>> {
         ///     let store = Store::new(
         ///         Calculator(0),
         ///         AsyncReactor(sink::unfold((), |_, state: Calculator| async move {
@@ -237,10 +238,10 @@ mod sink {
         ///
         ///     // Closing the asynchronous dispatcher signals to the background task that
         ///     // it can terminate once all pending actions have been processed.
-        ///     block_on(dispatcher.close())?;
+        ///     dispatcher.close().await?;
         ///
         ///     // Wait for the background task to terminate.
-        ///     block_on(handle)?;
+        ///     handle.await??;
         ///
         ///     Ok(())
         /// }
@@ -284,7 +285,7 @@ mod tests {
     use futures::SinkExt;
 
     #[cfg(feature = "async")]
-    use smol::{block_on, spawn};
+    use tokio::runtime;
 
     #[cfg(feature = "async")]
     use std::thread::yield_now;
@@ -371,6 +372,7 @@ mod tests {
     #[cfg(feature = "async")]
     #[proptest]
     fn sink(action: u8, result: Result<(), u8>, id: usize) {
+        let rt = runtime::Builder::new_multi_thread().build()?;
         let mut reducer = MockReducer::new();
         reducer.expect_id().return_const(id);
         reducer.expect_clone().returning(move || {
@@ -395,13 +397,14 @@ mod tests {
             .return_const(result);
 
         let mut store = Store::new(reducer, AsyncReactor(reactor));
-        assert_eq!(block_on(store.send(action)), result);
-        assert_eq!(block_on(store.close()), Ok(()));
+        assert_eq!(rt.block_on(store.send(action)), result);
+        assert_eq!(rt.block_on(store.close()), Ok(()));
     }
 
     #[cfg(feature = "async")]
     #[proptest]
     fn task(action: u8, result: Result<(), u8>, id: usize) {
+        let rt = runtime::Builder::new_multi_thread().build()?;
         let mut reducer = MockReducer::new();
         reducer.expect_id().return_const(id);
         reducer.expect_clone().returning(move || {
@@ -428,16 +431,17 @@ mod tests {
         let store = Store::new(reducer, AsyncReactor(reactor));
         let (task, mut dispatcher) = store.into_task();
 
-        let handle = spawn(task);
+        let handle = rt.spawn(task);
 
         assert_eq!(dispatcher.dispatch(action), Ok(()));
-        assert_eq!(block_on(dispatcher.close()), Ok(()));
-        assert_eq!(block_on(handle), result);
+        assert_eq!(rt.block_on(dispatcher.close()), Ok(()));
+        assert_eq!(rt.block_on(handle)?, result);
     }
 
     #[cfg(feature = "async")]
     #[proptest]
     fn error(action: u8, error: u8, id: usize) {
+        let rt = runtime::Builder::new_multi_thread().build()?;
         let mut reducer = MockReducer::new();
         reducer.expect_id().return_const(id);
         reducer.expect_clone().returning(move || {
@@ -464,7 +468,7 @@ mod tests {
         let store = Store::new(reducer, AsyncReactor(reactor));
         let (task, mut dispatcher) = store.into_task();
 
-        let handle = spawn(task);
+        let handle = rt.spawn(task);
 
         assert_eq!(dispatcher.dispatch(action), Ok(()));
 
@@ -477,6 +481,6 @@ mod tests {
             }
         }
 
-        assert_eq!(block_on(handle), Err(error));
+        assert_eq!(rt.block_on(handle)?, Err(error));
     }
 }

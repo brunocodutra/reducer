@@ -1,6 +1,5 @@
 use crate::dispatcher::*;
 use derive_more::{Deref, DerefMut, From};
-use futures::executor::block_on;
 use futures::sink::{Sink, SinkExt};
 use pin_project::pin_project;
 use std::pin::Pin;
@@ -48,7 +47,7 @@ where
     /// but it's guaranteed to eventually do,
     /// unless the sink is closed in between.
     fn dispatch(&mut self, action: A) -> Self::Output {
-        block_on(self.send(action))
+        futures::executor::block_on(self.send(action))
     }
 }
 
@@ -81,6 +80,7 @@ mod tests {
     use mockall::predicate::*;
     use std::{ops::*, vec::Vec};
     use test_strategy::proptest;
+    use tokio::runtime;
 
     #[proptest]
     fn deref(sink: Vec<u8>) {
@@ -105,6 +105,7 @@ mod tests {
 
     #[proptest]
     fn sink(action: u8, result: Result<(), u8>) {
+        let rt = runtime::Builder::new_multi_thread().build()?;
         let mut mock = MockDispatcher::new();
 
         mock.expect_dispatch()
@@ -113,7 +114,7 @@ mod tests {
             .return_const(result);
 
         let mut dispatcher = AsyncDispatcher(mock);
-        assert_eq!(block_on(dispatcher.send(action)), result);
-        assert_eq!(block_on(dispatcher.close()), Ok(()));
+        assert_eq!(rt.block_on(dispatcher.send(action)), result);
+        assert_eq!(rt.block_on(dispatcher.close()), Ok(()));
     }
 }
