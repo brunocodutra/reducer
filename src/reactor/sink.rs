@@ -1,6 +1,5 @@
 use crate::reactor::*;
 use derive_more::{Deref, DerefMut, From};
-use futures::executor::block_on;
 use futures::sink::{Sink, SinkExt};
 use pin_project::pin_project;
 use std::task::{Context, Poll};
@@ -45,7 +44,7 @@ where
 
     /// Sends an owned version of the state through the sink.
     fn react(&mut self, state: &S) -> Result<(), Self::Error> {
-        block_on(self.send(state))
+        futures::executor::block_on(self.send(state))
     }
 }
 
@@ -79,6 +78,7 @@ mod tests {
     use mockall::predicate::*;
     use std::{ops::*, string::String, vec::Vec};
     use test_strategy::proptest;
+    use tokio::runtime;
 
     #[proptest]
     fn deref(sink: Vec<u8>) {
@@ -103,6 +103,7 @@ mod tests {
 
     #[proptest]
     fn sink(state: String, result: Result<(), u8>) {
+        let rt = runtime::Builder::new_multi_thread().build()?;
         let mut mock = MockReactor::new();
 
         mock.expect_react()
@@ -111,6 +112,6 @@ mod tests {
             .return_const(result);
 
         let mut reactor = AsyncReactor(mock);
-        assert_eq!(block_on(reactor.send(state.as_str())), result);
+        assert_eq!(rt.block_on(reactor.send(state.as_str())), result);
     }
 }

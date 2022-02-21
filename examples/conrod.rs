@@ -15,9 +15,9 @@ use glium::{Display, Surface};
 
 use reducer::{AsyncReactor, Dispatcher, Reducer, Store};
 use ring_channel::{ring_channel, RingReceiver};
-use smol::{block_on, spawn};
 use std::time::{Duration, Instant};
 use std::{error::Error, mem, num::NonZeroUsize, sync::Arc};
+use tokio::task::spawn;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum View {
@@ -311,7 +311,8 @@ fn run<E: Error + 'static>(
     });
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     // Create a channel that always holds the latest state.
     let (tx, rx) = ring_channel(NonZeroUsize::new(1).unwrap());
 
@@ -328,7 +329,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     run(dispatcher, rx)?;
 
     // Wait for the background thread to complete.
-    block_on(handle)?;
+    handle.await??;
 
     Ok(())
 }
