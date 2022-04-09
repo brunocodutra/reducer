@@ -20,7 +20,7 @@
 //! The _view_, often a \[G\]UI, [dispatches] _actions_ on the [_store_], which in turn
 //! [updates] its internal state and [notifies] back the _view_.
 //!
-//! [Flux pattern]: https://facebook.github.io/flux/docs/in-depth-overview.html
+//! [Flux pattern]: https://facebook.github.io/flux/docs/in-depth-overview/
 //! [dispatches]: Store::dispatch
 //! [_store_]: Store
 //! [updates]: Reducer::reduce
