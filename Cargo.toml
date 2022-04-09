@@ -35,7 +35,7 @@ glium = "0.28.0"
 mockall = "0.11.0"
 proptest = "1.0.0"
 ring-channel = "0.11.0"
-test-strategy = "0.1.2"
+test-strategy = "0.2.0"
 tokio = { version = "1.17.0", features = ["macros", "rt-multi-thread"] }
 ttf-noto-sans = "0.1.1"
 winit = "0.23.0"
