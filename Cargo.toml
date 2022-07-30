@@ -38,7 +38,7 @@ ring-channel = "0.11.0"
 test-strategy = "0.2.0"
 tokio = { version = "1.17.0", features = ["macros", "rt-multi-thread"] }
 ttf-noto-sans = "0.1.1"
-winit = "0.23.0"
+winit = "0.27.0"
 
 [[example]]
 name = "conrod"
