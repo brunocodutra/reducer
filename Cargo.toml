@@ -37,7 +37,7 @@ pin-project = { version = "1.0.10", optional = true, default-features = false }
 conrod_core = { version = "0.76.1", default-features = false }
 conrod_glium = { version = "0.76.1", default-features = false }
 conrod_winit = { version = "0.76.1", default-features = false }
-glium = { version = "0.28.0", default-features = false }
+glium = { version = "0.32.1", default-features = false }
 mockall = { version = "0.11.0", default-features = false }
 proptest = { version = "1.0.0", default-features = false, features = ["std"] }
 ring-channel = { version = "0.11.0", default-features = false, features = ["std", "futures_api"] }
