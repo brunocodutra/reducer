@@ -44,7 +44,7 @@ ring-channel = { version = "0.11.0", default-features = false, features = ["std"
 test-strategy = { version = "0.2.0", default-features = false }
 tokio = { version = "1.17.0", features = ["macros", "rt-multi-thread"], default-features = false }
 ttf-noto-sans = { version = "0.1.1", default-features = false, features = ["regular"] }
-winit = { version = "0.23.0", default-features = false }
+winit = { version = "0.27.4", default-features = false }
 
 [[example]]
 name = "conrod"
