@@ -30,23 +30,25 @@ derive_more = { version = "0.99.17", default-features = false, features = [
     "display",
     "error",
 ] }
-futures = { version = "0.3.21", optional = true, default-features = false, features = ["executor", "std"] }
+futures = { version = "0.3.21", optional = true, default-features = false, features = [
+    "executor",
+    "std",
+] }
 pin-project = { version = "1.0.10", optional = true, default-features = false }
 
 [dev-dependencies]
-conrod_core = { version = "0.76.1", default-features = false }
-conrod_glium = { version = "0.76.1", default-features = false }
-conrod_winit = { version = "0.76.1", default-features = false }
-glium = { version = "0.28.0", default-features = false }
+eframe = { version = "0.19.0", default-features = false, features = [
+    "dark-light",
+    "default_fonts",
+    "glow",
+] }
 mockall = { version = "0.11.0", default-features = false }
 proptest = { version = "1.0.0", default-features = false, features = ["std"] }
 ring-channel = { version = "0.11.0", default-features = false, features = ["std", "futures_api"] }
 test-strategy = { version = "0.2.0", default-features = false }
-tokio = { version = "1.17.0", features = ["macros", "rt-multi-thread"], default-features = false }
-ttf-noto-sans = { version = "0.1.1", default-features = false, features = ["regular"] }
-winit = { version = "0.23.0", default-features = false }
+tokio = { version = "1.17.0", default-features = false, features = ["macros", "rt-multi-thread"] }
 
 [[example]]
-name = "conrod"
+name = "egui"
 harness = false
 required-features = ["async"]

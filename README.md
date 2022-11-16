@@ -24,10 +24,10 @@ The full API documentation is available on [docs.rs][docs.home]
 ## Examples
 
 The [examples] folder contains the implementation of a simple Todo List app using Reducer
-and [Conrod].
+and [egui].
 
 ```
-> cargo run --release --example conrod
+> cargo run --release --example egui
 ```
 
 ## Contribution
@@ -48,7 +48,7 @@ Reducer is distributed under the terms of the MIT license, see [LICENSE] for det
 [codecov.home]:     https://codecov.io/gh/brunocodutra/reducer
 [codecov.badge]:    https://codecov.io/gh/brunocodutra/reducer/branch/master/graph/badge.svg
 
-[Conrod]:           https://crates.io/crates/Conrod
+[egui]:             https://crates.io/crates/egui
 
 [issues]:           https://github.com/brunocodutra/reducer/issues
 [pulls]:            https://github.com/brunocodutra/reducer/pulls
