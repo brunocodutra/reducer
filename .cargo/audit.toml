@@ -1,5 +1,0 @@
-[advisories]
-ignore = [
-    "RUSTSEC-2021-0019",
-    "RUSTSEC-2021-0119",
-]
