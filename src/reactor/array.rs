@@ -70,7 +70,7 @@ mod tests {
         for (i, (mock, result)) in reactor.iter_mut().zip(results).enumerate() {
             mock.expect_react()
                 .with(eq(state))
-                .times(if i > idx { 0 } else { 1 })
+                .times(usize::from(i <= idx))
                 .return_const(result);
         }
 
