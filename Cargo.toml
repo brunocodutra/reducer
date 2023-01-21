@@ -45,7 +45,7 @@ eframe = { version = "0.20.0", default-features = false, features = [
 mockall = { version = "0.11.0", default-features = false }
 proptest = { version = "1.0.0", default-features = false, features = ["std"] }
 ring-channel = { version = "0.11.0", default-features = false, features = ["std", "futures_api"] }
-test-strategy = { version = "0.2.0", default-features = false }
+test-strategy = { version = "0.3.0", default-features = false }
 tokio = { version = "1.17.0", default-features = false, features = ["macros", "rt-multi-thread"] }
 
 [[example]]
