@@ -14,73 +14,45 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - uses: actions-rs/toolchain@v1
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@stable
       with:
-        override: true
-        profile: minimal
-        toolchain: stable
         components: rustfmt
-    - uses: actions-rs/cargo@v1
-      with:
-        command: fmt
-        args: --all -- --check
+    - run: cargo fmt --all -- --check
 
   clippy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - uses: actions-rs/toolchain@v1
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@stable
       with:
-        override: true
-        profile: minimal
-        toolchain: stable
         components: clippy
-    - uses: actions-rs/clippy-check@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --all-targets -- -D warnings
+    - run: cargo clippy --all-targets --all-features -- -D warnings
 
   audit:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - uses: actions-rs/audit-check@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/checkout@v3
+    - run: cargo install --force cargo-audit
+    - run: cargo generate-lockfile
+    - run: cargo audit
 
   check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - uses: actions-rs/toolchain@v1
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@stable
       with:
-        override: true
-        profile: minimal
-        toolchain: stable
-        target: thumbv7m-none-eabi
-    - uses: actions-rs/cargo@v1
-      with:
-        command: check
-        args: --all
-    - uses: actions-rs/cargo@v1
-      with:
-        command: check
-        args: --all --no-default-features --target thumbv7m-none-eabi
+        targets: thumbv7m-none-eabi
+    - run: cargo check --workspace
+    - run: cargo check --workspace --no-default-features --target thumbv7m-none-eabi
 
   doc:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - uses: actions-rs/toolchain@v1
-      with:
-        override: true
-        profile: minimal
-        toolchain: stable
-    - uses: actions-rs/cargo@v1
-      with:
-        command: doc
-        args: --all-features --no-deps
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@stable
+    - run: cargo doc --all-features --no-deps
 
   test:
     needs: [fmt, clippy, audit, check, doc]
@@ -95,51 +67,26 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
     - run: sudo -E apt-get -yq install libxcb-shape0-dev libxcb-xfixes0-dev
       if: matrix.os == 'ubuntu-latest'
-    - uses: actions/checkout@master
-    - uses: actions-rs/toolchain@v1
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@master
       with:
-        override: true
-        profile: minimal
         toolchain: ${{ matrix.rust }}
-    - uses: actions-rs/cargo@v1
-      with:
-        command: test
-    - uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --no-default-features
-    - uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --no-default-features --features alloc
-    - uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --no-default-features --features std
-    - uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --no-default-features --features async
+    - run: cargo test
+    - run: cargo test --no-default-features
+    - run: cargo test --no-default-features --features alloc
+    - run: cargo test --no-default-features --features std
+    - run: cargo test --no-default-features --features async
 
   miri:
     needs: [test]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - uses: actions-rs/toolchain@v1
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@nightly
       with:
-        override: true
-        profile: minimal
-        toolchain: nightly
         components: miri, rust-src
-    - uses: actions-rs/cargo@v1
-      with:
-        command: miri
-        args: setup
-    - uses: actions-rs/cargo@v1
-      with:
-        command: miri
-        args: test --all-features
+    - run: cargo miri setup
+    - run: cargo miri test --all-features
       env:
         MIRIFLAGS: "-Zmiri-disable-isolation"
         PROPTEST_CASES: 1
@@ -152,17 +99,11 @@ jobs:
       matrix:
         sanitizer: [address, leak, memory, thread]
     steps:
-    - uses: actions/checkout@master
-    - uses: actions-rs/toolchain@v1
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@nightly
       with:
-        override: true
-        profile: minimal
-        toolchain: nightly
         components: rust-src
-    - uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --tests --lib --all-features --target x86_64-unknown-linux-gnu -Z build-std
+    - run: cargo test --tests --lib --all-features --target x86_64-unknown-linux-gnu -Z build-std -- --test-threads=1
       env:
         RUSTFLAGS: "-Z sanitizer=${{ matrix.sanitizer }}"
 
@@ -170,16 +111,11 @@ jobs:
     needs: [test]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - uses: actions-rs/toolchain@v1
-      with:
-        override: true
-        profile: minimal
-        toolchain: stable
-    - uses: actions-rs/tarpaulin@v0.1
-      with:
-        args: --all-features --avoid-cfg-tarpaulin
-    - uses: codecov/codecov-action@v2
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@stable
+    - run: cargo install --force cargo-tarpaulin
+    - run: cargo tarpaulin --all-features --workspace --engine llvm -o Xml
+    - uses: codecov/codecov-action@v3
       with:
         token: ${{secrets.CODECOV_TOKEN}}
         fail_ci_if_error: true
@@ -196,13 +132,6 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
     - run: sudo -E apt-get -yq install libxcb-shape0-dev libxcb-xfixes0-dev
       if: matrix.os == 'ubuntu-latest'
-    - uses: actions/checkout@master
-    - uses: actions-rs/toolchain@v1
-      with:
-        override: true
-        profile: minimal
-        toolchain: stable
-    - uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --release --examples
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@stable
+    - run: cargo build --release --examples
