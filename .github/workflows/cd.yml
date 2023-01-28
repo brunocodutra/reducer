@@ -8,13 +8,6 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - uses: actions-rs/toolchain@v1
-      with:
-        override: true
-        profile: minimal
-        toolchain: stable
-    - uses: actions-rs/cargo@v1
-      with:
-        command: publish
-        args: --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@stable
+    - run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
