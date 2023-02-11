@@ -37,7 +37,7 @@ futures = { version = "0.3.21", optional = true, default-features = false, featu
 pin-project = { version = "1.0.10", optional = true, default-features = false }
 
 [dev-dependencies]
-eframe = { version = "0.20.0", default-features = false, features = [
+eframe = { version = "0.21.0", default-features = false, features = [
     "dark-light",
     "default_fonts",
     "glow",
