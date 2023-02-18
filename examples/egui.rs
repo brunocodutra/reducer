@@ -124,7 +124,7 @@ impl<D: Dispatcher<Action>> App for Application<D> {
                 }
 
                 if ui.button("Add todo").clicked()
-                    || (text_edit.lost_focus() && ui.input().key_pressed(Key::Enter))
+                    || (text_edit.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter)))
                 {
                     self.dispatcher.dispatch(Action::AddTodo);
                 }
