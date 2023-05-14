@@ -7,17 +7,12 @@ use ring_channel::{ring_channel, RingReceiver};
 use std::{error::Error, mem, num::NonZeroUsize, sync::Arc};
 use tokio::task::spawn;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 enum View {
+    #[default]
     All,
     Done,
     Pending,
-}
-
-impl Default for View {
-    fn default() -> Self {
-        View::All
-    }
 }
 
 // The actions our users can trigger.
@@ -194,7 +189,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             ..NativeOptions::default()
         },
         Box::new(|_| Box::new(Application::new(rx, dispatcher))),
-    );
+    )?;
 
     // Wait for the background thread to complete.
     handle.await??;
