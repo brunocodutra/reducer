@@ -1,3 +1,5 @@
+#![allow(clippy::items_after_test_module)]
+
 //! A predictable reactive framework for Rust apps.
 //!
 //! # Overview
