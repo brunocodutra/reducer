@@ -1,7 +1,7 @@
 //! A simple example demonstrating how to implement a Todo List app using Reducer & egui.
 
 use eframe::egui::{CentralPanel, Context, Key, ScrollArea, TopBottomPanel};
-use eframe::{epaint::vec2, run_native, App, Frame, NativeOptions};
+use eframe::{run_native, App, Frame, NativeOptions};
 use reducer::{AsyncReactor, Dispatcher, Reducer, Store};
 use ring_channel::{ring_channel, RingReceiver};
 use std::{error::Error, mem, num::NonZeroUsize, sync::Arc};
@@ -183,11 +183,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Run egui.
     run_native(
         "reducer <3 egui",
-        NativeOptions {
-            resizable: false,
-            initial_window_size: Some(vec2(380., 500.)),
-            ..NativeOptions::default()
-        },
+        NativeOptions::default(),
         Box::new(|_| Box::new(Application::new(rx, dispatcher))),
     )?;
 
